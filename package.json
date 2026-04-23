@@ -8,10 +8,22 @@
     "start": "next start",
     "lint": "eslint"
   },
+
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+
   "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "next": "16.2.4",
+    "next-auth": "^4.24.14",
+    "prisma": "^7.7.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

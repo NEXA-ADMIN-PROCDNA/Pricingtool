@@ -1,0 +1,389 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                   String            @id @default(cuid())
+  email                String            @unique
+  name                 String
+  role                 UserRole
+  kindeId              String            @unique
+  managerId            String?
+  isActive             Boolean           @default(true)
+  deletedAt            DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  activityLogs         ActivityLog[]
+  approvalsGiven       ApprovalRequest[] @relation("Approver")
+  approvalsRequested   ApprovalRequest[] @relation("Requester")
+  clientsCreated       Client[]
+  comments             Comment[]
+  opportunitiesCoOwned Opportunity[]     @relation("OpportunityCoOwner")
+  opportunitiesOwned   Opportunity[]     @relation("OpportunityOwner")
+  rateCardsIngested    RateCard[]
+  manager              User?             @relation("UserHierarchy", fields: [managerId], references: [id])
+  reports              User[]            @relation("UserHierarchy")
+
+  @@index([managerId])
+  @@index([role])
+  @@map("users")
+}
+
+model Client {
+  id            String        @id @default(cuid())
+  clientId      String        @unique
+  name          String
+  businessUnit  String?
+  industry      String?
+  region        String?
+  isActive      Boolean       @default(true)
+  createdById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  pocs          ClientPOC[]
+  createdBy     User          @relation(fields: [createdById], references: [id])
+  opportunities Opportunity[]
+  sowDocuments  SOWDocument[]
+
+  @@map("clients")
+}
+
+model ClientPOC {
+  id       String  @id @default(cuid())
+  clientId String
+  name     String
+  email    String?
+  phone    String?
+  jobTitle String?
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_pocs")
+}
+
+model Opportunity {
+  id               String            @id @default(cuid())
+  opportunityId    String            @unique
+  clientId         String
+  opportunityName  String
+  opportunityType  OpportunityType   @default(NEW)
+  primaryLob       LineOfBusiness
+  startDate        DateTime
+  endDate          DateTime
+  status           OpportunityStatus @default(OPEN)
+  stage            OpportunityStage  @default(LEAD)
+  starConnect      Boolean           @default(false)
+  ownerId          String
+  coOwnerId        String?
+  nextSteps        String?
+  notes            String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activityLogs     ActivityLog[]
+  approvalRequests ApprovalRequest[]
+  comments         Comment[]
+  client           Client            @relation(fields: [clientId], references: [id])
+  coOwner          User?             @relation("OpportunityCoOwner", fields: [coOwnerId], references: [id])
+  owner            User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  otherCosts       OtherCost[]
+  pricingVersions  PricingVersion[]
+  sowDocuments     SOWDocument[]
+
+  @@map("opportunities")
+}
+
+model RateCard {
+  id                String             @id @default(cuid())
+  jobRole           JobRole
+  location          Location
+  costRatePerHour   Decimal            @db.Decimal(10, 2)
+  billRatePerHour   Decimal            @db.Decimal(10, 2)
+  effectiveFrom     DateTime           @default(now())
+  effectiveTo       DateTime?
+  isActive          Boolean            @default(true)
+  ingestedById      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  ingestedBy        User?              @relation(fields: [ingestedById], references: [id])
+  staffingResources StaffingResource[]
+
+  @@unique([jobRole, location, effectiveFrom])
+  @@map("rate_cards")
+}
+
+model PricingVersion {
+  id                    String              @id @default(cuid())
+  opportunityId         String
+  versionNumber         Int                 @default(1)
+  isFinal               Boolean             @default(false)
+  label                 String?
+  revenueSharePct       Decimal?            @db.Decimal(8, 4)
+  proposedBillings      Decimal?            @db.Decimal(14, 2)
+  totalCost             Decimal?            @db.Decimal(14, 2)
+  grossMarginPct        Decimal?            @db.Decimal(8, 4)
+  discountPremiumPct    Decimal?            @db.Decimal(8, 4)
+  effectiveRatePerHour  Decimal?            @db.Decimal(10, 2)
+  totalHours            Decimal?            @db.Decimal(10, 2)
+  offshorePct           Decimal?            @db.Decimal(8, 4)
+  businessJustification String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  financialSnapshots    FinancialSnapshot[]
+  opportunity           Opportunity         @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  scheduleOfPayments    ScheduleOfPayment[]
+  staffingResources     StaffingResource[]
+
+  @@unique([opportunityId, versionNumber])
+  @@map("pricing_versions")
+}
+
+model StaffingResource {
+  id                    String              @id @default(cuid())
+  pricingVersionId      String
+  rateCardId            String?
+  resourceDesignation   JobRole
+  location              Location            @default(INDIA)
+  isBillable            Boolean             @default(true)
+  systemBillRatePerHour Decimal?            @db.Decimal(10, 2)
+  manualBillRatePerHour Decimal?            @db.Decimal(10, 2)
+  discountPremiumPct    Decimal?            @db.Decimal(8, 4)
+  effectiveBillRate     Decimal?            @db.Decimal(10, 2)
+  costRatePerHour       Decimal?            @db.Decimal(10, 2)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  pricingVersion        PricingVersion      @relation(fields: [pricingVersionId], references: [id], onDelete: Cascade)
+  rateCard              RateCard?           @relation(fields: [rateCardId], references: [id])
+  weeklyHours           StaffingWeekEntry[]
+
+  @@map("staffing_resources")
+}
+
+model StaffingWeekEntry {
+  id                 String           @id @default(cuid())
+  staffingResourceId String
+  weekStartDate      DateTime
+  hours              Decimal          @default(0) @db.Decimal(6, 2)
+  staffingResource   StaffingResource @relation(fields: [staffingResourceId], references: [id], onDelete: Cascade)
+
+  @@unique([staffingResourceId, weekStartDate])
+  @@map("staffing_week_entries")
+}
+
+model OtherCost {
+  id            String      @id @default(cuid())
+  opportunityId String
+  description   String
+  amount        Decimal     @db.Decimal(12, 2)
+  isBillable    Boolean     @default(true)
+  month         DateTime
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("other_costs")
+}
+
+model ScheduleOfPayment {
+  id                   String         @id @default(cuid())
+  pricingVersionId     String
+  month                DateTime
+  recommendedBillings  Decimal?       @db.Decimal(12, 2)
+  recommendedOtherCost Decimal?       @db.Decimal(12, 2)
+  proposedBillings     Decimal?       @db.Decimal(12, 2)
+  proposedOtherCost    Decimal?       @db.Decimal(12, 2)
+  proposedIsManual     Boolean        @default(false)
+  discountPct          Decimal?       @db.Decimal(8, 4)
+  premiumPct           Decimal?       @db.Decimal(8, 4)
+  discountIsManual     Boolean        @default(false)
+  premiumIsManual      Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  pricingVersion       PricingVersion @relation(fields: [pricingVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([pricingVersionId, month])
+  @@map("schedule_of_payments")
+}
+
+model FinancialSnapshot {
+  id                   String         @id @default(cuid())
+  pricingVersionId     String
+  month                DateTime?
+  revenueFromBilling   Decimal?       @db.Decimal(12, 2)
+  revenueFromOtherCost Decimal?       @db.Decimal(12, 2)
+  totalRevenue         Decimal?       @db.Decimal(12, 2)
+  employeeCost         Decimal?       @db.Decimal(12, 2)
+  otherCost            Decimal?       @db.Decimal(12, 2)
+  grossMargin          Decimal?       @db.Decimal(12, 2)
+  grossMarginPct       Decimal?       @db.Decimal(8, 4)
+  discountPremiumPct   Decimal?       @db.Decimal(8, 4)
+  totalHours           Decimal?       @db.Decimal(10, 2)
+  offshoreRatio        Decimal?       @db.Decimal(8, 4)
+  billedRatePerHour    Decimal?       @db.Decimal(10, 2)
+  effectiveRatePerHour Decimal?       @db.Decimal(10, 2)
+  indiaRate            Decimal?       @db.Decimal(10, 2)
+  usRate               Decimal?       @db.Decimal(10, 2)
+  computedAt           DateTime       @default(now())
+  pricingVersion       PricingVersion @relation(fields: [pricingVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([pricingVersionId, month])
+  @@map("financial_snapshots")
+}
+
+model ApprovalRequest {
+  id              String         @id @default(cuid())
+  opportunityId   String
+  requestedById   String
+  approverId      String
+  status          ApprovalStatus @default(PENDING)
+  rejectionReason String?
+  requestedAt     DateTime       @default(now())
+  decidedAt       DateTime?
+  approver        User           @relation("Approver", fields: [approverId], references: [id])
+  opportunity     Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  requestedBy     User           @relation("Requester", fields: [requestedById], references: [id])
+
+  @@map("approval_requests")
+}
+
+model SOWDocument {
+  id            String      @id @default(cuid())
+  opportunityId String
+  clientId      String
+  fileName      String
+  storagePath   String?
+  fileUrl       String?
+  externalLink  String?
+  fileSizeBytes Int?
+  mimeType      String?     @default("application/pdf")
+  version       Int         @default(1)
+  uploadedAt    DateTime    @default(now())
+  isActive      Boolean     @default(true)
+  client        Client      @relation(fields: [clientId], references: [id])
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@map("sow_documents")
+}
+
+model Comment {
+  id            String      @id @default(cuid())
+  opportunityId String
+  authorId      String
+  content       String
+  parentId      String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  author        User        @relation(fields: [authorId], references: [id])
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  parent        Comment?    @relation("CommentThread", fields: [parentId], references: [id])
+  replies       Comment[]   @relation("CommentThread")
+
+  @@map("comments")
+}
+
+model ActivityLog {
+  id            String       @id @default(cuid())
+  opportunityId String?
+  userId        String
+  action        String
+  oldValue      Json?
+  newValue      Json?
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
+
+model NotificationLog {
+  id             String           @id @default(cuid())
+  type           NotificationType
+  recipientEmail String
+  ccEmails       String[]
+  subject        String
+  opportunityId  String?
+  status         String           @default("sent")
+  error          String?
+  sentAt         DateTime         @default(now())
+
+  @@map("notification_logs")
+}
+
+enum UserRole {
+  SEL
+  DIRECTOR
+  ED
+  PARTNER
+  COFOUNDER
+  ADMIN
+}
+
+enum OpportunityType {
+  NEW
+  EXISTING
+}
+
+enum LineOfBusiness {
+  TECH
+  ANALYTICS
+  MS
+  DS
+  OTHERS
+}
+
+enum OpportunityStatus {
+  OPEN
+  WON
+  LOST
+  ABANDONED
+  ARCHIVED
+}
+
+enum OpportunityStage {
+  LEAD
+  QUALIFICATION
+  PROPOSAL
+  SOW_SUBMITTED
+  SOW_SIGNED
+  PO_RECEIVED
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum Location {
+  INDIA
+  US
+}
+
+enum JobRole {
+  ANALYST
+  SENIOR_ANALYST
+  CONSULTANT
+  SENIOR_CONSULTANT
+  MANAGER
+  SENIOR_MANAGER
+  DIRECTOR
+  ASSOCIATE_DIRECTOR
+  VICE_PRESIDENT
+  PRINCIPAL
+  PARTNER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  APPROVAL_REQUESTED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  STATUS_CHANGED
+  WEEKLY_REPORT
+  PRICING_UPDATED
+}
