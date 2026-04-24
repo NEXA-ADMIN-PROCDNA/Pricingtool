@@ -31,10 +31,9 @@ CREATE TABLE "users" (
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "role" "UserRole" NOT NULL,
-    "kindeId" TEXT NOT NULL,
+    "kindeId" TEXT,
     "managerId" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "deletedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -298,12 +297,6 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_kindeId_key" ON "users"("kindeId");
-
--- CreateIndex
-CREATE INDEX "users_managerId_idx" ON "users"("managerId");
-
--- CreateIndex
-CREATE INDEX "users_role_idx" ON "users"("role");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "clients_clientId_key" ON "clients"("clientId");
