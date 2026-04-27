@@ -23,7 +23,6 @@ enum UserRole {
   DIRECTOR
   ED
   PARTNER
-  COFOUNDER
   ADMIN
 }
 
@@ -608,7 +607,7 @@ model NotificationLog {
 //
 //   -- PARTNER, COFOUNDER, ADMIN: see everything
 //   CREATE POLICY "senior_read_all" ON opportunities FOR SELECT USING (
-//     current_user_role() IN ('PARTNER', 'COFOUNDER', 'ADMIN')
+//     current_user_role() IN ('PARTNER', 'ADMIN')
 //   );
 //
 // STEP 4 — Write policies:
@@ -618,7 +617,7 @@ model NotificationLog {
 //   ADMIN      → full access including DELETE
 //
 //   CREATE POLICY "sel_insert" ON opportunities FOR INSERT WITH CHECK (
-//     current_user_role() IN ('SEL', 'DIRECTOR', 'ED', 'PARTNER', 'COFOUNDER', 'ADMIN')
+//     current_user_role() IN ('SEL', 'DIRECTOR', 'ED', 'PARTNER', 'ADMIN')
 //     AND owner_id = current_user_id()
 //   );
 //
@@ -628,7 +627,7 @@ model NotificationLog {
 //   );
 //
 //   CREATE POLICY "senior_update_all" ON opportunities FOR UPDATE USING (
-//     current_user_role() IN ('ED', 'PARTNER', 'COFOUNDER', 'ADMIN')
+//     current_user_role() IN ('ED', 'PARTNER', 'ADMIN')
 //   );
 //
 //   CREATE POLICY "admin_delete" ON opportunities FOR DELETE USING (
@@ -648,6 +647,6 @@ model NotificationLog {
 //   );
 //
 // STEP 6 — Notification and activity logs:
-//   PARTNER, COFOUNDER, ADMIN → read all
+//   PARTNER,  ADMIN → read all
 //   Others → only rows where opportunity_id is in their accessible set
 // ═══════════════════════════════════════════════════════════════

@@ -36,7 +36,7 @@ export default function LoginPage() {
       <div className="bg-white p-8 rounded-lg shadow-md w-96 space-y-4">
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">ProcPursuit</h1>
+          <h1 className="text-2xl font-bold text-gray-800">NEXA | Pricing Tool</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
         </div>
 
