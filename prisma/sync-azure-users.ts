@@ -7,7 +7,7 @@
  *
  * Usage:
  *   npx tsx prisma/sync-azure-users.ts
- *
+ *Everybody is SE NOW
  * Required env vars (in .env):
  *   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, DATABASE_URL
  */
