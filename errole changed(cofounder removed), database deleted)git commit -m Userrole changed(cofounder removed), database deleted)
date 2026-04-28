@@ -1,0 +1,36 @@
+[33mcommit 7319d6bf6deae5604bab637f393dc32e7c4c02db[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Shreeraj-Deshmukh <shreeraj.deshmukh.22031@iitgoa.ac.in>
+Date:   Mon Apr 27 12:59:36 2026 +0530
+
+    Userrole changed(cofounder removed), database deleted)
+
+[33mcommit 14308db7db8ddda31ab6c44934ba0ca176a39e36[m
+Author: Shreeraj-Deshmukh <shreeraj.deshmukh.22031@iitgoa.ac.in>
+Date:   Fri Apr 24 15:10:04 2026 +0530
+
+    minor changes
+
+[33mcommit c8b72385f7c3671134d4c8907c5f0e759006655c[m
+Merge: 042b930 770d4da
+Author: Shreeraj-Deshmukh <shreeraj.deshmukh.22031@iitgoa.ac.in>
+Date:   Thu Apr 23 13:37:55 2026 +0530
+
+    merge remote
+
+[33mcommit 042b930c28cf22c1d029a33288509899aa367f8d[m
+Author: Shreeraj-Deshmukh <shreeraj.deshmukh.22031@iitgoa.ac.in>
+Date:   Thu Apr 23 13:19:36 2026 +0530
+
+    Initial commit
+
+[33mcommit 770d4da4c48f367ff3bd2fc1caa621761a0c3e4f[m
+Author: NEXA-ADMIN-PROCDNA <nexaadmin@procdna.com>
+Date:   Thu Apr 23 13:09:27 2026 +0530
+
+    Initial commit
+
+[33mcommit 7947e0f04c9a7a02e8160cd56d787d48dfa8b0d8[m
+Author: Shreeraj-Deshmukh <shreeraj.deshmukh.22031@iitgoa.ac.in>
+Date:   Fri Apr 17 14:29:26 2026 +0530
+
+    Initial commit from Create Next App
