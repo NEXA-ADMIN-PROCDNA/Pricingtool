@@ -47,6 +47,8 @@ function mapTitleToRole(jobTitle: string | null | undefined): UserRole | null {
   return null
 }
 
+
+
 // ── Graph API types ───────────────────────────────────────────────
 interface GraphUser {
   id: string
@@ -62,10 +64,12 @@ interface GraphResponse {
 }
 
 // ── Fetch all users from Azure AD (handles pagination) ────────────
+// User.ReadBasic.All fields: id, displayName, givenName, surname, mail, userPrincipalName
+// jobTitle is NOT in ReadBasic — we request it anyway; some tenants return it, others return null.
 async function fetchAllAzureUsers(graphClient: Client): Promise<GraphUser[]> {
   const users: GraphUser[] = []
   let url: string | undefined =
-    '/users?$select=id,displayName,mail,userPrincipalName,jobTitle&$top=999'
+    '/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle&$top=999'
 
   while (url) {
     const page: GraphResponse = await graphClient.api(url).get()
@@ -80,9 +84,7 @@ async function fetchAllAzureUsers(graphClient: Client): Promise<GraphUser[]> {
 
 // ── Main ──────────────────────────────────────────────────────────
 async function main() {
-  const { AZURE_TENANT_ID, AZURE_CLIENT_ID } = process.env
-
-  const { AZURE_CLIENT_SECRET } = process.env
+  const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET } = process.env
 
   if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET) {
     console.error('Missing AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET in .env')
@@ -97,55 +99,82 @@ async function main() {
 
   console.log('Fetching users from Azure AD …')
   const azureUsers = await fetchAllAzureUsers(graphClient)
-  console.log(`  Found ${azureUsers.length} total Azure AD users`)
+  console.log(`  Found ${azureUsers.length} total Azure AD users\n`)
 
-  let synced = 0
+  // Track results for the role-assignment report
+  const synced:      { name: string; email: string; role: string; source: string }[] = []
+  const needsRole:   { name: string; email: string; jobTitle: string | null }[]       = []
   let skipped = 0
 
   for (const azUser of azureUsers) {
-    const role = mapTitleToRole(azUser.jobTitle)
-
-    if (!role) {
-      // Not a role we manage — skip silently unless job title is set
-      if (azUser.jobTitle) {
-        console.warn(`  SKIP  "${azUser.displayName}" — unrecognised title: "${azUser.jobTitle}"`)
-      }
-      skipped++
-      continue
-    }
-
-    // Prefer mail, fall back to userPrincipalName (guest accounts sometimes lack mail)
     const email = azUser.mail ?? azUser.userPrincipalName
     const name  = azUser.displayName
 
     if (!email || !name) {
-      console.warn(`  SKIP  Azure ID ${azUser.id} — missing email or name`)
       skipped++
       continue
     }
 
-    await prisma.user.upsert({
-      where:  { email },
-      update: {
-        name,
-        role,
-        kindeId:  azUser.id,   // store Azure OID in kindeId for now
-        isActive: true,
-      },
-      create: {
-        email,
-        name,
-        role,
-        kindeId:  azUser.id,
-        isActive: true,
-      },
-    })
+    // Only sync ProcDNA staff
+    if (!email.toLowerCase().endsWith('@procdna.com')) {
+      skipped++
+      continue
+    }
 
-    console.log(`  SYNC  ${role.padEnd(8)}  ${name} <${email}>`)
-    synced++
+    // Skip service accounts / guests
+    if (email.includes('#EXT#') || !name.trim()) {
+      skipped++
+      continue
+    }
+
+    const role = mapTitleToRole(azUser.jobTitle)
+
+    if (role) {
+      // jobTitle was readable and mapped — upsert with correct role
+      await prisma.user.upsert({
+        where:  { email },
+        update: { name, role, kindeId: azUser.id, isActive: true },
+        create: { email, name, role, kindeId: azUser.id, isActive: true },
+      })
+      synced.push({ name, email, role, source: `jobTitle: "${azUser.jobTitle}"` })
+    } else {
+      // jobTitle missing or unrecognised — upsert as SEL (most restrictive default)
+      // and flag for manual role assignment
+      await prisma.user.upsert({
+        where:  { email },
+        update: { name, kindeId: azUser.id, isActive: true },
+        create: { email, name, role: 'SEL', kindeId: azUser.id, isActive: true },
+      })
+      needsRole.push({ name, email, jobTitle: azUser.jobTitle })
+    }
   }
 
-  console.log(`\nDone. Synced: ${synced}  Skipped: ${skipped}`)
+  // ── Summary report ────────────────────────────────────────────────
+  console.log('─'.repeat(70))
+  console.log(`✅  SYNCED WITH ROLE (${synced.length})`)
+  console.log('─'.repeat(70))
+  for (const u of synced) {
+    console.log(`  ${u.role.padEnd(10)} ${u.name.padEnd(30)} ${u.email}`)
+    console.log(`             └─ ${u.source}`)
+  }
+
+  if (needsRole.length > 0) {
+    console.log('\n' + '─'.repeat(70))
+    console.log(`⚠️   SYNCED AS SEL — NEEDS MANUAL ROLE ASSIGNMENT (${needsRole.length})`)
+    console.log('─'.repeat(70))
+    console.log('  jobTitle was null or unrecognised (User.ReadBasic.All likely blocked it).')
+    console.log('  Run the SQL below in Supabase SQL Editor to fix roles:\n')
+    for (const u of needsRole) {
+      console.log(`  -- ${u.name} (jobTitle: ${u.jobTitle ?? 'null'})`)
+      console.log(`  UPDATE procdna_database.users SET role = 'DIRECTOR' WHERE email = '${u.email}';\n`)
+    }
+  }
+
+  if (skipped > 0) {
+    console.log(`\nSkipped ${skipped} service accounts / guests.`)
+  }
+
+  console.log(`\nDone. Synced: ${synced.length + needsRole.length}  Skipped: ${skipped}`)
 }
 
 main()

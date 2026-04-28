@@ -78,4 +78,5 @@ export async function getDashboardStats() {
     totalPipeline: Number(billing._sum.proposedBillings ?? 0),
     avgMargin:     Number(billing._avg.grossMarginPct   ?? 0),
   }
+  
 }
