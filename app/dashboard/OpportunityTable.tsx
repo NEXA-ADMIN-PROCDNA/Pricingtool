@@ -28,10 +28,6 @@ function fmtPct(n: number | null | undefined) {
   return `${Number(n).toFixed(1)}%`
 }
 
-function fmtDate(d: Date | null | undefined) {
-  if (!d) return '—'
-  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const router = useRouter()
@@ -44,7 +40,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-1 flex-col gap-4 min-h-0">
       {/* Filter pills */}
       <div className="flex items-center gap-2 flex-wrap">
         {STATUS_FILTERS.map(f => (
@@ -67,9 +63,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
         ))}
       </div>
 
-      {/* Table card */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Table card — stretches to bottom of viewport */}
+      <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-0">
+        <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">

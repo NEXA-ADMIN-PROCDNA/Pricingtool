@@ -69,7 +69,7 @@ export default async function DashboardPage({
       }
     >
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
+      <div className="grid shrink-0 grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
         <KPICard
           label="Total Pipeline"
           value={fmt(stats.totalPipeline)}
@@ -116,8 +116,8 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* Table */}
-      <Suspense fallback={<div className="h-64 animate-pulse rounded-2xl bg-slate-100" />}>
+      {/* Table — grows to fill remaining height */}
+      <Suspense fallback={<div className="flex-1 animate-pulse rounded-2xl bg-slate-100" />}>
         <OpportunityTable rows={rows} />
       </Suspense>
     </MainLayout>
