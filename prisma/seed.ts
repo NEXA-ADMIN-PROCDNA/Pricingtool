@@ -1,4 +1,6 @@
-import "dotenv/config";
+import 'dotenv/config'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 import {
   PrismaClient,
   UserRole,
@@ -9,631 +11,665 @@ import {
   Location,
   JobRole,
   ApprovalStatus,
-  NotificationType
-} from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
+} from '@prisma/client'
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
+const prisma = new PrismaClient({ adapter })
 
-const prisma = new PrismaClient({
-  adapter,
-});
+// ── helpers ──────────────────────────────────────────────────────
+function monday(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
+function addWeeks(date: Date, n: number): Date {
+  const d = new Date(date)
+  d.setDate(d.getDate() + n * 7)
+  return d
+}
 
+function addMonths(date: Date, n: number): Date {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() + n)
+  return d
+}
+
+// ── main ─────────────────────────────────────────────────────────
 async function main() {
-  console.log("🌱 Seeding database...\n");
+  console.log('🌱  Seeding …')
 
-  // ─────────────────────────────────────────────
-  // 1. USERS
-  // ─────────────────────────────────────────────
-  console.log("👤 Seeding users...");
+  // ── 1. USERS ─────────────────────────────────────────────────
+  // Create top-level senior users first (no manager), then reports
 
-  const cofounder = await prisma.user.create({
-    data: {
-      email: "cofounder@company.com",
-      name: "Sarah Connor",
-      role: UserRole.COFOUNDER,
-      kindeId: "kinde_cofounder_001",
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@firm.com' },
+    update: {},
+    create: {
+      email: 'admin@firm.com',
+      name: 'Admin User',
+      role: UserRole.ADMIN,
       isActive: true,
     },
-  });
+  })
 
-  const partner = await prisma.user.create({
-    data: {
-      email: "partner@company.com",
-      name: "James Carter",
+  const partner = await prisma.user.upsert({
+    where: { email: 'partner@firm.com' },
+    update: {},
+    create: {
+      email: 'partner@firm.com',
+      name: 'Priya Sharma',
       role: UserRole.PARTNER,
-      kindeId: "kinde_partner_001",
-      managerId: cofounder.id,
       isActive: true,
     },
-  });
+  })
 
-  const ed = await prisma.user.create({
-    data: {
-      email: "ed@company.com",
-      name: "Emily Davis",
+  const ed = await prisma.user.upsert({
+    where: { email: 'ed@firm.com' },
+    update: {},
+    create: {
+      email: 'ed@firm.com',
+      name: 'Edward Collins',
       role: UserRole.ED,
-      kindeId: "kinde_ed_001",
       managerId: partner.id,
       isActive: true,
     },
-  });
+  })
 
-  const director = await prisma.user.create({
-    data: {
-      email: "director@company.com",
-      name: "Robert Miles",
+  const director1 = await prisma.user.upsert({
+    where: { email: 'director1@firm.com' },
+    update: {},
+    create: {
+      email: 'director1@firm.com',
+      name: 'Diana Patel',
       role: UserRole.DIRECTOR,
-      kindeId: "kinde_director_001",
       managerId: ed.id,
       isActive: true,
     },
-  });
+  })
 
-  const sel1 = await prisma.user.create({
-    data: {
-      email: "sel1@company.com",
-      name: "Nina Patel",
+  const director2 = await prisma.user.upsert({
+    where: { email: 'director2@firm.com' },
+    update: {},
+    create: {
+      email: 'director2@firm.com',
+      name: 'Daniel Kim',
+      role: UserRole.DIRECTOR,
+      managerId: ed.id,
+      isActive: true,
+    },
+  })
+
+  const sel1 = await prisma.user.upsert({
+    where: { email: 'sel1@firm.com' },
+    update: {},
+    create: {
+      email: 'sel1@firm.com',
+      name: 'Sara Lopez',
       role: UserRole.SEL,
-      kindeId: "kinde_sel_001",
-      managerId: director.id,
+      managerId: director1.id,
       isActive: true,
     },
-  });
+  })
 
-  const sel2 = await prisma.user.create({
-    data: {
-      email: "sel2@company.com",
-      name: "Tom Hughes",
+  const sel2 = await prisma.user.upsert({
+    where: { email: 'sel2@firm.com' },
+    update: {},
+    create: {
+      email: 'sel2@firm.com',
+      name: 'Sam Nguyen',
       role: UserRole.SEL,
-      kindeId: "kinde_sel_002",
-      managerId: director.id,
+      managerId: director2.id,
       isActive: true,
     },
-  });
+  })
 
-  const admin = await prisma.user.create({
-    data: {
-      email: "admin@company.com",
-      name: "Admin User",
-      role: UserRole.ADMIN,
-      kindeId: "kinde_admin_001",
+  console.log('  ✓ users')
+
+  // ── 2. RATE CARDS ─────────────────────────────────────────────
+  // One active row per (jobRole, location) combo
+  const effectiveFrom = new Date('2026-01-01')
+
+  type RateRow = {
+    jobRole: JobRole
+    location: Location
+    costRatePerHour: number
+    billRatePerHour: number
+  }
+
+  const rateRows: RateRow[] = [
+    // INDIA
+    { jobRole: JobRole.ANALYST,            location: Location.INDIA, costRatePerHour: 18,  billRatePerHour: 35  },
+    { jobRole: JobRole.SENIOR_ANALYST,     location: Location.INDIA, costRatePerHour: 24,  billRatePerHour: 48  },
+    { jobRole: JobRole.CONSULTANT,         location: Location.INDIA, costRatePerHour: 32,  billRatePerHour: 65  },
+    { jobRole: JobRole.SENIOR_CONSULTANT,  location: Location.INDIA, costRatePerHour: 40,  billRatePerHour: 82  },
+    { jobRole: JobRole.MANAGER,            location: Location.INDIA, costRatePerHour: 52,  billRatePerHour: 105 },
+    { jobRole: JobRole.SENIOR_MANAGER,     location: Location.INDIA, costRatePerHour: 65,  billRatePerHour: 130 },
+    { jobRole: JobRole.DIRECTOR,           location: Location.INDIA, costRatePerHour: 85,  billRatePerHour: 170 },
+    { jobRole: JobRole.ASSOCIATE_DIRECTOR, location: Location.INDIA, costRatePerHour: 100, billRatePerHour: 200 },
+    { jobRole: JobRole.VICE_PRESIDENT,     location: Location.INDIA, costRatePerHour: 120, billRatePerHour: 240 },
+    { jobRole: JobRole.PRINCIPAL,          location: Location.INDIA, costRatePerHour: 145, billRatePerHour: 290 },
+    { jobRole: JobRole.PARTNER,            location: Location.INDIA, costRatePerHour: 175, billRatePerHour: 350 },
+    // US
+    { jobRole: JobRole.ANALYST,            location: Location.US, costRatePerHour: 55,  billRatePerHour: 110 },
+    { jobRole: JobRole.SENIOR_ANALYST,     location: Location.US, costRatePerHour: 70,  billRatePerHour: 140 },
+    { jobRole: JobRole.CONSULTANT,         location: Location.US, costRatePerHour: 90,  billRatePerHour: 180 },
+    { jobRole: JobRole.SENIOR_CONSULTANT,  location: Location.US, costRatePerHour: 110, billRatePerHour: 220 },
+    { jobRole: JobRole.MANAGER,            location: Location.US, costRatePerHour: 135, billRatePerHour: 270 },
+    { jobRole: JobRole.SENIOR_MANAGER,     location: Location.US, costRatePerHour: 160, billRatePerHour: 320 },
+    { jobRole: JobRole.DIRECTOR,           location: Location.US, costRatePerHour: 200, billRatePerHour: 400 },
+    { jobRole: JobRole.ASSOCIATE_DIRECTOR, location: Location.US, costRatePerHour: 230, billRatePerHour: 460 },
+    { jobRole: JobRole.VICE_PRESIDENT,     location: Location.US, costRatePerHour: 265, billRatePerHour: 530 },
+    { jobRole: JobRole.PRINCIPAL,          location: Location.US, costRatePerHour: 310, billRatePerHour: 620 },
+    { jobRole: JobRole.PARTNER,            location: Location.US, costRatePerHour: 375, billRatePerHour: 750 },
+  ]
+
+  const rateCardMap: Record<string, string> = {} // "ANALYST_INDIA" → id
+
+  for (const row of rateRows) {
+    const rc = await prisma.rateCard.upsert({
+      where: { jobRole_location_effectiveFrom: { jobRole: row.jobRole, location: row.location, effectiveFrom } },
+      update: {},
+      create: {
+        jobRole: row.jobRole,
+        location: row.location,
+        costRatePerHour: row.costRatePerHour,
+        billRatePerHour: row.billRatePerHour,
+        effectiveFrom,
+        isActive: true,
+        ingestedById: admin.id,
+      },
+    })
+    rateCardMap[`${row.jobRole}_${row.location}`] = rc.id
+  }
+
+  console.log('  ✓ rate cards')
+
+  // ── 3. CLIENTS ────────────────────────────────────────────────
+  const clientNovartis = await prisma.client.upsert({
+    where: { clientId: 'CL-001' },
+    update: {},
+    create: {
+      clientId: 'CL-001',
+      name: 'Novartis AG',
+      businessUnit: 'Commercial Analytics',
+      industry: 'Pharmaceuticals',
+      region: 'EMEA',
       isActive: true,
+      createdById: admin.id,
     },
-  });
+  })
 
-  console.log("   ✅ 7 users created\n");
-
-  // ─────────────────────────────────────────────
-  // 2. CLIENTS
-  // ─────────────────────────────────────────────
-  console.log("🏢 Seeding clients...");
-
-  const client1 = await prisma.client.create({
-    data: {
-      clientId: "CLT-001",
-      name: "Acme Corp",
-      businessUnit: "Enterprise",
-      industry: "Technology",
-      region: "North America",
+  const clientJPM = await prisma.client.upsert({
+    where: { clientId: 'CL-002' },
+    update: {},
+    create: {
+      clientId: 'CL-002',
+      name: 'JPMorgan Chase',
+      businessUnit: 'Risk & Data',
+      industry: 'Financial Services',
+      region: 'NA',
       isActive: true,
-      createdById: sel1.id,
+      createdById: admin.id,
     },
-  });
+  })
 
-  const client2 = await prisma.client.create({
-    data: {
-      clientId: "CLT-002",
-      name: "GlobalTech Ltd",
-      businessUnit: "Mid-Market",
-      industry: "Finance",
-      region: "Europe",
+  const clientBioGen = await prisma.client.upsert({
+    where: { clientId: 'CL-003' },
+    update: {},
+    create: {
+      clientId: 'CL-003',
+      name: 'BioGen Inc.',
+      businessUnit: 'R&D Operations',
+      industry: 'Biotechnology',
+      region: 'NA',
       isActive: true,
-      createdById: sel2.id,
+      createdById: admin.id,
     },
-  });
+  })
 
-  console.log("   ✅ 2 clients created\n");
-
-  // ─────────────────────────────────────────────
-  // 3. CLIENT POCs
-  // ─────────────────────────────────────────────
-  console.log("📇 Seeding client POCs...");
-
+  // POCs
   await prisma.clientPOC.createMany({
+    skipDuplicates: true,
     data: [
-      { clientId: client1.id, name: "John Doe",   email: "john.doe@acme.com",         phone: "+11234560001", jobTitle: "VP Procurement" },
-      { clientId: client1.id, name: "Lisa Ray",   email: "lisa.ray@acme.com",          phone: "+11234560002", jobTitle: "CTO" },
-      { clientId: client2.id, name: "Mark Evans", email: "mark.evans@globaltech.com",  phone: "+441234560001", jobTitle: "CFO" },
+      { clientId: clientNovartis.id, name: 'Marco Rossi',   email: 'mrossi@novartis.com',  phone: '+41-79-111-2222', jobTitle: 'VP Analytics' },
+      { clientId: clientNovartis.id, name: 'Lena Fischer',  email: 'lfischer@novartis.com', jobTitle: 'Procurement Lead' },
+      { clientId: clientJPM.id,      name: 'James Howard',  email: 'jhoward@jpmc.com',      phone: '+1-212-555-0101', jobTitle: 'MD Risk Tech' },
+      { clientId: clientBioGen.id,   name: 'Rachel Greene', email: 'rgreene@biogen.com',    jobTitle: 'Director, Ops' },
     ],
-  });
+  })
 
-  console.log("   ✅ 3 client POCs created\n");
+  console.log('  ✓ clients + POCs')
 
-  // ─────────────────────────────────────────────
-  // 4. RATE CARDS
-  // ─────────────────────────────────────────────
-  console.log("💰 Seeding rate cards...");
-
-  const rateCardData = [
-    { jobRole: JobRole.ANALYST,           location: Location.INDIA, costRatePerHour: 15.00,  billRatePerHour: 30.00  },
-    { jobRole: JobRole.SENIOR_ANALYST,    location: Location.INDIA, costRatePerHour: 20.00,  billRatePerHour: 40.00  },
-    { jobRole: JobRole.CONSULTANT,        location: Location.INDIA, costRatePerHour: 25.00,  billRatePerHour: 55.00  },
-    { jobRole: JobRole.SENIOR_CONSULTANT, location: Location.INDIA, costRatePerHour: 30.00,  billRatePerHour: 65.00  },
-    { jobRole: JobRole.MANAGER,           location: Location.INDIA, costRatePerHour: 40.00,  billRatePerHour: 85.00  },
-    { jobRole: JobRole.ANALYST,           location: Location.US,    costRatePerHour: 50.00,  billRatePerHour: 100.00 },
-    { jobRole: JobRole.CONSULTANT,        location: Location.US,    costRatePerHour: 80.00,  billRatePerHour: 160.00 },
-    { jobRole: JobRole.MANAGER,           location: Location.US,    costRatePerHour: 100.00, billRatePerHour: 200.00 },
-    { jobRole: JobRole.DIRECTOR,          location: Location.US,    costRatePerHour: 130.00, billRatePerHour: 260.00 },
-  ];
-
-  const rateCards = await Promise.all(
-    rateCardData.map((rc) =>
-      prisma.rateCard.create({
-        data: {
-          ...rc,
-          effectiveFrom: new Date("2024-01-01"),
-          isActive: true,
-          ingestedById: admin.id,
-        },
-      })
-    )
-  );
-
-  console.log(`   ✅ ${rateCards.length} rate cards created\n`);
-
-  // ─────────────────────────────────────────────
-  // 5. OPPORTUNITIES
-  // ─────────────────────────────────────────────
-  console.log("🎯 Seeding opportunities...");
-
-  const opp1 = await prisma.opportunity.create({
-    data: {
-      opportunityId: "OPP-001",
-      clientId: client1.id,
-      opportunityName: "Acme Data Analytics Platform",
+  // ── 4. OPPORTUNITIES ─────────────────────────────────────────
+  const opp1 = await prisma.opportunity.upsert({
+    where: { opportunityId: 'BD-001' },
+    update: {},
+    create: {
+      opportunityId: 'BD-001',
+      clientId: clientNovartis.id,
+      opportunityName: 'Commercial Analytics Transformation',
       opportunityType: OpportunityType.NEW,
       primaryLob: LineOfBusiness.ANALYTICS,
-      startDate: new Date("2024-04-01"),
-      endDate: new Date("2024-12-31"),
+      startDate: new Date('2026-05-01'),
+      endDate: new Date('2026-10-31'),
       status: OpportunityStatus.OPEN,
       stage: OpportunityStage.PROPOSAL,
       starConnect: true,
       ownerId: sel1.id,
-      coOwnerId: sel2.id,
-      nextSteps: "Send revised proposal by EOW",
-      notes: "Client is evaluating 3 vendors",
-      isActive: true,
+      coOwnerId: director1.id,
+      nextSteps: 'Send revised SOW by Friday',
+      notes: 'Client is keen on offshore delivery. Margin target ≥ 35%.',
     },
-  });
+  })
 
-  const opp2 = await prisma.opportunity.create({
-    data: {
-      opportunityId: "OPP-002",
-      clientId: client2.id,
-      opportunityName: "GlobalTech Cloud Migration",
+  const opp2 = await prisma.opportunity.upsert({
+    where: { opportunityId: 'BD-002' },
+    update: {},
+    create: {
+      opportunityId: 'BD-002',
+      clientId: clientJPM.id,
+      opportunityName: 'Risk Data Platform — Phase 2',
       opportunityType: OpportunityType.EXISTING,
       primaryLob: LineOfBusiness.TECH,
-      startDate: new Date("2024-06-01"),
-      endDate: new Date("2025-05-31"),
+      startDate: new Date('2026-06-01'),
+      endDate: new Date('2027-03-31'),
       status: OpportunityStatus.OPEN,
       stage: OpportunityStage.SOW_SUBMITTED,
       starConnect: false,
       ownerId: sel2.id,
-      isActive: true,
+      coOwnerId: director2.id,
+      nextSteps: 'Awaiting legal sign-off from JPM',
+      notes: 'Extension of Phase 1 engagement. Mixed US/India team.',
     },
-  });
+  })
 
-  console.log("   ✅ 2 opportunities created\n");
+  const opp3 = await prisma.opportunity.upsert({
+    where: { opportunityId: 'BD-003' },
+    update: {},
+    create: {
+      opportunityId: 'BD-003',
+      clientId: clientBioGen.id,
+      opportunityName: 'R&D Data Science Support',
+      opportunityType: OpportunityType.NEW,
+      primaryLob: LineOfBusiness.DS,
+      startDate: new Date('2026-07-01'),
+      endDate: new Date('2026-12-31'),
+      status: OpportunityStatus.OPEN,
+      stage: OpportunityStage.QUALIFICATION,
+      starConnect: false,
+      ownerId: sel1.id,
+      nextSteps: 'Discovery call scheduled for next week',
+    },
+  })
 
-  // ─────────────────────────────────────────────
-  // 6. PRICING VERSIONS
-  // ─────────────────────────────────────────────
-  console.log("📊 Seeding pricing versions...");
+  console.log('  ✓ opportunities')
 
-  const pv1 = await prisma.pricingVersion.create({
-    data: {
+  // ── 5. PRICING VERSIONS ───────────────────────────────────────
+  const pv1 = await prisma.pricingVersion.upsert({
+    where: { opportunityId_versionNumber: { opportunityId: opp1.id, versionNumber: 1 } },
+    update: {},
+    create: {
       opportunityId: opp1.id,
       versionNumber: 1,
       isFinal: false,
-      label: "Initial Estimate",
-      proposedBillings: 250000.00,
-      totalCost: 180000.00,
-      grossMarginPct: 0.28,
-      discountPremiumPct: 0.05,
-      effectiveRatePerHour: 75.00,
-      totalHours: 3333.33,
-      offshorePct: 0.70,
+      label: 'Initial estimate',
+      revenueSharePct: 0,
+      proposedBillings: 480000,
+      totalCost: 290000,
+      grossMarginPct: 39.58,
+      discountPremiumPct: 0,
+      effectiveRatePerHour: 96,
+      totalHours: 5000,
+      offshorePct: 80,
+      businessJustification: 'Strategic new logo — offshore-heavy model to hit margin target.',
     },
-  });
+  })
 
-  const pv2 = await prisma.pricingVersion.create({
-    data: {
+  const pv1v2 = await prisma.pricingVersion.upsert({
+    where: { opportunityId_versionNumber: { opportunityId: opp1.id, versionNumber: 2 } },
+    update: {},
+    create: {
       opportunityId: opp1.id,
       versionNumber: 2,
       isFinal: true,
-      label: "Final Revised",
-      proposedBillings: 280000.00,
-      totalCost: 195000.00,
-      grossMarginPct: 0.304,
-      discountPremiumPct: 0.0,
-      effectiveRatePerHour: 80.00,
-      totalHours: 3500.00,
-      offshorePct: 0.65,
+      label: 'Revised after client review',
+      revenueSharePct: 0,
+      proposedBillings: 510000,
+      totalCost: 300000,
+      grossMarginPct: 41.18,
+      discountPremiumPct: 2,
+      effectiveRatePerHour: 102,
+      totalHours: 5000,
+      offshorePct: 75,
+      businessJustification: 'Premium added for accelerated delivery. Margin improves to 41%.',
     },
-  });
+  })
 
-  const pv3 = await prisma.pricingVersion.create({
-    data: {
+  const pv2 = await prisma.pricingVersion.upsert({
+    where: { opportunityId_versionNumber: { opportunityId: opp2.id, versionNumber: 1 } },
+    update: {},
+    create: {
       opportunityId: opp2.id,
       versionNumber: 1,
       isFinal: true,
-      label: "Cloud Migration v1",
-      proposedBillings: 500000.00,
-      totalCost: 340000.00,
-      grossMarginPct: 0.32,
-      totalHours: 6250.00,
-      offshorePct: 0.80,
+      label: 'SOW submission version',
+      proposedBillings: 1200000,
+      totalCost: 700000,
+      grossMarginPct: 41.67,
+      discountPremiumPct: 0,
+      effectiveRatePerHour: 150,
+      totalHours: 8000,
+      offshorePct: 60,
     },
-  });
+  })
 
-  console.log("   ✅ 3 pricing versions created\n");
+  console.log('  ✓ pricing versions')
 
-  // ─────────────────────────────────────────────
-  // 7. STAFFING RESOURCES
-  // ─────────────────────────────────────────────
-  console.log("👥 Seeding staffing resources...");
-
-  const indiaAnalystRC = rateCards.find((r) => r.jobRole === JobRole.ANALYST     && r.location === Location.INDIA)!;
-  const indiaConsultRC = rateCards.find((r) => r.jobRole === JobRole.CONSULTANT  && r.location === Location.INDIA)!;
-  const indiaManagerRC = rateCards.find((r) => r.jobRole === JobRole.MANAGER     && r.location === Location.INDIA)!;
-  const usConsultRC    = rateCards.find((r) => r.jobRole === JobRole.CONSULTANT  && r.location === Location.US)!;
-
+  // ── 6. STAFFING RESOURCES + WEEKLY HOURS ─────────────────────
+  // opp1 v2: 2 India consultants + 1 US manager
   const sr1 = await prisma.staffingResource.create({
     data: {
-      pricingVersionId: pv1.id,
-      rateCardId: indiaAnalystRC.id,
-      resourceDesignation: JobRole.ANALYST,
+      pricingVersionId: pv1v2.id,
+      rateCardId: rateCardMap['CONSULTANT_INDIA'],
+      resourceDesignation: JobRole.CONSULTANT,
       location: Location.INDIA,
       isBillable: true,
-      systemBillRatePerHour: indiaAnalystRC.billRatePerHour,
-      costRatePerHour: indiaAnalystRC.costRatePerHour,
-      effectiveBillRate: indiaAnalystRC.billRatePerHour,
+      systemBillRatePerHour: 65,
+      effectiveBillRate: 65,
+      costRatePerHour: 32,
     },
-  });
+  })
 
   const sr2 = await prisma.staffingResource.create({
     data: {
-      pricingVersionId: pv1.id,
-      rateCardId: indiaConsultRC.id,
-      resourceDesignation: JobRole.CONSULTANT,
+      pricingVersionId: pv1v2.id,
+      rateCardId: rateCardMap['SENIOR_CONSULTANT_INDIA'],
+      resourceDesignation: JobRole.SENIOR_CONSULTANT,
       location: Location.INDIA,
       isBillable: true,
-      systemBillRatePerHour: indiaConsultRC.billRatePerHour,
-      costRatePerHour: indiaConsultRC.costRatePerHour,
-      effectiveBillRate: indiaConsultRC.billRatePerHour,
+      systemBillRatePerHour: 82,
+      effectiveBillRate: 82,
+      costRatePerHour: 40,
     },
-  });
+  })
 
   const sr3 = await prisma.staffingResource.create({
     data: {
-      pricingVersionId: pv3.id,
-      rateCardId: usConsultRC.id,
-      resourceDesignation: JobRole.CONSULTANT,
+      pricingVersionId: pv1v2.id,
+      rateCardId: rateCardMap['MANAGER_US'],
+      resourceDesignation: JobRole.MANAGER,
       location: Location.US,
       isBillable: true,
-      systemBillRatePerHour: usConsultRC.billRatePerHour,
-      costRatePerHour: usConsultRC.costRatePerHour,
-      effectiveBillRate: usConsultRC.billRatePerHour,
+      systemBillRatePerHour: 270,
+      effectiveBillRate: 270,
+      costRatePerHour: 135,
     },
-  });
+  })
 
+  // Seed 4 weeks of hours starting from the opportunity start date
+  const weekStart = monday(new Date('2026-05-01'))
+  for (let w = 0; w < 4; w++) {
+    const ws = addWeeks(weekStart, w)
+    await prisma.staffingWeekEntry.createMany({
+      skipDuplicates: true,
+      data: [
+        { staffingResourceId: sr1.id, weekStartDate: ws, hours: 40 },
+        { staffingResourceId: sr2.id, weekStartDate: ws, hours: 40 },
+        { staffingResourceId: sr3.id, weekStartDate: ws, hours: 20 },
+      ],
+    })
+  }
+
+  // opp2 v1: senior India team + US director
   const sr4 = await prisma.staffingResource.create({
     data: {
-      pricingVersionId: pv3.id,
-      rateCardId: indiaManagerRC.id,
-      resourceDesignation: JobRole.MANAGER,
+      pricingVersionId: pv2.id,
+      rateCardId: rateCardMap['SENIOR_MANAGER_INDIA'],
+      resourceDesignation: JobRole.SENIOR_MANAGER,
       location: Location.INDIA,
       isBillable: true,
-      systemBillRatePerHour: indiaManagerRC.billRatePerHour,
-      costRatePerHour: indiaManagerRC.costRatePerHour,
-      effectiveBillRate: indiaManagerRC.billRatePerHour,
+      systemBillRatePerHour: 130,
+      effectiveBillRate: 130,
+      costRatePerHour: 65,
     },
-  });
+  })
 
-  console.log("   ✅ 4 staffing resources created\n");
+  const sr5 = await prisma.staffingResource.create({
+    data: {
+      pricingVersionId: pv2.id,
+      rateCardId: rateCardMap['DIRECTOR_US'],
+      resourceDesignation: JobRole.DIRECTOR,
+      location: Location.US,
+      isBillable: true,
+      systemBillRatePerHour: 400,
+      effectiveBillRate: 400,
+      costRatePerHour: 200,
+    },
+  })
 
-  // ─────────────────────────────────────────────
-  // 8. STAFFING WEEK ENTRIES
-  // ─────────────────────────────────────────────
-  console.log("📅 Seeding staffing week entries...");
+  const weekStart2 = monday(new Date('2026-06-01'))
+  for (let w = 0; w < 4; w++) {
+    const ws = addWeeks(weekStart2, w)
+    await prisma.staffingWeekEntry.createMany({
+      skipDuplicates: true,
+      data: [
+        { staffingResourceId: sr4.id, weekStartDate: ws, hours: 40 },
+        { staffingResourceId: sr5.id, weekStartDate: ws, hours: 16 },
+      ],
+    })
+  }
 
-  const weeks = ["2024-04-01", "2024-04-08", "2024-04-15", "2024-04-22"];
+  console.log('  ✓ staffing resources + weekly hours')
 
-  await prisma.staffingWeekEntry.createMany({
-    data: [
-      ...weeks.map((w) => ({ staffingResourceId: sr1.id, weekStartDate: new Date(w), hours: 40 })),
-      ...weeks.map((w) => ({ staffingResourceId: sr2.id, weekStartDate: new Date(w), hours: 32 })),
-      ...weeks.map((w) => ({ staffingResourceId: sr3.id, weekStartDate: new Date(w), hours: 40 })),
-      ...weeks.map((w) => ({ staffingResourceId: sr4.id, weekStartDate: new Date(w), hours: 20 })),
-    ],
-  });
-
-  console.log("   ✅ 16 staffing week entries created\n");
-
-  // ─────────────────────────────────────────────
-  // 9. OTHER COSTS
-  // ─────────────────────────────────────────────
-  console.log("💸 Seeding other costs...");
-
+  // ── 7. OTHER COSTS ────────────────────────────────────────────
   await prisma.otherCost.createMany({
     data: [
-      { opportunityId: opp1.id, description: "Travel & Accommodation", amount: 5000.00,  isBillable: true,  month: new Date("2024-05-01") },
-      { opportunityId: opp1.id, description: "Software Licenses",      amount: 3000.00,  isBillable: false, month: new Date("2024-06-01") },
-      { opportunityId: opp2.id, description: "Cloud Infrastructure",   amount: 12000.00, isBillable: true,  month: new Date("2024-07-01") },
-    ],
-  });
-
-  console.log("   ✅ 3 other costs created\n");
-
-  // ─────────────────────────────────────────────
-  // 10. SCHEDULE OF PAYMENTS
-  // ─────────────────────────────────────────────
-  console.log("🗓️  Seeding schedule of payments...");
-
-  await prisma.scheduleOfPayment.createMany({
-    data: [
-      { pricingVersionId: pv2.id, month: new Date("2024-04-01"), recommendedBillings: 70000,  proposedBillings: 70000 },
-      { pricingVersionId: pv2.id, month: new Date("2024-05-01"), recommendedBillings: 70000,  proposedBillings: 75000, proposedIsManual: true },
-      { pricingVersionId: pv2.id, month: new Date("2024-06-01"), recommendedBillings: 70000,  proposedBillings: 70000 },
-      { pricingVersionId: pv3.id, month: new Date("2024-06-01"), recommendedBillings: 100000, proposedBillings: 100000 },
-      { pricingVersionId: pv3.id, month: new Date("2024-07-01"), recommendedBillings: 100000, proposedBillings: 110000, proposedIsManual: true },
-    ],
-  });
-
-  console.log("   ✅ 5 schedule of payments created\n");
-
-  // ─────────────────────────────────────────────
-  // 11. FINANCIAL SNAPSHOTS
-  // ─────────────────────────────────────────────
-  console.log("📈 Seeding financial snapshots...");
-
-  await prisma.financialSnapshot.createMany({
-    data: [
       {
+        opportunityId: opp1.id,
+        description: 'Travel — client site visits (EMEA)',
+        amount: 12000,
+        isBillable: true,
+        month: new Date('2026-06-01'),
+      },
+      {
+        opportunityId: opp1.id,
+        description: 'Software licences — Tableau',
+        amount: 3500,
+        isBillable: false,
+        month: new Date('2026-05-01'),
+      },
+      {
+        opportunityId: opp2.id,
+        description: 'Travel — New York kick-off',
+        amount: 8000,
+        isBillable: true,
+        month: new Date('2026-06-01'),
+      },
+    ],
+  })
+
+  console.log('  ✓ other costs')
+
+  // ── 8. SCHEDULE OF PAYMENTS ───────────────────────────────────
+  // opp1 v2: 6-month project → 6 monthly rows
+  const sopStart = new Date('2026-05-01')
+  for (let m = 0; m < 6; m++) {
+    const month = addMonths(sopStart, m)
+    await prisma.scheduleOfPayment.upsert({
+      where: { pricingVersionId_month: { pricingVersionId: pv1v2.id, month } },
+      update: {},
+      create: {
+        pricingVersionId: pv1v2.id,
+        month,
+        recommendedBillings: 85000,
+        recommendedOtherCost: m === 1 ? 2000 : 0,   // licence in month 2
+        proposedBillings: 85000,
+        proposedOtherCost: m === 1 ? 2000 : 0,
+        discountPct: 0,
+        premiumPct: m === 0 ? 2 : 0,                 // kick-off premium
+      },
+    })
+  }
+
+  // opp2 v1: 10-month project
+  const sopStart2 = new Date('2026-06-01')
+  for (let m = 0; m < 10; m++) {
+    const month = addMonths(sopStart2, m)
+    await prisma.scheduleOfPayment.upsert({
+      where: { pricingVersionId_month: { pricingVersionId: pv2.id, month } },
+      update: {},
+      create: {
         pricingVersionId: pv2.id,
-        month: new Date("2024-04-01"),
-        revenueFromBilling: 70000,
-        revenueFromOtherCost: 1000,
-        totalRevenue: 71000,
-        employeeCost: 48000,
-        otherCost: 1000,
-        grossMargin: 22000,
-        grossMarginPct: 0.31,
-        totalHours: 875,
-        offshoreRatio: 0.65,
-        billedRatePerHour: 80.0,
-        effectiveRatePerHour: 78.5,
+        month,
+        recommendedBillings: 120000,
+        proposedBillings: 120000,
+        discountPct: 0,
+        premiumPct: 0,
       },
-      {
-        pricingVersionId: pv3.id,
-        month: new Date("2024-06-01"),
-        revenueFromBilling: 100000,
-        revenueFromOtherCost: 5000,
-        totalRevenue: 105000,
-        employeeCost: 68000,
-        otherCost: 5000,
-        grossMargin: 32000,
-        grossMarginPct: 0.305,
-        totalHours: 1250,
-        offshoreRatio: 0.80,
-        billedRatePerHour: 84.0,
-        effectiveRatePerHour: 80.0,
-      },
-    ],
-  });
+    })
+  }
 
-  console.log("   ✅ 2 financial snapshots created\n");
+  console.log('  ✓ schedule of payments')
 
-  // ─────────────────────────────────────────────
-  // 12. APPROVAL REQUESTS
-  // ─────────────────────────────────────────────
-  console.log("✅ Seeding approval requests...");
+  // ── 9. FINANCIAL SNAPSHOTS ────────────────────────────────────
+  // opp1 v2 total row (month = null)
+  await prisma.financialSnapshot.upsert({
+    where: { pricingVersionId_month: { pricingVersionId: pv1v2.id, month: new Date('2026-05-01') } },
+    update: {},
+    create: {
+      pricingVersionId: pv1v2.id,
+      month: new Date('2026-05-01'),
+      revenueFromBilling: 85000,
+      revenueFromOtherCost: 0,
+      totalRevenue: 85000,
+      employeeCost: 49800,
+      otherCost: 0,
+      grossMargin: 35200,
+      grossMarginPct: 41.41,
+      discountPremiumPct: 2,
+      totalHours: 833,
+      offshoreRatio: 75,
+      billedRatePerHour: 102,
+      effectiveRatePerHour: 102,
+      indiaRate: 73.5,
+      usRate: 270,
+    },
+  })
 
-  await prisma.approvalRequest.createMany({
-    data: [
-      {
-        opportunityId: opp1.id,
-        requestedById: sel1.id,
-        approverId: director.id,
-        status: ApprovalStatus.PENDING,
-        requestedAt: new Date("2024-03-20"),
-      },
-      {
-        opportunityId: opp2.id,
-        requestedById: sel2.id,
-        approverId: ed.id,
-        status: ApprovalStatus.APPROVED,
-        requestedAt: new Date("2024-03-15"),
-        decidedAt: new Date("2024-03-17"),
-      },
-    ],
-  });
+  console.log('  ✓ financial snapshots')
 
-  console.log("   ✅ 2 approval requests created\n");
+  // ── 10. APPROVAL REQUESTS ─────────────────────────────────────
+  await prisma.approvalRequest.create({
+    data: {
+      opportunityId: opp1.id,
+      requestedById: sel1.id,
+      approverId: ed.id,
+      status: ApprovalStatus.PENDING,
+      requestedAt: new Date(),
+    },
+  })
 
-  // ─────────────────────────────────────────────
-  // 13. SOW DOCUMENTS
-  // ─────────────────────────────────────────────
-  console.log("📄 Seeding SOW documents...");
+  await prisma.approvalRequest.create({
+    data: {
+      opportunityId: opp2.id,
+      requestedById: sel2.id,
+      approverId: partner.id,
+      status: ApprovalStatus.APPROVED,
+      requestedAt: new Date('2026-04-20'),
+      decidedAt: new Date('2026-04-22'),
+    },
+  })
 
-  await prisma.sOWDocument.createMany({
-    data: [
-      {
-        opportunityId: opp1.id,
-        clientId: client1.id,
-        fileName: "acme_sow_v1.pdf",
-        storagePath: "/documents/opp-001/acme_sow_v1.pdf",
-        fileSizeBytes: 204800,
-        mimeType: "application/pdf",
-        version: 1,
-        isActive: true,
-      },
-      {
-        opportunityId: opp2.id,
-        clientId: client2.id,
-        fileName: "globaltech_sow_v1.pdf",
-        storagePath: "/documents/opp-002/globaltech_sow_v1.pdf",
-        fileSizeBytes: 358400,
-        mimeType: "application/pdf",
-        version: 1,
-        isActive: true,
-      },
-    ],
-  });
+  console.log('  ✓ approval requests')
 
-  console.log("   ✅ 2 SOW documents created\n");
-
-  // ─────────────────────────────────────────────
-  // 14. COMMENTS
-  // ─────────────────────────────────────────────
-  console.log("💬 Seeding comments...");
-
+  // ── 11. COMMENTS ─────────────────────────────────────────────
   const comment1 = await prisma.comment.create({
     data: {
       opportunityId: opp1.id,
-      authorId: sel1.id,
-      content: "Client confirmed budget approval. Moving to proposal stage.",
+      authorId: director1.id,
+      content: 'We need to tighten the offshore ratio — client may push back on US headcount.',
     },
-  });
+  })
 
   await prisma.comment.create({
     data: {
       opportunityId: opp1.id,
-      authorId: director.id,
-      content: "Great progress. Make sure margins are above 28%.",
+      authorId: sel1.id,
+      content: 'Agreed. Updated staffing plan in v2 — 75% offshore now.',
       parentId: comment1.id,
     },
-  });
+  })
 
   await prisma.comment.create({
     data: {
       opportunityId: opp2.id,
-      authorId: sel2.id,
-      content: "SOW submitted. Awaiting client sign-off.",
+      authorId: partner.id,
+      content: 'Good progress — make sure legal has the amended MSA before SOW countersign.',
     },
-  });
+  })
 
-  console.log("   ✅ 3 comments created\n");
+  console.log('  ✓ comments')
 
-  // ─────────────────────────────────────────────
-  // 15. ACTIVITY LOGS
-  // ─────────────────────────────────────────────
-  console.log("📝 Seeding activity logs...");
-
+  // ── 12. ACTIVITY LOGS ─────────────────────────────────────────
   await prisma.activityLog.createMany({
     data: [
       {
         opportunityId: opp1.id,
         userId: sel1.id,
-        action: "OPPORTUNITY_CREATED",
-        newValue: { opportunityId: "OPP-001", stage: "LEAD" },
+        action: 'opportunity.created',
+        newValue: { opportunityId: 'BD-001', stage: 'LEAD' },
       },
       {
         opportunityId: opp1.id,
         userId: sel1.id,
-        action: "STAGE_UPDATED",
-        oldValue: { stage: "LEAD" },
-        newValue: { stage: "PROPOSAL" },
+        action: 'stage.changed',
+        oldValue: { stage: 'LEAD' },
+        newValue: { stage: 'PROPOSAL' },
+      },
+      {
+        opportunityId: opp1.id,
+        userId: sel1.id,
+        action: 'pricing.version.created',
+        newValue: { versionNumber: 2, isFinal: true },
+      },
+      {
+        opportunityId: opp1.id,
+        userId: sel1.id,
+        action: 'approval.requested',
+        newValue: { approverId: ed.id, status: 'PENDING' },
       },
       {
         opportunityId: opp2.id,
         userId: sel2.id,
-        action: "OPPORTUNITY_CREATED",
-        newValue: { opportunityId: "OPP-002", stage: "LEAD" },
+        action: 'opportunity.created',
+        newValue: { opportunityId: 'BD-002', stage: 'LEAD' },
       },
       {
         opportunityId: opp2.id,
-        userId: sel2.id,
-        action: "STAGE_UPDATED",
-        oldValue: { stage: "PROPOSAL" },
-        newValue: { stage: "SOW_SUBMITTED" },
+        userId: partner.id,
+        action: 'approval.approved',
+        newValue: { status: 'APPROVED' },
       },
       {
         userId: admin.id,
-        action: "RATE_CARD_INGESTED",
-        metadata: { count: rateCards.length },
+        action: 'ratecard.ingested',
+        metadata: { count: rateRows.length, effectiveFrom: effectiveFrom.toISOString() },
       },
     ],
-  });
+  })
 
-  console.log("   ✅ 5 activity logs created\n");
-
-  // ─────────────────────────────────────────────
-  // 16. NOTIFICATION LOGS
-  // ─────────────────────────────────────────────
-  console.log("🔔 Seeding notification logs...");
-
-  await prisma.notificationLog.createMany({
-    data: [
-      {
-        type: NotificationType.APPROVAL_REQUESTED,
-        recipientEmail: director.email,
-        ccEmails: [sel1.email],
-        subject: "Approval Required: Acme Data Analytics Platform",
-        opportunityId: opp1.id,
-        status: "sent",
-      },
-      {
-        type: NotificationType.APPROVAL_APPROVED,
-        recipientEmail: sel2.email,
-        ccEmails: [ed.email, director.email],
-        subject: "Approved: GlobalTech Cloud Migration",
-        opportunityId: opp2.id,
-        status: "sent",
-      },
-      {
-        type: NotificationType.STATUS_CHANGED,
-        recipientEmail: sel1.email,
-        ccEmails: [],
-        subject: "Status Update: OPP-001 moved to Proposal",
-        opportunityId: opp1.id,
-        status: "sent",
-      },
-    ],
-  });
-
-  console.log("   ✅ 3 notification logs created\n");
-
-  console.log("🎉 Seeding complete!\n");
-  console.log("Summary:");
-  console.log(`   Users:               7`);
-  console.log(`   Clients:             2`);
-  console.log(`   Client POCs:         3`);
-  console.log(`   Rate Cards:          ${rateCards.length}`);
-  console.log(`   Opportunities:       2`);
-  console.log(`   Pricing Versions:    3`);
-  console.log(`   Staffing Resources:  4`);
-  console.log(`   Week Entries:        16`);
-  console.log(`   Other Costs:         3`);
-  console.log(`   Schedule of Pmts:    5`);
-  console.log(`   Financial Snapshots: 2`);
-  console.log(`   Approval Requests:   2`);
-  console.log(`   SOW Documents:       2`);
-  console.log(`   Comments:            3 (1 threaded reply)`);
-  console.log(`   Activity Logs:       5`);
-  console.log(`   Notification Logs:   3`);
+  console.log('  ✓ activity logs')
+  console.log('\n✅  Seed complete.')
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
   })
-  .catch(async (e) => {
-    console.error("❌ Seed failed:", e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+  .finally(() => prisma.$disconnect())
