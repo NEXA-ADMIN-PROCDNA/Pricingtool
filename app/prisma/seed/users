@@ -1,0 +1,40 @@
+const users = [
+  {
+    id: "u1",
+    email: "shree@nexa.com",
+    name: "Shreeraj",
+    role: "ADMIN",
+    kindeId: "kinde_001",
+    managerId: null,
+    isActive: true,
+  },
+  {
+    id: "u2",
+    email: "lead@nexa.com",
+    name: "Finance Lead",
+    role: "MANAGER",
+    kindeId: "kinde_002",
+    managerId: "u1",
+    isActive: true,
+  },
+  {
+    id: "u3",
+    email: "analyst@nexa.com",
+    name: "Analyst",
+    role: "USER",
+    kindeId: "kinde_003",
+    managerId: "u2",
+    isActive: true,
+  },
+  {
+    id: "u4",
+    email: "inactive@nexa.com",
+    name: "Old User",
+    role: "USER",
+    kindeId: "kinde_004",
+    managerId: "u2",
+    isActive: false,
+  }
+];
+
+module.exports = { users };

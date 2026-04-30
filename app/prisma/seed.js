@@ -10,7 +10,6 @@ async function main() {
     data: users,
   })
 }
-///////////////////small change
 
 main()
   .then(() => console.log("Users seeded"))
@@ -63,7 +62,7 @@ async function main() {
   const director = await prisma.user.create({
     data: {
       email: "director@company.com",
-      name: "Robert DeNiro",
+      name: "Robert Miles",
       role: UserRole.DIRECTOR,
       kindeId: "kinde_director_001",
       managerId: ed.id,
@@ -74,7 +73,7 @@ async function main() {
   const sel1 = await prisma.user.create({
     data: {
       email: "sel1@company.com",
-      name: "Sneh Shah SS",
+      name: "Nina Patel",
       role: UserRole.SEL,
       kindeId: "kinde_sel_001",
       managerId: director.id,
@@ -85,7 +84,7 @@ async function main() {
   const sel2 = await prisma.user.create({
     data: {
       email: "sel2@company.com",
-      name: "Aditya VS",
+      name: "Tom Hughes",
       role: UserRole.SEL,
       kindeId: "kinde_sel_002",
       managerId: director.id,
@@ -131,20 +130,6 @@ async function main() {
       region: "Europe",
       isActive: true,
       createdById: sel2.id,
-    },
-  });
-
-    const clientNovoNordisk = await prisma.client.upsert({
-    where: { clientId: 'CL-003' },
-    update: {},
-    create: {
-      clientId: 'CL-004',
-      name: 'Novonordisk',
-      businessUnit: 'IC',
-      industry: 'Biotechnology',
-      region: 'NA',
-      isActive: true,
-      createdById: admin.id,
     },
   });
 

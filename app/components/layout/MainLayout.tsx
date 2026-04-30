@@ -4,12 +4,10 @@ export function MainLayout({
   children,
   title,
   action,
-  scrollable = false,
 }: {
   children: React.ReactNode
   title?: string
   action?: React.ReactNode
-  scrollable?: boolean
 }) {
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -21,9 +19,7 @@ export function MainLayout({
             {action}
           </header>
         )}
-        <main className={`flex flex-1 flex-col px-8 py-6 ${scrollable ? 'overflow-y-auto' : 'overflow-hidden'}`}>
-          {children}
-        </main>
+        <main className="flex flex-1 flex-col overflow-hidden px-8 py-6">{children}</main>
       </div>
     </div>
   )

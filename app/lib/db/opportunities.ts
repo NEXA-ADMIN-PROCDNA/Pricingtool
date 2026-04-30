@@ -4,34 +4,26 @@ import { OpportunityStatus } from '@prisma/client'
 export type OpportunityRow = Awaited<ReturnType<typeof getOpportunities>>[number]
 export type OpportunityDetail = NonNullable<Awaited<ReturnType<typeof getOpportunityDetail>>>
 
-// Decimal → number serializer; preserves all other types
-function serialize<T>(data: T): T {
-  return JSON.parse(
-    JSON.stringify(data, (_, value) =>
-      value?.constructor?.name === 'Decimal' ? Number(value) : value
-    )
-  ) as T
-}
-
-// ✅ LIST VIEW
 export async function getOpportunities(status?: OpportunityStatus | 'ALL') {
-  const data = await prisma.opportunity.findMany({
+  return prisma.opportunity.findMany({
     where: status && status !== 'ALL' ? { status } : {},
     include: {
-      client:  { select: { name: true, clientId: true } },
+      client: { select: { name: true, clientId: true } },
       owner:   { select: { name: true } },
       coOwner: { select: { name: true } },
-      _count:  { select: { comments: true } },
+      pricingVersions: {
+        where: { isFinal: true },
+        select: { proposedBillings: true, grossMarginPct: true },
+        take: 1,
+      },
+      _count: { select: { comments: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
-
-  return serialize(data)
 }
 
-// ✅ DETAIL VIEW
 export async function getOpportunityDetail(opportunityId: string) {
-  const data = await prisma.opportunity.findUnique({
+  return prisma.opportunity.findUnique({
     where: { opportunityId },
     include: {
       client: { include: { pocs: true } },
@@ -40,14 +32,13 @@ export async function getOpportunityDetail(opportunityId: string) {
       pricingVersions: {
         include: {
           staffingResources: {
-            include: { weeklyHours: { orderBy: { weekStartDate: 'asc' } }, rateCard: true },
+            include: { weeklyHours: true, rateCard: true },
           },
           scheduleOfPayments: { orderBy: { month: 'asc' } },
           financialSnapshots: { orderBy: { month: 'asc' } },
         },
-        orderBy: { versionNumber: 'asc' },
+        orderBy: { versionNumber: 'desc' },
       },
-      otherCosts: { orderBy: [{ month: 'asc' }, { createdAt: 'asc' }] },
       approvalRequests: {
         include: { requestedBy: true, approver: true },
         orderBy: { requestedAt: 'desc' },
@@ -62,27 +53,22 @@ export async function getOpportunityDetail(opportunityId: string) {
       },
     },
   })
-
-  return serialize(data)
 }
 
-// ✅ DASHBOARD STATS
 export async function getDashboardStats() {
-  const counts = await prisma.opportunity.groupBy({
-    by: ['status'],
-    _count: { _all: true },
-  })
+  const [counts, billing] = await Promise.all([
+    prisma.opportunity.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    }),
+    prisma.pricingVersion.aggregate({
+      where: { isFinal: true },
+      _sum: { proposedBillings: true },
+      _avg: { grossMarginPct: true },
+    }),
+  ])
 
-  const billing = await prisma.pricingVersion.aggregate({
-    where: { isFinal: true },
-    _sum: { proposedBillings: true },
-    _avg: { grossMarginPct: true },
-  })
-
-  const byStatus = Object.fromEntries(
-    counts.map(c => [c.status, c._count._all])
-  )
-
+  const byStatus = Object.fromEntries(counts.map(c => [c.status, c._count._all]))
   return {
     total:        counts.reduce((s, c) => s + c._count._all, 0),
     open:         byStatus['OPEN']      ?? 0,
@@ -92,4 +78,5 @@ export async function getDashboardStats() {
     totalPipeline: Number(billing._sum.proposedBillings ?? 0),
     avgMargin:     Number(billing._avg.grossMarginPct   ?? 0),
   }
+  
 }

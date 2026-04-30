@@ -15,15 +15,7 @@ export async function getClients() {
 export async function getClientsForSelect() {
   return prisma.client.findMany({
     where: { isActive: true },
-    select: {
-      id: true,
-      name: true,
-      clientId: true,
-      businessUnit: true,
-      industry: true,
-      region: true,
-      pocs: { select: { id: true, name: true, email: true, jobTitle: true } },
-    },
+    select: { id: true, name: true, clientId: true },
     orderBy: { name: 'asc' },
   })
 }

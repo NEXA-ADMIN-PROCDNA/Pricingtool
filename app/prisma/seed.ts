@@ -168,7 +168,7 @@ async function main() {
     { jobRole: JobRole.PARTNER,            location: Location.US, costRatePerHour: 375, billRatePerHour: 750 },
   ]
 
-  const rateCardMap: Record<string, string | null> = {} // "ANALYST_INDIA" → id
+  const rateCardMap: Record<string, string> = {} // "ANALYST_INDIA" → id
 
   for (const row of rateRows) {
     const rc = await prisma.rateCard.upsert({
@@ -232,89 +232,14 @@ async function main() {
     },
   })
 
-  const clientNovoNordisk = await prisma.client.upsert({
-    where: { clientId: 'CL-004' },
-    update: {},
-    create: {
-      clientId: 'CL-004',
-      name: 'Novo Nordisk',
-      businessUnit: 'Integrated Care',
-      industry: 'Pharmaceuticals',
-      region: 'EMEA',
-      isActive: true,
-      createdById: admin.id,
-    },
-  })
-
-  const clientAstraZeneca = await prisma.client.upsert({
-    where: { clientId: 'CL-005' },
-    update: {},
-    create: {
-      clientId: 'CL-005',
-      name: 'AstraZeneca',
-      businessUnit: 'Global Oncology',
-      industry: 'Pharmaceuticals',
-      region: 'EMEA',
-      isActive: true,
-      createdById: admin.id,
-    },
-  })
-
-  const clientGoldmanSachs = await prisma.client.upsert({
-    where: { clientId: 'CL-006' },
-    update: {},
-    create: {
-      clientId: 'CL-006',
-      name: 'Goldman Sachs',
-      businessUnit: 'Global Markets Technology',
-      industry: 'Financial Services',
-      region: 'NA',
-      isActive: true,
-      createdById: admin.id,
-    },
-  })
-
-  const clientPfizer = await prisma.client.upsert({
-    where: { clientId: 'CL-007' },
-    update: {},
-    create: {
-      clientId: 'CL-007',
-      name: 'Pfizer Inc.',
-      businessUnit: 'Commercial Operations',
-      industry: 'Pharmaceuticals',
-      region: 'NA',
-      isActive: true,
-      createdById: admin.id,
-    },
-  })
-
-  const clientUnilever = await prisma.client.upsert({
-    where: { clientId: 'CL-008' },
-    update: {},
-    create: {
-      clientId: 'CL-008',
-      name: 'Unilever PLC',
-      businessUnit: 'Supply Chain Analytics',
-      industry: 'Consumer Goods',
-      region: 'EMEA',
-      isActive: true,
-      createdById: admin.id,
-    },
-  })
-
   // POCs
   await prisma.clientPOC.createMany({
     skipDuplicates: true,
     data: [
-      { clientId: clientNovartis.id,     name: 'Marco Rossi',      email: 'mrossi@novartis.com',      phone: '+41-79-111-2222', jobTitle: 'VP Analytics' },
-      { clientId: clientNovartis.id,     name: 'Lena Fischer',     email: 'lfischer@novartis.com',     jobTitle: 'Procurement Lead' },
-      { clientId: clientJPM.id,          name: 'James Howard',     email: 'jhoward@jpmc.com',          phone: '+1-212-555-0101', jobTitle: 'MD Risk Tech' },
-      { clientId: clientBioGen.id,       name: 'Rachel Greene',    email: 'rgreene@biogen.com',        jobTitle: 'Director, Ops' },
-      { clientId: clientNovoNordisk.id,  name: 'Anders Larsen',    email: 'alarsen@novonordisk.com',   phone: '+45-30-111-4444', jobTitle: 'Head of Data Science' },
-      { clientId: clientAstraZeneca.id,  name: 'Claire Dubois',    email: 'cdubois@astrazeneca.com',   phone: '+44-20-555-7890', jobTitle: 'VP Digital Transformation' },
-      { clientId: clientGoldmanSachs.id, name: 'Michael Chen',     email: 'mchen@gs.com',              phone: '+1-212-902-1000', jobTitle: 'Managing Director, Tech' },
-      { clientId: clientPfizer.id,       name: 'Sandra Williams',  email: 'swilliams@pfizer.com',      jobTitle: 'Sr Director, Commercial Analytics' },
-      { clientId: clientUnilever.id,     name: 'Raj Krishnamurthy',email: 'rkrishnamurthy@unilever.com',jobTitle: 'Global Supply Chain Director' },
+      { clientId: clientNovartis.id, name: 'Marco Rossi',   email: 'mrossi@novartis.com',  phone: '+41-79-111-2222', jobTitle: 'VP Analytics' },
+      { clientId: clientNovartis.id, name: 'Lena Fischer',  email: 'lfischer@novartis.com', jobTitle: 'Procurement Lead' },
+      { clientId: clientJPM.id,      name: 'James Howard',  email: 'jhoward@jpmc.com',      phone: '+1-212-555-0101', jobTitle: 'MD Risk Tech' },
+      { clientId: clientBioGen.id,   name: 'Rachel Greene', email: 'rgreene@biogen.com',    jobTitle: 'Director, Ops' },
     ],
   })
 
@@ -382,130 +307,6 @@ async function main() {
     },
   })
 
-  const opp4 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-004' },
-    update: {},
-    create: {
-      opportunityId: 'BD-004',
-      clientId: clientNovoNordisk.id,
-      opportunityName: 'Patient Analytics Platform Build',
-      opportunityType: OpportunityType.NEW,
-      primaryLob: LineOfBusiness.ANALYTICS,
-      startDate: new Date('2026-04-01'),
-      endDate: new Date('2026-09-30'),
-      status: OpportunityStatus.WON,
-      stage: OpportunityStage.SOW_SIGNED,
-      starConnect: true,
-      ownerId: director1.id,
-      coOwnerId: sel1.id,
-      nextSteps: 'Kick-off meeting confirmed for 3 May',
-      notes: 'Signed SOW. Offshore team being onboarded.',
-    },
-  })
-
-  const opp5 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-005' },
-    update: {},
-    create: {
-      opportunityId: 'BD-005',
-      clientId: clientAstraZeneca.id,
-      opportunityName: 'Oncology Trial Data Engineering',
-      opportunityType: OpportunityType.NEW,
-      primaryLob: LineOfBusiness.DS,
-      startDate: new Date('2026-03-01'),
-      endDate: new Date('2026-08-31'),
-      status: OpportunityStatus.LOST,
-      stage: OpportunityStage.PROPOSAL,
-      starConnect: false,
-      ownerId: sel2.id,
-      coOwnerId: director2.id,
-      nextSteps: 'Conduct internal debrief on loss',
-      notes: 'Lost to a competitor on price. Margin requirement was too high for client budget.',
-    },
-  })
-
-  const opp6 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-006' },
-    update: {},
-    create: {
-      opportunityId: 'BD-006',
-      clientId: clientGoldmanSachs.id,
-      opportunityName: 'Trading Risk Model Automation',
-      opportunityType: OpportunityType.NEW,
-      primaryLob: LineOfBusiness.TECH,
-      startDate: new Date('2026-08-01'),
-      endDate: new Date('2027-07-31'),
-      status: OpportunityStatus.OPEN,
-      stage: OpportunityStage.LEAD,
-      starConnect: false,
-      ownerId: director2.id,
-      nextSteps: 'Initial capability presentation to MD scheduled',
-      notes: 'Warm intro via partner network. Large potential — $2M+.',
-    },
-  })
-
-  const opp7 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-007' },
-    update: {},
-    create: {
-      opportunityId: 'BD-007',
-      clientId: clientPfizer.id,
-      opportunityName: 'HCP Segmentation & Targeting Analytics',
-      opportunityType: OpportunityType.EXISTING,
-      primaryLob: LineOfBusiness.ANALYTICS,
-      startDate: new Date('2026-05-15'),
-      endDate: new Date('2026-11-15'),
-      status: OpportunityStatus.OPEN,
-      stage: OpportunityStage.SOW_SUBMITTED,
-      starConnect: true,
-      ownerId: sel1.id,
-      coOwnerId: ed.id,
-      nextSteps: 'Awaiting Pfizer procurement approval',
-      notes: 'Extension of prior engagement. Strong relationship. Margin target 38%.',
-    },
-  })
-
-  const opp8 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-008' },
-    update: {},
-    create: {
-      opportunityId: 'BD-008',
-      clientId: clientUnilever.id,
-      opportunityName: 'Supply Chain Demand Forecasting',
-      opportunityType: OpportunityType.NEW,
-      primaryLob: LineOfBusiness.MS,
-      startDate: new Date('2026-09-01'),
-      endDate: new Date('2027-02-28'),
-      status: OpportunityStatus.OPEN,
-      stage: OpportunityStage.QUALIFICATION,
-      starConnect: false,
-      ownerId: director1.id,
-      nextSteps: 'RFP response due end of May',
-      notes: 'Competitive RFP. 4 vendors shortlisted. Emphasise offshore cost advantage.',
-    },
-  })
-
-  const opp9 = await prisma.opportunity.upsert({
-    where: { opportunityId: 'BD-009' },
-    update: {},
-    create: {
-      opportunityId: 'BD-009',
-      clientId: clientJPM.id,
-      opportunityName: 'Credit Risk Dashboard — APAC',
-      opportunityType: OpportunityType.EXISTING,
-      primaryLob: LineOfBusiness.TECH,
-      startDate: new Date('2025-10-01'),
-      endDate: new Date('2026-03-31'),
-      status: OpportunityStatus.WON,
-      stage: OpportunityStage.SOW_SIGNED,
-      starConnect: false,
-      ownerId: sel2.id,
-      coOwnerId: director2.id,
-      nextSteps: 'Final deliverables handover in progress',
-      notes: 'Concluded successfully. Strong NPS. Good base for Phase 3.',
-    },
-  })
-
   console.log('  ✓ opportunities')
 
   // ── 5. PRICING VERSIONS ───────────────────────────────────────
@@ -567,344 +368,6 @@ async function main() {
     },
   })
 
-  // opp4 — Novo Nordisk (WON / SOW_SIGNED)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp4.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp4.id,
-      versionNumber: 1,
-      isFinal: true,
-      label: 'Signed SOW version',
-      proposedBillings: 740000,
-      totalCost: 430000,
-      grossMarginPct: 41.89,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 92,
-      totalHours: 8000,
-      offshorePct: 85,
-      businessJustification: 'Offshore-heavy delivery; strong margin for pharma analytics build.',
-    },
-  })
-
-  // opp5 — AstraZeneca (LOST)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp5.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp5.id,
-      versionNumber: 1,
-      isFinal: true,
-      label: 'Final proposal (lost)',
-      proposedBillings: 620000,
-      totalCost: 390000,
-      grossMarginPct: 37.1,
-      discountPremiumPct: -3,
-      effectiveRatePerHour: 110,
-      totalHours: 5636,
-      offshorePct: 70,
-      businessJustification: 'Discounted 3% to stay competitive. Still lost on price.',
-    },
-  })
-
-  // opp6 — Goldman Sachs (LEAD) — early draft, not final
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp6.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp6.id,
-      versionNumber: 1,
-      isFinal: false,
-      label: 'Preliminary estimate',
-      proposedBillings: 2100000,
-      totalCost: 1200000,
-      grossMarginPct: 42.86,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 175,
-      totalHours: 12000,
-      offshorePct: 55,
-      businessJustification: 'FS client — mixed US/India model. Premium US rates push margin up.',
-    },
-  })
-
-  // opp7 — Pfizer (SOW_SUBMITTED)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp7.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp7.id,
-      versionNumber: 1,
-      isFinal: false,
-      label: 'Draft v1',
-      proposedBillings: 380000,
-      totalCost: 240000,
-      grossMarginPct: 36.84,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 95,
-      totalHours: 4000,
-      offshorePct: 90,
-    },
-  })
-
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp7.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp7.id,
-      versionNumber: 2,
-      isFinal: true,
-      label: 'SOW submission',
-      proposedBillings: 410000,
-      totalCost: 255000,
-      grossMarginPct: 37.8,
-      discountPremiumPct: 1.5,
-      effectiveRatePerHour: 102,
-      totalHours: 4000,
-      offshorePct: 88,
-      businessJustification: 'Existing relationship — small premium justified by faster ramp.',
-    },
-  })
-
-  // opp8 — Unilever (QUALIFICATION)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp8.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp8.id,
-      versionNumber: 1,
-      isFinal: false,
-      label: 'RFP response estimate',
-      proposedBillings: 870000,
-      totalCost: 520000,
-      grossMarginPct: 40.23,
-      discountPremiumPct: -2,
-      effectiveRatePerHour: 108,
-      totalHours: 8000,
-      offshorePct: 80,
-      businessJustification: 'Competitive RFP — small discount to improve win probability.',
-    },
-  })
-
-  // opp9 — JPM APAC (WON, concluded)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp9.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp9.id,
-      versionNumber: 1,
-      isFinal: true,
-      label: 'Signed engagement',
-      proposedBillings: 560000,
-      totalCost: 320000,
-      grossMarginPct: 42.86,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 140,
-      totalHours: 4000,
-      offshorePct: 65,
-    },
-  })
-
-  // ── Additional versions for richer demo data ─────────────────
-  // opp2 (JPM Phase 2): v2 — revised with higher offshore
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp2.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp2.id,
-      versionNumber: 2,
-      isFinal: false,
-      label: 'Revised — higher offshore mix',
-      proposedBillings: 1150000,
-      totalCost: 640000,
-      grossMarginPct: 44.35,
-      discountPremiumPct: -2,
-      effectiveRatePerHour: 143,
-      totalHours: 8000,
-      offshorePct: 75,
-      businessJustification: 'Shifting 15% more work to India to improve margin by ~3pts.',
-    },
-  })
-
-  // opp2 (JPM Phase 2): v3 — final negotiated
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp2.id, versionNumber: 3 } },
-    update: {},
-    create: {
-      opportunityId: opp2.id,
-      versionNumber: 3,
-      isFinal: false,
-      label: 'Negotiated final — client pushed back on rates',
-      proposedBillings: 1100000,
-      totalCost: 660000,
-      grossMarginPct: 40.0,
-      discountPremiumPct: -5,
-      effectiveRatePerHour: 137,
-      totalHours: 8000,
-      offshorePct: 72,
-      businessJustification: 'Client pushed for 5% discount. Accepted to secure the extension.',
-    },
-  })
-
-  // opp3 (BioGen R&D): v1 — discovery estimate (was missing entirely)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp3.id, versionNumber: 1 } },
-    update: {},
-    create: {
-      opportunityId: opp3.id,
-      versionNumber: 1,
-      isFinal: false,
-      label: 'Discovery phase estimate',
-      proposedBillings: 290000,
-      totalCost: 180000,
-      grossMarginPct: 37.93,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 72,
-      totalHours: 4000,
-      offshorePct: 90,
-      businessJustification: 'Initial light team to validate scope before full engagement.',
-    },
-  })
-
-  // opp3 (BioGen R&D): v2 — scaled-up proposal
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp3.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp3.id,
-      versionNumber: 2,
-      isFinal: true,
-      label: 'Full engagement proposal',
-      proposedBillings: 520000,
-      totalCost: 310000,
-      grossMarginPct: 40.38,
-      discountPremiumPct: 1,
-      effectiveRatePerHour: 86,
-      totalHours: 6000,
-      offshorePct: 88,
-      businessJustification: 'Post-discovery scope expanded. Margin holds at 40% with India-heavy team.',
-    },
-  })
-
-  // opp4 (Novo Nordisk WON): v2 — scope expansion after SOW signed
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp4.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp4.id,
-      versionNumber: 2,
-      isFinal: false,
-      label: 'Phase 2 scope expansion (in discussion)',
-      proposedBillings: 920000,
-      totalCost: 530000,
-      grossMarginPct: 42.39,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 95,
-      totalHours: 9600,
-      offshorePct: 85,
-      businessJustification: 'Client requested expanded scope post kick-off. Currently being scoped.',
-    },
-  })
-
-  // opp5 (AstraZeneca LOST): v2 — second attempt (deeply discounted, still lost)
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp5.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp5.id,
-      versionNumber: 2,
-      isFinal: false,
-      label: 'Second attempt — aggressive pricing',
-      proposedBillings: 560000,
-      totalCost: 380000,
-      grossMarginPct: 32.14,
-      discountPremiumPct: -8,
-      effectiveRatePerHour: 99,
-      totalHours: 5636,
-      offshorePct: 75,
-      businessJustification: 'Cut rates further to try to win. Margin below target but strategic value.',
-    },
-  })
-
-  // opp6 (Goldman Sachs LEAD): v2 — refined scope with US team reduction
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp6.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp6.id,
-      versionNumber: 2,
-      isFinal: false,
-      label: 'Refined — reduced US headcount',
-      proposedBillings: 1850000,
-      totalCost: 1050000,
-      grossMarginPct: 43.24,
-      discountPremiumPct: 0,
-      effectiveRatePerHour: 154,
-      totalHours: 12000,
-      offshorePct: 65,
-      businessJustification: 'Replaced 2 US SMs with India equivalents. Better margin, similar output.',
-    },
-  })
-
-  // opp6 (Goldman Sachs LEAD): v3 — capability-based pricing
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp6.id, versionNumber: 3 } },
-    update: {},
-    create: {
-      opportunityId: opp6.id,
-      versionNumber: 3,
-      isFinal: false,
-      label: 'Capability-based model (under review)',
-      proposedBillings: 2300000,
-      totalCost: 1280000,
-      grossMarginPct: 44.35,
-      discountPremiumPct: 5,
-      effectiveRatePerHour: 191,
-      totalHours: 12000,
-      offshorePct: 55,
-      businessJustification: 'Premium for IP/proprietary tooling we bring. Pending partner sign-off.',
-    },
-  })
-
-  // opp8 (Unilever QUALIFICATION): v2 — leaner model for RFP competitiveness
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp8.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp8.id,
-      versionNumber: 2,
-      isFinal: true,
-      label: 'Lean model — RFP final submission',
-      proposedBillings: 810000,
-      totalCost: 470000,
-      grossMarginPct: 41.98,
-      discountPremiumPct: -4,
-      effectiveRatePerHour: 101,
-      totalHours: 8000,
-      offshorePct: 85,
-      businessJustification: 'Further offshore shift to beat competitors on price while maintaining 42% margin.',
-    },
-  })
-
-  // opp9 (JPM APAC WON): v2 — milestone billing revision
-  await prisma.pricingVersion.upsert({
-    where: { opportunityId_versionNumber: { opportunityId: opp9.id, versionNumber: 2 } },
-    update: {},
-    create: {
-      opportunityId: opp9.id,
-      versionNumber: 2,
-      isFinal: false,
-      label: 'Milestone billing recut',
-      proposedBillings: 580000,
-      totalCost: 325000,
-      grossMarginPct: 43.97,
-      discountPremiumPct: 2,
-      effectiveRatePerHour: 145,
-      totalHours: 4000,
-      offshorePct: 65,
-      businessJustification: 'Rebased to milestone billing after client requested payment flexibility.',
-    },
-  })
-
   console.log('  ✓ pricing versions')
 
   // ── 6. STAFFING RESOURCES + WEEKLY HOURS ─────────────────────
@@ -912,7 +375,7 @@ async function main() {
   const sr1 = await prisma.staffingResource.create({
     data: {
       pricingVersionId: pv1v2.id,
-      rateCardId: rateCardMap['CONSULTANT_INDIA'] ?? null,
+      rateCardId: rateCardMap['CONSULTANT_INDIA'],
       resourceDesignation: JobRole.CONSULTANT,
       location: Location.INDIA,
       isBillable: true,
@@ -925,7 +388,7 @@ async function main() {
   const sr2 = await prisma.staffingResource.create({
     data: {
       pricingVersionId: pv1v2.id,
-      rateCardId: rateCardMap['SENIOR_CONSULTANT_INDIA'] ?? null,
+      rateCardId: rateCardMap['SENIOR_CONSULTANT_INDIA'],
       resourceDesignation: JobRole.SENIOR_CONSULTANT,
       location: Location.INDIA,
       isBillable: true,
@@ -938,7 +401,7 @@ async function main() {
   const sr3 = await prisma.staffingResource.create({
     data: {
       pricingVersionId: pv1v2.id,
-      rateCardId: rateCardMap['MANAGER_US'] ?? null,
+      rateCardId: rateCardMap['MANAGER_US'],
       resourceDesignation: JobRole.MANAGER,
       location: Location.US,
       isBillable: true,
@@ -966,7 +429,7 @@ async function main() {
   const sr4 = await prisma.staffingResource.create({
     data: {
       pricingVersionId: pv2.id,
-      rateCardId: rateCardMap['SENIOR_MANAGER_INDIA'] ?? null,
+      rateCardId: rateCardMap['SENIOR_MANAGER_INDIA'],
       resourceDesignation: JobRole.SENIOR_MANAGER,
       location: Location.INDIA,
       isBillable: true,
@@ -979,7 +442,7 @@ async function main() {
   const sr5 = await prisma.staffingResource.create({
     data: {
       pricingVersionId: pv2.id,
-      rateCardId: rateCardMap['DIRECTOR_US'] ?? null,
+      rateCardId: rateCardMap['DIRECTOR_US'],
       resourceDesignation: JobRole.DIRECTOR,
       location: Location.US,
       isBillable: true,
