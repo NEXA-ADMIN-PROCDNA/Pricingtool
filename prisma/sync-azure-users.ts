@@ -2,12 +2,12 @@
  * Pulls users from Microsoft Azure AD (via Graph API) and upserts them
  * into the Supabase `users` table with the correct UserRole.
  *
- * Only users whose Azure AD jobTitle maps to SEL, DIRECTOR, ED, or PARTNER
- * are synced. Everyone else is skipped with a warning.
+ * Only users whose Azure AD jobTitle maps to SEL, DIRECTOR, or ED are synced.
+ * PARTNER and unrecognised titles are skipped entirely.
  *
  * Usage:
  *   npx tsx prisma/sync-azure-users.ts
- *Everybody is SEL NOW, users basic given only.
+ *
  * Required env vars (in .env):
  *   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, DATABASE_URL
  */
@@ -101,9 +101,7 @@ async function main() {
   const azureUsers = await fetchAllAzureUsers(graphClient)
   console.log(`  Found ${azureUsers.length} total Azure AD users\n`)
 
-  // Track results for the role-assignment report
-  const synced:      { name: string; email: string; role: string; source: string }[] = []
-  const needsRole:   { name: string; email: string; jobTitle: string | null }[]       = []
+  const synced:  { name: string; email: string; role: string; source: string }[] = []
   let skipped = 0
 
   for (const azUser of azureUsers) {
@@ -129,52 +127,31 @@ async function main() {
 
     const role = mapTitleToRole(azUser.jobTitle)
 
-    if (role) {
-      // jobTitle was readable and mapped — upsert with correct role
-      await prisma.user.upsert({
-        where:  { email },
-        update: { name, role, kindeId: azUser.id, isActive: true },
-        create: { email, name, role, kindeId: azUser.id, isActive: true },
-      })
-      synced.push({ name, email, role, source: `jobTitle: "${azUser.jobTitle}"` })
-    } else {
-      // jobTitle missing or unrecognised — upsert as SEL (most restrictive default)
-      // and flag for manual role assignment
-      await prisma.user.upsert({
-        where:  { email },
-        update: { name, kindeId: azUser.id, isActive: true },
-        create: { email, name, role: 'SEL', kindeId: azUser.id, isActive: true },
-      })
-      needsRole.push({ name, email, jobTitle: azUser.jobTitle })
+    // Only sync BD staff — skip PARTNER and anyone with an unrecognised/missing title
+    if (!role || role === UserRole.PARTNER) {
+      skipped++
+      continue
     }
+
+    await prisma.user.upsert({
+      where:  { email },
+      update: { name, role, kindeId: azUser.id, isActive: true },
+      create: { email, name, role, kindeId: azUser.id, isActive: true },
+    })
+    synced.push({ name, email, role, source: `jobTitle: "${azUser.jobTitle}"` })
   }
 
   // ── Summary report ────────────────────────────────────────────────
   console.log('─'.repeat(70))
-  console.log(`✅  SYNCED WITH ROLE (${synced.length})`)
+  console.log(`✅  SYNCED (${synced.length})`)
   console.log('─'.repeat(70))
   for (const u of synced) {
     console.log(`  ${u.role.padEnd(10)} ${u.name.padEnd(30)} ${u.email}`)
     console.log(`             └─ ${u.source}`)
   }
 
-  if (needsRole.length > 0) {
-    console.log('\n' + '─'.repeat(70))
-    console.log(`⚠️   SYNCED AS SEL — NEEDS MANUAL ROLE ASSIGNMENT (${needsRole.length})`)
-    console.log('─'.repeat(70))
-    console.log('  jobTitle was null or unrecognised (User.ReadBasic.All likely blocked it).')
-    console.log('  Run the SQL below in Supabase SQL Editor to fix roles:\n')
-    for (const u of needsRole) {
-      console.log(`  -- ${u.name} (jobTitle: ${u.jobTitle ?? 'null'})`)
-      console.log(`  UPDATE procdna_database.users SET role = 'DIRECTOR' WHERE email = '${u.email}';\n`)
-    }
-  }
-
-  if (skipped > 0) {
-    console.log(`\nSkipped ${skipped} service accounts / guests.`)
-  }
-
-  console.log(`\nDone. Synced: ${synced.length + needsRole.length}  Skipped: ${skipped}`)
+  console.log(`\nSkipped ${skipped} (service accounts, guests, PARTNER, or unrecognised titles).`)
+  console.log(`Done. Synced: ${synced.length}`)
 }
 
 main()

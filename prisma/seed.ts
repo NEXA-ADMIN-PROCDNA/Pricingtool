@@ -12,6 +12,9 @@ import {
   JobRole,
   ApprovalStatus,
 } from '@prisma/client'
+import { ClientSecretCredential } from '@azure/identity'
+import { Client as GraphClient } from '@microsoft/microsoft-graph-client'
+import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
@@ -337,6 +340,8 @@ async function main() {
       starConnect: true,
       ownerId: sel1.id,
       coOwnerId: director1.id,
+      estimatedRevenue: 520000,
+      probability: 75,
       nextSteps: 'Send revised SOW by Friday',
       notes: 'Client is keen on offshore delivery. Margin target ≥ 35%.',
     },
@@ -1201,7 +1206,93 @@ async function main() {
   })
 
   console.log('  ✓ activity logs')
+
+  // ── 13. AZURE AD USERS (SEL / DIRECTOR / ED only) ─────────────
+  await syncAzureBDUsers()
+
   console.log('\n✅  Seed complete.')
+}
+
+// ── Azure AD sync helper ──────────────────────────────────────────
+const TITLE_TO_ROLE: Array<{ match: string; role: UserRole }> = [
+  { match: 'engagement director', role: UserRole.ED       },
+  { match: ' ed ',               role: UserRole.ED       },
+  { match: 'executive director', role: UserRole.ED       },
+  { match: 'director',           role: UserRole.DIRECTOR },
+  { match: 'sel',                role: UserRole.SEL      },
+  { match: 'senior engagement',  role: UserRole.SEL      },
+]
+
+function mapTitleToRole(jobTitle: string | null | undefined): UserRole | null {
+  if (!jobTitle) return null
+  const lower = jobTitle.toLowerCase()
+  for (const { match, role } of TITLE_TO_ROLE) {
+    if (lower.includes(match)) return role
+  }
+  return null
+}
+
+async function syncAzureBDUsers() {
+  const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET } = process.env
+
+  if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET) {
+    console.log('  ⚠️  Azure env vars missing — skipping Azure AD user sync.')
+    console.log('     Set AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET to enable it.')
+    return
+  }
+
+  const credential = new ClientSecretCredential(AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET)
+  const authProvider = new TokenCredentialAuthenticationProvider(credential, {
+    scopes: ['https://graph.microsoft.com/.default'],
+  })
+  const graphClient = GraphClient.initWithMiddleware({ authProvider })
+
+  console.log('\n  Fetching BD users from Azure AD …')
+
+  interface GraphUser {
+    id: string
+    displayName: string | null
+    mail: string | null
+    userPrincipalName: string | null
+    jobTitle: string | null
+  }
+
+  const allUsers: GraphUser[] = []
+  let url: string | undefined =
+    '/users?$select=id,displayName,mail,userPrincipalName,jobTitle&$top=999'
+
+  while (url) {
+    const page: { value: GraphUser[]; '@odata.nextLink'?: string } =
+      await graphClient.api(url).get()
+    allUsers.push(...page.value)
+    url = page['@odata.nextLink']
+      ? page['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '')
+      : undefined
+  }
+
+  let synced = 0
+  let skipped = 0
+
+  for (const azUser of allUsers) {
+    const email = azUser.mail ?? azUser.userPrincipalName
+    const name  = azUser.displayName
+
+    if (!email || !name?.trim()) { skipped++; continue }
+    if (!email.toLowerCase().endsWith('@procdna.com')) { skipped++; continue }
+    if (email.includes('#EXT#')) { skipped++; continue }
+
+    const role = mapTitleToRole(azUser.jobTitle)
+    if (!role || role === UserRole.PARTNER) { skipped++; continue }
+
+    await prisma.user.upsert({
+      where:  { email },
+      update: { name, role, kindeId: azUser.id, isActive: true },
+      create: { email, name, role, kindeId: azUser.id, isActive: true },
+    })
+    synced++
+  }
+
+  console.log(`  ✓ Azure AD users  (synced: ${synced}  skipped: ${skipped})`)
 }
 
 main()

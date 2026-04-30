@@ -46,11 +46,16 @@ export async function POST(req: NextRequest) {
       nextSteps,
       notes,
       starConnect,
+      estimatedRevenue,
+      probability,
     } = body
 
     if (!clientId || !opportunityName || !primaryLob || !ownerId || !startDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const parsedEstimatedRevenue = estimatedRevenue ? parseInt(String(estimatedRevenue), 10) : null
+    const parsedProbability      = probability      ? parseInt(String(probability),      10) : null
 
     const opportunityId = await nextOpportunityId()
 
@@ -59,16 +64,18 @@ export async function POST(req: NextRequest) {
         opportunityId,
         clientId,
         opportunityName,
-        opportunityType: (opportunityType as OpportunityType) ?? 'NEW',
-        primaryLob:      primaryLob as LineOfBusiness,
-        stage:           (stage as OpportunityStage) ?? 'LEAD',
+        opportunityType:  (opportunityType as OpportunityType) ?? 'NEW',
+        primaryLob:       primaryLob as LineOfBusiness,
+        stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,
-        coOwnerId:       coOwnerId || null,
-        startDate:       new Date(startDate),
-        endDate:         endDate ? new Date(endDate) : new Date(startDate),
-        nextSteps:       nextSteps || null,
-        notes:           notes || null,
-        starConnect:     starConnect === 'true' || starConnect === true,
+        coOwnerId:        coOwnerId || null,
+        startDate:        new Date(startDate),
+        endDate:          endDate ? new Date(endDate) : new Date(startDate),
+        nextSteps:        nextSteps || null,
+        notes:            notes || null,
+        starConnect:      starConnect === 'true' || starConnect === true,
+        estimatedRevenue: parsedEstimatedRevenue,
+        probability:      parsedProbability,
       },
     })
 

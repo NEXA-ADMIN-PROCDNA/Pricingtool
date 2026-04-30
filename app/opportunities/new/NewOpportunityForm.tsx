@@ -222,6 +222,45 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
               ))}
             </div>
           </div>
+
+          {/* Estimated Revenue */}
+          <div>
+            <Label text="Estimated Revenue ($)" />
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+              <input
+                name="estimatedRevenue"
+                type="number"
+                min={0}
+                step={1}
+                placeholder="e.g. 500000"
+                className={inputCls + ' pl-7'}
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-slate-400">
+              Used in pipeline if no final pricing exists. Weighted by probability below.
+            </p>
+          </div>
+
+          {/* Win Probability */}
+          <div>
+            <Label text="Win Probability (%)" />
+            <div className="relative">
+              <input
+                name="probability"
+                type="number"
+                min={1}
+                max={100}
+                step={1}
+                placeholder="e.g. 70"
+                className={inputCls + ' pr-8'}
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+            </div>
+            <p className="mt-1 text-[10px] text-slate-400">
+              1 – 100. Multiplied by estimated revenue for pipeline calculation.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -197,6 +197,8 @@ model Opportunity {
   status            OpportunityStatus @default(OPEN)
   stage             OpportunityStage  @default(LEAD)
   starConnect       Boolean           @default(false)
+  estimatedRevenue  Int?                              // user-entered pre-pricing revenue estimate
+  probability       Int?                              // win probability 1–100
   ownerId           String
   owner             User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
   coOwnerId         String?

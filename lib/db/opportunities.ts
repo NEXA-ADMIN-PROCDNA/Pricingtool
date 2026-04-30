@@ -68,28 +68,49 @@ export async function getOpportunityDetail(opportunityId: string) {
 
 // ✅ DASHBOARD STATS
 export async function getDashboardStats() {
-  const counts = await prisma.opportunity.groupBy({
-    by: ['status'],
-    _count: { _all: true },
-  })
+  const [counts, oppsForPipeline] = await Promise.all([
+    prisma.opportunity.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    }),
+    // Fetch all active opportunities with their final pricing to compute weighted revenue
+    prisma.opportunity.findMany({
+      where: { isActive: true },
+      select: {
+        estimatedRevenue: true,
+        probability:      true,
+        pricingVersions: {
+          where: { isFinal: true },
+          select: { proposedBillings: true },
+          take: 1,
+        },
+      },
+    }),
+  ])
 
-  const billing = await prisma.pricingVersion.aggregate({
-    where: { isFinal: true },
-    _sum: { proposedBillings: true },
-    _avg: { grossMarginPct: true },
-  })
+  // Weighted estimated revenue:
+  // - If final pricing exists → use proposedBillings
+  // - Else if estimatedRevenue + probability are set → estimatedRevenue × (probability / 100)
+  let estimatedRevenue = 0
+  for (const opp of oppsForPipeline) {
+    const finalBillings = opp.pricingVersions[0]?.proposedBillings
+    if (finalBillings != null) {
+      estimatedRevenue += Number(finalBillings)
+    } else if (opp.estimatedRevenue != null && opp.probability != null) {
+      estimatedRevenue += opp.estimatedRevenue * (opp.probability / 100)
+    }
+  }
 
   const byStatus = Object.fromEntries(
     counts.map(c => [c.status, c._count._all])
   )
 
   return {
-    total:        counts.reduce((s, c) => s + c._count._all, 0),
-    open:         byStatus['OPEN']      ?? 0,
-    won:          byStatus['WON']       ?? 0,
-    lost:         byStatus['LOST']      ?? 0,
-    abandoned:    byStatus['ABANDONED'] ?? 0,
-    totalPipeline: Number(billing._sum.proposedBillings ?? 0),
-    avgMargin:     Number(billing._avg.grossMarginPct   ?? 0),
+    total:            counts.reduce((s, c) => s + c._count._all, 0),
+    open:             byStatus['OPEN']      ?? 0,
+    won:              byStatus['WON']       ?? 0,
+    lost:             byStatus['LOST']      ?? 0,
+    abandoned:        byStatus['ABANDONED'] ?? 0,
+    estimatedRevenue,
   }
 }
