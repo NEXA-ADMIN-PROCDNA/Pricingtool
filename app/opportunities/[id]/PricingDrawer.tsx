@@ -1,8 +1,53 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 
 type Version = OpportunityDetail['pricingVersions'][number]
+
+type RateCardItem = { id: string; jobRole: string; location: string; costRatePerHour: number; billRatePerHour: number }
+type StaffRow = {
+  id: string
+  rateCardId: string | null
+  resourceDesignation: string
+  location: string
+  costRatePerHour: number | null
+  systemBillRatePerHour: number | null
+  effectiveBillRate: number | null
+  weeklyHours: { weekStartDate: string; hours: number }[]
+}
+
+type ComputedMetrics = {
+  totalHours: number
+  totalCost: number
+  proposedBillings: number
+  grossMargin: number
+  grossMarginPct: number
+  offshorePct: number
+  effectiveRatePerHour: number
+}
+
+function fmtRole(r: string) {
+  return r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function computeFromRows(rows: StaffRow[]): ComputedMetrics {
+  let totalHours = 0, totalCost = 0, proposedBillings = 0, indiaHours = 0
+  for (const row of rows) {
+    for (const wh of row.weeklyHours) {
+      const h = wh.hours
+      const bill = row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0
+      totalHours     += h
+      totalCost      += h * (row.costRatePerHour ?? 0)
+      proposedBillings += h * bill
+      if (row.location === 'INDIA') indiaHours += h
+    }
+  }
+  const grossMargin    = proposedBillings - totalCost
+  const grossMarginPct = proposedBillings > 0 ? (grossMargin / proposedBillings) * 100 : 0
+  const offshorePct    = totalHours > 0 ? (indiaHours / totalHours) * 100 : 0
+  const effectiveRatePerHour = totalHours > 0 ? proposedBillings / totalHours : 0
+  return { totalHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour }
+}
 
 const SUB_TABS = [
   'Basic Details',
@@ -76,6 +121,108 @@ export function PricingDrawer({
 }) {
   const [sub, setSub] = useState<SubTab>('Basic Details')
 
+  // ── Efforts state ─────────────────────────────────────────────
+  const toStaffRow = (sr: any): StaffRow => ({
+    id: sr.id,
+    rateCardId: sr.rateCardId ?? null,
+    resourceDesignation: sr.resourceDesignation,
+    location: sr.location,
+    costRatePerHour: sr.costRatePerHour != null ? Number(sr.costRatePerHour) : null,
+    systemBillRatePerHour: sr.systemBillRatePerHour != null ? Number(sr.systemBillRatePerHour) : null,
+    effectiveBillRate: sr.effectiveBillRate != null ? Number(sr.effectiveBillRate) : null,
+    weeklyHours: (sr.weeklyHours ?? []).map((w: any) => ({
+      weekStartDate: new Date(w.weekStartDate).toISOString().slice(0, 10),
+      hours: Number(w.hours),
+    })),
+  })
+
+  const [staffRows, setStaffRows] = useState<StaffRow[]>(() =>
+    version.staffingResources.map(toStaffRow)
+  )
+  const [versionMetrics, setVersionMetrics] = useState<ComputedMetrics>(() =>
+    computeFromRows(version.staffingResources.map(toStaffRow))
+  )
+  const [allRateCards, setAllRateCards] = useState<RateCardItem[]>([])
+  const [showAddRow, setShowAddRow] = useState(false)
+  const [editCell, setEditCell] = useState<{ srId: string; wk: string } | null>(null)
+  const [editVal, setEditVal] = useState('')
+
+  // ── Patch PricingVersion with computed metrics ────────────────
+  const patchVersion = useCallback(async (rows: StaffRow[]) => {
+    const m = computeFromRows(rows)
+    setVersionMetrics(m)
+    await fetch(`/api/pricing-versions/${version.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        totalHours:           m.totalHours,
+        totalCost:            m.totalCost,
+        proposedBillings:     m.proposedBillings,
+        grossMarginPct:       m.grossMarginPct,
+        offshorePct:          m.offshorePct,
+        effectiveRatePerHour: m.effectiveRatePerHour,
+      }),
+    })
+  }, [version.id])
+
+  useEffect(() => {
+    if (sub === 'Efforts' && allRateCards.length === 0) {
+      fetch('/api/rate-cards').then(r => r.json()).then(setAllRateCards).catch(() => {})
+    }
+  }, [sub, allRateCards.length])
+
+  const addRow = useCallback(async (rc: RateCardItem) => {
+    const res = await fetch(`/api/pricing-versions/${version.id}/staffing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rateCardId: rc.id }),
+    })
+    if (!res.ok) return
+    const sr = await res.json()
+    const newRow: StaffRow = {
+      id: sr.id,
+      rateCardId: rc.id,
+      resourceDesignation: rc.jobRole,
+      location: rc.location,
+      costRatePerHour: rc.costRatePerHour,
+      systemBillRatePerHour: rc.billRatePerHour,
+      effectiveBillRate: null,
+      weeklyHours: [],
+    }
+    const newRows = [...staffRows, newRow]
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const removeRow = useCallback(async (srId: string) => {
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, { method: 'DELETE' })
+    const newRows = staffRows.filter(r => r.id !== srId)
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const commitHours = useCallback(async (srId: string, wk: string, val: string) => {
+    const hours = Math.max(0, parseFloat(val) || 0)
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}/hours`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekStartDate: wk, hours }),
+    })
+    const newRows = staffRows.map(r => {
+      if (r.id !== srId) return r
+      const existing = r.weeklyHours.find(w => w.weekStartDate === wk)
+      return {
+        ...r,
+        weeklyHours: existing
+          ? r.weeklyHours.map(w => w.weekStartDate === wk ? { ...w, hours } : w)
+          : [...r.weeklyHours, { weekStartDate: wk, hours }],
+      }
+    })
+    setStaffRows(newRows)
+    setEditCell(null)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -144,9 +291,9 @@ export function PricingDrawer({
                 >
                   {t}
                   {soon && <span className="ml-1 text-[9px] text-slate-300">(Coming Soon)</span>}
-                  {t === 'Efforts' && version.staffingResources.length > 0 && (
+                  {t === 'Efforts' && staffRows.length > 0 && (
                     <span className="ml-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5">
-                      {version.staffingResources.length}
+                      {staffRows.length}
                     </span>
                   )}
                 </button>
@@ -175,23 +322,30 @@ export function PricingDrawer({
                   </dl>
                 </div>
 
-                {/* Pricing metrics */}
+                {/* Pricing metrics — live-updated from Efforts */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                  <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-slate-500">Pricing Metrics</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Pricing Metrics</p>
+                    {versionMetrics.totalHours > 0 && (
+                      <span className="rounded-full bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[9px] font-semibold text-indigo-600">
+                        Auto-computed from Efforts
+                      </span>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     {[
-                      { label: 'Revenue Share',      value: version.revenueSharePct    != null ? `${Number(version.revenueSharePct).toFixed(2)}%`    : '!' },
-                      { label: 'Proposed Billings',  value: fmt(version.proposedBillings != null ? Number(version.proposedBillings) : null), hi: true },
-                      { label: 'Total Cost',         value: fmt(version.totalCost        != null ? Number(version.totalCost)        : null) },
-                      { label: 'Gross Margin %',     value: version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`     : '!', hi: true },
-                      { label: 'Discount / Premium', value: version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%` : '!' },
-                      { label: 'Eff. Rate / Hour',   value: fmt(version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour) : null) },
-                      { label: 'Total Hours',        value: version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`  : '!' },
-                      { label: 'Offshore %',         value: version.offshorePct         != null ? `${Number(version.offshorePct).toFixed(0)}%`        : '!' },
+                      { label: 'Revenue Share',      value: version.revenueSharePct != null ? `${Number(version.revenueSharePct).toFixed(2)}%` : '—' },
+                      { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings : (version.proposedBillings != null ? Number(version.proposedBillings) : null)), hi: true },
+                      { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost        : (version.totalCost        != null ? Number(version.totalCost)        : null)) },
+                      { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : (version.grossMarginPct != null ? `${Number(version.grossMarginPct).toFixed(1)}%` : '—'), hi: true },
+                      { label: 'Discount / Premium', value: version.discountPremiumPct != null ? `${Number(version.discountPremiumPct).toFixed(1)}%` : '—' },
+                      { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour) : null)) },
+                      { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h` : (version.totalHours != null ? `${Number(version.totalHours).toLocaleString()} h` : '—') },
+                      { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%` : (version.offshorePct != null ? `${Number(version.offshorePct).toFixed(0)}%` : '—') },
                     ].map(({ label, value, hi }) => (
                       <div key={label} className={`rounded-xl p-3 ${hi ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50'}`}>
                         <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                        <p className={`text-base font-bold ${hi ? 'text-indigo-700' : 'text-slate-800'} ${value === '!' ? 'text-red-400' : ''}`}>
+                        <p className={`text-base font-bold ${hi ? 'text-indigo-700' : 'text-slate-800'}`}>
                           {value}
                         </p>
                       </div>
@@ -241,119 +395,214 @@ export function PricingDrawer({
             {/* ── Efforts ──────────────────────────────── */}
             {sub === 'Efforts' && (
               <div className="space-y-4">
-                {version.staffingResources.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-                    <p className="text-slate-400 text-sm">No staffing resources added.</p>
+
+                {/* Hint */}
+                <p className="text-xs text-slate-400">
+                  Click any hour cell to edit. Use the + row at the bottom to add a resource.
+                </p>
+
+                {/* Live metrics banner */}
+                {staffRows.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      { label: 'Total Hours',     value: `${versionMetrics.totalHours.toLocaleString()} h`, color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
+                      { label: 'Employee Cost',   value: fmt(versionMetrics.totalCost),                     color: 'bg-slate-50 border-slate-200 text-slate-800' },
+                      { label: 'Implied Revenue', value: fmt(versionMetrics.proposedBillings),              color: 'bg-slate-50 border-slate-200 text-slate-800' },
+                      { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '—', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className={`rounded-xl border px-4 py-3 ${color}`}>
+                        <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-0.5">{label}</p>
+                        <p className="text-base font-bold">{value}</p>
+                      </div>
+                    ))}
                   </div>
-                ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="text-sm">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-0 bg-slate-50 z-10 min-w-[200px] whitespace-nowrap">
-                              Role
-                            </th>
-                            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[80px]">
-                              Location
-                            </th>
-                            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
-                              Cost Rate
-                            </th>
-                            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
-                              Bill Rate
-                            </th>
-                            {weeks.map((_, i) => (
-                              <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[48px]">
-                                W{i + 1}
-                              </th>
-                            ))}
-                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap">
-                              Total Hrs
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {version.staffingResources.map(sr => {
-                            const hoursMap: Record<string, number> = {}
-                            sr.weeklyHours.forEach((w: any) => {
-                              hoursMap[new Date(w.weekStartDate).toISOString().slice(0, 10)] = Number(w.hours)
-                            })
-                            const total = weeks.reduce((s, w) => s + (hoursMap[weekKey(w)] ?? 0), 0)
+                )}
 
-                            return (
-                              <tr key={sr.id} className="hover:bg-slate-50/50">
-                                <td className="px-4 py-3 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-100">
-                                  {sr.resourceDesignation.replace(/_/g, ' ')}
-                                </td>
-                                <td className="px-3 py-3 text-slate-500 whitespace-nowrap">
-                                  {sr.location === 'INDIA' ? 'India' : 'US'}
-                                </td>
-                                <td className="px-3 py-3 text-slate-700 whitespace-nowrap">
-                                  {sr.costRatePerHour != null ? `$${Number(sr.costRatePerHour)}` : '!'}
-                                </td>
-                                <td className="px-3 py-3 text-slate-700 whitespace-nowrap">
-                                  {sr.effectiveBillRate != null
-                                    ? `$${Number(sr.effectiveBillRate)}`
-                                    : sr.systemBillRatePerHour != null
-                                      ? `$${Number(sr.systemBillRatePerHour)}`
-                                      : '!'}
-                                </td>
-                                {weeks.map((w, i) => {
-                                  const h = hoursMap[weekKey(w)] ?? 0
-                                  return (
-                                    <td key={i} className="px-1 py-3 text-center">
-                                      {h > 0 ? (
-                                        <span className="inline-flex h-7 min-w-[32px] items-center justify-center rounded-full bg-indigo-50 px-2 text-xs font-semibold text-indigo-700">
-                                          {h}
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-300 text-xs">0</span>
-                                      )}
-                                    </td>
-                                  )
-                                })}
-                                <td className="px-4 py-3 text-right font-bold text-slate-800 whitespace-nowrap">
-                                  {total > 0 ? total : '—'}
-                                </td>
-                              </tr>
-                            )
-                          })}
+                {/* Staffing table — always shown */}
+                <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-0 bg-slate-50 z-20 min-w-[190px] whitespace-nowrap border-r border-slate-200">
+                            Role
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[190px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
+                            Location
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[260px] bg-slate-50 z-20 min-w-[88px] whitespace-nowrap border-r border-slate-200">
+                            Cost Rate
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
+                            Bill Rate
+                          </th>
+                          {weeks.map((_, i) => (
+                            <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[52px]">
+                              W{i + 1}
+                            </th>
+                          ))}
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[100px]">
+                            Total Cost
+                          </th>
+                          <th className="px-2 py-3 w-8" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {staffRows.map(sr => {
+                          const hoursMap: Record<string, number> = {}
+                          sr.weeklyHours.forEach(w => { hoursMap[w.weekStartDate] = w.hours })
+                          const totalHrs = weeks.reduce((s, w) => s + (hoursMap[weekKey(w)] ?? 0), 0)
+                          const rowCost  = totalHrs * (sr.costRatePerHour ?? 0)
+                          const billRate = sr.effectiveBillRate ?? sr.systemBillRatePerHour
 
-                          {/* Total row */}
+                          return (
+                            <tr key={sr.id} className="hover:bg-slate-50/50 group">
+                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                {fmtRole(sr.resourceDesignation)}
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[190px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                {sr.location === 'INDIA' ? 'India' : 'US'}
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap sticky left-[260px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
+                                {billRate != null ? `$${billRate}` : '—'}
+                              </td>
+                              {weeks.map((w, i) => {
+                                const wk = weekKey(w)
+                                const h = hoursMap[wk] ?? 0
+                                const isEditing = editCell?.srId === sr.id && editCell?.wk === wk
+                                return (
+                                  <td key={i} className="px-1 py-2 text-center">
+                                    {isEditing ? (
+                                      <input
+                                        autoFocus
+                                        type="number"
+                                        min={0}
+                                        step={1}
+                                        value={editVal}
+                                        onChange={e => setEditVal(e.target.value)}
+                                        onBlur={() => commitHours(sr.id, wk, editVal)}
+                                        onKeyDown={e => {
+                                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                          if (e.key === 'Escape') setEditCell(null)
+                                        }}
+                                        className="w-14 text-center text-xs rounded-lg border border-indigo-400 px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                      />
+                                    ) : (
+                                      <span
+                                        className="cursor-pointer"
+                                        onClick={() => { setEditCell({ srId: sr.id, wk }); setEditVal(String(h || '')) }}
+                                      >
+                                        {h > 0 ? (
+                                          <span className="inline-flex h-7 min-w-[32px] items-center justify-center rounded-full bg-indigo-50 px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100">
+                                            {h}
+                                          </span>
+                                        ) : (
+                                          <span className="text-slate-300 text-xs hover:text-slate-400">·</span>
+                                        )}
+                                      </span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                              <td className="px-4 py-2.5 text-right font-semibold text-slate-800 whitespace-nowrap">
+                                {rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">—</span>}
+                              </td>
+                              <td className="px-2 py-2.5">
+                                <button
+                                  onClick={() => removeRow(sr.id)}
+                                  title="Remove row"
+                                  className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                  </svg>
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+
+                        {/* Total row — only when there are rows */}
+                        {staffRows.length > 0 && (
                           <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
-                            <td className="px-4 py-3 text-slate-800 sticky left-0 bg-slate-50 z-10 border-r border-slate-200">
-                              Total
-                            </td>
-                            <td /><td /><td />
+                            <td className="px-4 py-3 text-slate-800 sticky left-0 bg-slate-50 z-10 border-r border-slate-200">Total</td>
+                            <td className="sticky left-[190px] bg-slate-50 z-10 border-r border-slate-200" />
+                            <td className="sticky left-[260px] bg-slate-50 z-10 border-r border-slate-200" />
+                            <td />
                             {weeks.map((w, i) => {
-                              const weekTotal = version.staffingResources.reduce((s, sr) => {
+                              const wt = staffRows.reduce((s, sr) => {
                                 const hm: Record<string, number> = {}
-                                sr.weeklyHours.forEach((wh: any) => {
-                                  hm[new Date(wh.weekStartDate).toISOString().slice(0, 10)] = Number(wh.hours)
-                                })
+                                sr.weeklyHours.forEach(wh => { hm[wh.weekStartDate] = wh.hours })
                                 return s + (hm[weekKey(w)] ?? 0)
                               }, 0)
                               return (
                                 <td key={i} className="px-1 py-3 text-center font-bold text-slate-700">
-                                  {weekTotal > 0 ? weekTotal : (
-                                    <span className="font-normal text-slate-300 text-xs">0</span>
-                                  )}
+                                  {wt > 0 ? wt : <span className="font-normal text-slate-300 text-xs">·</span>}
                                 </td>
                               )
                             })}
-                            <td className="px-4 py-3 text-right font-bold text-indigo-600">
-                              {version.staffingResources.reduce(
-                                (s, sr) => s + sr.weeklyHours.reduce((ws: number, w: any) => ws + Number(w.hours), 0),
-                                0
-                              )}
+                            <td className="px-4 py-3 text-right font-bold text-indigo-700">
+                              {fmt(versionMetrics.totalCost)}
                             </td>
+                            <td />
                           </tr>
-                        </tbody>
-                      </table>
-                    </div>
+                        )}
+
+                        {/* Add resource row */}
+                        <tr className="border-t border-dashed border-slate-200 bg-white">
+                          {showAddRow ? (
+                            <>
+                              <td colSpan={4} className="px-4 py-2.5 sticky left-0 bg-white z-10">
+                                <select
+                                  autoFocus
+                                  className="w-full text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                  defaultValue=""
+                                  onChange={e => {
+                                    const rc = allRateCards.find(r => r.id === e.target.value)
+                                    if (rc) { addRow(rc); setShowAddRow(false) }
+                                  }}
+                                >
+                                  <option value="" disabled>Select a role…</option>
+                                  {allRateCards
+                                    .filter(rc => !staffRows.some(r => r.rateCardId === rc.id))
+                                    .map(rc => (
+                                      <option key={rc.id} value={rc.id}>
+                                        {fmtRole(rc.jobRole)} — {rc.location === 'INDIA' ? 'India' : 'US'} · ${rc.costRatePerHour}/hr
+                                      </option>
+                                    ))
+                                  }
+                                </select>
+                              </td>
+                              <td colSpan={weeks.length + 2} className="px-4 py-2.5">
+                                <button
+                                  onClick={() => setShowAddRow(false)}
+                                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </td>
+                            </>
+                          ) : (
+                            <td colSpan={4 + weeks.length + 2} className="px-4 py-2.5">
+                              <button
+                                onClick={() => setShowAddRow(true)}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+                              >
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-indigo-300 text-indigo-400 text-sm font-bold leading-none">
+                                  +
+                                </span>
+                                Add Resource
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                )}
+                </div>
               </div>
             )}
 

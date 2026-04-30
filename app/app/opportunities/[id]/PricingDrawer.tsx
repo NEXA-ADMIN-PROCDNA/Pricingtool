@@ -424,13 +424,13 @@ export function PricingDrawer({
                     <table className="text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-0 bg-slate-50 z-10 min-w-[200px] whitespace-nowrap">
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-0 bg-slate-50 z-20 min-w-[190px] whitespace-nowrap border-r border-slate-200">
                             Role
                           </th>
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[75px]">
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[190px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
                             Location
                           </th>
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[260px] bg-slate-50 z-20 min-w-[88px] whitespace-nowrap border-r border-slate-200">
                             Cost Rate
                           </th>
                           <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
@@ -457,13 +457,13 @@ export function PricingDrawer({
 
                           return (
                             <tr key={sr.id} className="hover:bg-slate-50/50 group">
-                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-100 group-hover:bg-slate-50/50">
+                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 {fmtRole(sr.resourceDesignation)}
                               </td>
-                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[190px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 {sr.location === 'INDIA' ? 'India' : 'US'}
                               </td>
-                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
+                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap sticky left-[260px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
                               </td>
                               <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
@@ -513,10 +513,11 @@ export function PricingDrawer({
                               <td className="px-2 py-2.5">
                                 <button
                                   onClick={() => removeRow(sr.id)}
-                                  className="opacity-0 group-hover:opacity-100 rounded-lg p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                  title="Remove row"
+                                  className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
                                 >
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
                                   </svg>
                                 </button>
                               </td>
@@ -528,7 +529,9 @@ export function PricingDrawer({
                         {staffRows.length > 0 && (
                           <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
                             <td className="px-4 py-3 text-slate-800 sticky left-0 bg-slate-50 z-10 border-r border-slate-200">Total</td>
-                            <td /><td /><td />
+                            <td className="sticky left-[190px] bg-slate-50 z-10 border-r border-slate-200" />
+                            <td className="sticky left-[260px] bg-slate-50 z-10 border-r border-slate-200" />
+                            <td />
                             {weeks.map((w, i) => {
                               const wt = staffRows.reduce((s, sr) => {
                                 const hm: Record<string, number> = {}
