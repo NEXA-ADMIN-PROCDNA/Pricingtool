@@ -88,17 +88,13 @@ export async function getDashboardStats() {
     }),
   ])
 
-  // Weighted estimated revenue:
-  // - If final pricing exists → use proposedBillings
-  // - Else if estimatedRevenue + probability are set → estimatedRevenue × (probability / 100)
   let estimatedRevenue = 0
+  let weightedRevenue  = 0
   for (const opp of oppsForPipeline) {
     const finalBillings = opp.pricingVersions[0]?.proposedBillings
-    if (finalBillings != null) {
-      estimatedRevenue += Number(finalBillings)
-    } else if (opp.estimatedRevenue != null && opp.probability != null) {
-      estimatedRevenue += opp.estimatedRevenue * (opp.probability / 100)
-    }
+    const raw = finalBillings != null ? Number(finalBillings) : (opp.estimatedRevenue ?? 0)
+    estimatedRevenue += raw
+    weightedRevenue  += raw * ((opp.probability ?? 100) / 100)
   }
 
   const byStatus = Object.fromEntries(
@@ -112,5 +108,6 @@ export async function getDashboardStats() {
     lost:             byStatus['LOST']      ?? 0,
     abandoned:        byStatus['ABANDONED'] ?? 0,
     estimatedRevenue,
+    weightedRevenue,
   }
 }

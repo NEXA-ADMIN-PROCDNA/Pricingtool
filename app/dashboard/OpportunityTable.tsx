@@ -23,7 +23,7 @@ function fmtDate(d: string | Date | null | undefined) {
 
 const HEADERS = [
   'ID', 'Client', 'Project Name', 'Creator', 'Co-owner',
-  'Start', 'End', 'Status', 'Next Steps', '💬', 'Others',
+  'Start', 'End', 'Status', 'Next Steps', '💬Comments', 'Others',
 ]
 
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
