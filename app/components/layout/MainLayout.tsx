@@ -19,7 +19,7 @@ export function MainLayout({
             {action}
           </header>
         )}
-        <main className="flex flex-1 flex-col overflow-hidden px-8 py-6">{children}</main>
+        <main className="flex-1 min-h-0 overflow-y-auto px-8 py-6">{children}</main>
       </div>
     </div>
   )

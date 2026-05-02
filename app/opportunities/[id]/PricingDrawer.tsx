@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 
 type Version = OpportunityDetail['pricingVersions'][number]
@@ -13,6 +13,7 @@ type StaffRow = {
   costRatePerHour: number | null
   systemBillRatePerHour: number | null
   effectiveBillRate: number | null
+  utilization: number | null
   weeklyHours: { weekStartDate: string; hours: number }[]
 }
 
@@ -130,6 +131,7 @@ export function PricingDrawer({
     costRatePerHour: sr.costRatePerHour != null ? Number(sr.costRatePerHour) : null,
     systemBillRatePerHour: sr.systemBillRatePerHour != null ? Number(sr.systemBillRatePerHour) : null,
     effectiveBillRate: sr.effectiveBillRate != null ? Number(sr.effectiveBillRate) : null,
+    utilization: sr.utilization != null ? Number(sr.utilization) : null,
     weeklyHours: (sr.weeklyHours ?? []).map((w: any) => ({
       weekStartDate: new Date(w.weekStartDate).toISOString().slice(0, 10),
       hours: Number(w.hours),
@@ -187,6 +189,7 @@ export function PricingDrawer({
       costRatePerHour: rc.costRatePerHour,
       systemBillRatePerHour: rc.billRatePerHour,
       effectiveBillRate: null,
+      utilization: null,
       weeklyHours: [],
     }
     const newRows = [...staffRows, newRow]
@@ -223,13 +226,43 @@ export function PricingDrawer({
     await patchVersion(newRows)
   }, [version.id, staffRows, patchVersion])
 
+  const weeks = useMemo(
+    () => getWeekColumns(opp.startDate, opp.endDate),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [String(opp.startDate), String(opp.endDate)]
+  )
+
+  const applyUtilization = useCallback(async (srId: string, util: number | null) => {
+    const hoursPerWeek = util != null ? Math.round((util / 100) * 40) : 0
+    const weekEntries = util != null
+      ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+      : []
+
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ utilization: util, weekEntries }),
+    })
+
+    const newRows = staffRows.map(r => {
+      if (r.id !== srId) return r
+      return {
+        ...r,
+        utilization: util,
+        weeklyHours: util != null
+          ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+          : r.weeklyHours,
+      }
+    })
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, weeks, patchVersion])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-
-  const weeks = getWeekColumns(opp.startDate, opp.endDate)
 
   return (
     <>
@@ -436,6 +469,9 @@ export function PricingDrawer({
                           <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
                             Bill Rate
                           </th>
+                          <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[72px]">
+                            Util %
+                          </th>
                           {weeks.map((_, i) => (
                             <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[52px]">
                               W{i + 1}
@@ -468,6 +504,23 @@ export function PricingDrawer({
                               </td>
                               <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
                                 {billRate != null ? `$${billRate}` : '—'}
+                              </td>
+                              <td className="px-2 py-2 text-center">
+                                <input
+                                  key={`${sr.id}-util-${sr.utilization}`}
+                                  type="number"
+                                  min={1}
+                                  max={100}
+                                  defaultValue={sr.utilization ?? ''}
+                                  placeholder="—"
+                                  onBlur={e => {
+                                    const raw = e.target.value.trim()
+                                    const val = raw === '' ? null : Math.min(100, Math.max(1, parseInt(raw)))
+                                    if (val !== sr.utilization) applyUtilization(sr.id, val)
+                                  }}
+                                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                                  className="w-14 text-center text-xs rounded-lg border border-slate-200 px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                                />
                               </td>
                               {weeks.map((w, i) => {
                                 const wk = weekKey(w)
@@ -532,6 +585,7 @@ export function PricingDrawer({
                             <td className="sticky left-[190px] bg-slate-50 z-10 border-r border-slate-200" />
                             <td className="sticky left-[260px] bg-slate-50 z-10 border-r border-slate-200" />
                             <td />
+                            <td />
                             {weeks.map((w, i) => {
                               const wt = staffRows.reduce((s, sr) => {
                                 const hm: Record<string, number> = {}
@@ -555,7 +609,7 @@ export function PricingDrawer({
                         <tr className="border-t border-dashed border-slate-200 bg-white">
                           {showAddRow ? (
                             <>
-                              <td colSpan={4} className="px-4 py-2.5 sticky left-0 bg-white z-10">
+                              <td colSpan={5} className="px-4 py-2.5 sticky left-0 bg-white z-10">
                                 <select
                                   autoFocus
                                   className="w-full text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
@@ -586,7 +640,7 @@ export function PricingDrawer({
                               </td>
                             </>
                           ) : (
-                            <td colSpan={4 + weeks.length + 2} className="px-4 py-2.5">
+                            <td colSpan={5 + weeks.length + 2} className="px-4 py-2.5">
                               <button
                                 onClick={() => setShowAddRow(true)}
                                 className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"

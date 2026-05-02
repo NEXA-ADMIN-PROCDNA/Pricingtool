@@ -1,7 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { LineOfBusiness, OpportunityStage } from '@prisma/client'
+import { LineOfBusiness } from '@prisma/client'
 
 type POC    = { id: string; name: string; email: string | null; jobTitle: string | null }
 type Client = {
@@ -19,14 +19,6 @@ const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
   { value: 'OTHERS',    label: 'Others'            },
 ]
 
-const STAGE_OPTIONS: { value: OpportunityStage; label: string }[] = [
-  { value: 'LEAD',          label: 'Lead'          },
-  { value: 'QUALIFICATION', label: 'Qualification' },
-  { value: 'PROPOSAL',      label: 'Proposal'      },
-  { value: 'SOW_SUBMITTED', label: 'SOW Submitted' },
-  { value: 'SOW_SIGNED',    label: 'SOW Signed'    },
-  { value: 'PO_RECEIVED',   label: 'PO Received'   },
-]
 
 function Label({ text, required }: { text: string; required?: boolean }) {
   return (
@@ -186,15 +178,6 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
             <select name="primaryLob" required className={inputCls}>
               <option value="">Select LOB…</option>
               {LOB_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <Label text="Stage" />
-            <select name="stage" className={inputCls}>
-              {STAGE_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>

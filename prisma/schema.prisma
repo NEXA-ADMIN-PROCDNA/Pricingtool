@@ -47,18 +47,18 @@ enum OpportunityStatus {
   ARCHIVED
 }
 
-// Stage drives status transitions:
-// LEAD → QUALIFICATION → PROPOSAL → SOW_SUBMITTED → SOW_SIGNED
-// → PO_RECEIVED → CLOSED_WON | CLOSED_LOST
+// Stage drives the pipeline workflow:
+// LEAD → PRICE_LINKING_PENDING → APPROVAL_PENDING → STATUS_CHANGE_PENDING
+//   → (Won) SOW_PENDING → PO_PENDING → TO_BE_ARCHIVED
+//   → (Lost / Abandoned) — captured in OpportunityStatus
 enum OpportunityStage {
   LEAD
-  QUALIFICATION
-  PROPOSAL
-  SOW_SUBMITTED
-  SOW_SIGNED
-  PO_RECEIVED
-  CLOSED_WON
-  CLOSED_LOST
+  PRICE_LINKING_PENDING
+  APPROVAL_PENDING
+  STATUS_CHANGE_PENDING
+  SOW_PENDING
+  PO_PENDING
+  TO_BE_ARCHIVED
 }
 
 // [Q1] 2 fixed locations — enum is correct
@@ -100,6 +100,12 @@ enum NotificationType {
   PRICING_UPDATED
 }
 
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 
 // ───────────────────────────────────────────────────────────────
 // USER
@@ -127,8 +133,10 @@ model User {
   approvalsGiven        ApprovalRequest[] @relation("Approver")
   comments              Comment[]
   activityLogs          ActivityLog[]
-  clientsCreated        Client[]
-  rateCardsIngested     RateCard[]
+  clientsCreated          Client[]
+  rateCardsIngested       RateCard[]
+  clientRequestsMade      ClientRequest[] @relation("RequestedBy")
+  clientRequestsReviewed  ClientRequest[] @relation("ReviewedBy")
 
   @@map("users")
 }
@@ -170,6 +178,25 @@ model ClientPOC {
   jobTitle String?
 
   @@map("client_pocs")
+}
+
+model ClientRequest {
+  id             String        @id @default(cuid())
+  name           String
+  businessUnit   String?
+  industry       String?
+  region         String?
+  notes          String?
+  status         RequestStatus @default(PENDING)
+  requestedById  String
+  requestedBy    User          @relation("RequestedBy", fields: [requestedById], references: [id])
+  reviewedById   String?
+  reviewedBy     User?         @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  @@map("client_requests")
 }
 
 
@@ -307,6 +334,7 @@ model StaffingResource {
   discountPremiumPct     Decimal?       @db.Decimal(8, 4)
   effectiveBillRate      Decimal?       @db.Decimal(10, 2)  // manual if set, else system
   costRatePerHour        Decimal?       @db.Decimal(10, 2)
+  utilization            Int?                                // 1–100, drives auto-fill of 40 h/week
 
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt @db.Timestamptz(3)
