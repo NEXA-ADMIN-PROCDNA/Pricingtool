@@ -1,14 +1,13 @@
 import { OpportunityStage } from '@prisma/client'
 
 const config: Record<OpportunityStage, { label: string; classes: string }> = {
-  LEAD:          { label: 'Lead',          classes: 'bg-slate-100 text-slate-600'    },
-  QUALIFICATION: { label: 'Qualification', classes: 'bg-yellow-50 text-yellow-700'  },
-  PROPOSAL:      { label: 'Proposal',      classes: 'bg-blue-50 text-blue-700'      },
-  SOW_SUBMITTED: { label: 'SOW Submitted', classes: 'bg-orange-50 text-orange-700'  },
-  SOW_SIGNED:    { label: 'SOW Signed',    classes: 'bg-purple-50 text-purple-700'  },
-  PO_RECEIVED:   { label: 'PO Received',   classes: 'bg-indigo-50 text-indigo-700'  },
-  CLOSED_WON:    { label: 'Closed Won',    classes: 'bg-emerald-50 text-emerald-700'},
-  CLOSED_LOST:   { label: 'Closed Lost',   classes: 'bg-red-50 text-red-600'        },
+  LEAD:                  { label: 'Lead',                classes: 'bg-slate-100 text-slate-600'    },
+  PRICE_LINKING_PENDING: { label: 'Price Linking',       classes: 'bg-blue-50 text-blue-700'       },
+  APPROVAL_PENDING:      { label: 'Approval Pending',    classes: 'bg-amber-50 text-amber-700'     },
+  STATUS_CHANGE_PENDING: { label: 'Status Pending',      classes: 'bg-orange-50 text-orange-700'   },
+  SOW_PENDING:           { label: 'SOW Pending',         classes: 'bg-violet-50 text-violet-700'   },
+  PO_PENDING:            { label: 'PO Pending',          classes: 'bg-indigo-50 text-indigo-700'   },
+  TO_BE_ARCHIVED:        { label: 'Archiving',           classes: 'bg-emerald-50 text-emerald-700' },
 }
 
 export function StageBadge({ stage }: { stage: OpportunityStage }) {
@@ -20,21 +19,18 @@ export function StageBadge({ stage }: { stage: OpportunityStage }) {
   )
 }
 
-// Ordered stages for progress bar
+// Ordered stages for progress bar (linear happy path)
 export const STAGE_ORDER: OpportunityStage[] = [
-  'LEAD', 'QUALIFICATION', 'PROPOSAL', 'SOW_SUBMITTED',
-  'SOW_SIGNED', 'PO_RECEIVED', 'CLOSED_WON',
+  'LEAD',
+  'PRICE_LINKING_PENDING',
+  'APPROVAL_PENDING',
+  'STATUS_CHANGE_PENDING',
+  'SOW_PENDING',
+  'PO_PENDING',
+  'TO_BE_ARCHIVED',
 ]
 
 export function StageProgress({ stage }: { stage: OpportunityStage }) {
-  if (stage === 'CLOSED_LOST') {
-    return (
-      <div className="flex items-center gap-2">
-        <div className="h-1.5 flex-1 rounded-full bg-red-200" />
-        <span className="text-xs text-red-600 font-medium">Closed Lost</span>
-      </div>
-    )
-  }
   const idx = STAGE_ORDER.indexOf(stage)
   const pct = idx === -1 ? 0 : Math.round(((idx + 1) / STAGE_ORDER.length) * 100)
   return (

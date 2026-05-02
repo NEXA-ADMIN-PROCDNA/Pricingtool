@@ -140,9 +140,12 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     <StatusBadge status={row.status} />
                   </td>
 
-                  {/* Next Steps */}
-                  <td className="px-4 py-3.5 max-w-[160px]">
-                    <p className="truncate text-slate-500 text-xs">{row.nextSteps ?? '—'}</p>
+                  {/* Others — Stage + LOB at a glance */}
+                  <td className="px-4 py-3.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    <div className="flex flex-col gap-1">
+                      <StageBadge stage={row.stage} />
+                      <LOBBadge   lob={row.primaryLob} />
+                    </div>
                   </td>
 
                   {/* Comments */}
@@ -156,12 +159,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     )}
                   </td>
 
-                  {/* Others — Stage + LOB at a glance */}
-                  <td className="px-4 py-3.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                    <div className="flex flex-col gap-1">
-                      <StageBadge stage={row.stage} />
-                      <LOBBadge   lob={row.primaryLob} />
-                    </div>
+                  {/* Next Steps */}
+                  <td className="px-4 py-3.5 max-w-[160px]">
+                    <p className="truncate text-slate-500 text-xs">{row.nextSteps ?? '—'}</p>
                   </td>
                 </tr>
               ))}

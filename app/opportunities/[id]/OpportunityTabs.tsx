@@ -31,7 +31,7 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
-const TABS = ['Details', 'Pricing', 'Approvals', 'Others'] as const
+const TABS = ['Details', 'Pricing', 'Approvals', 'Comments'] as const
 type Tab = typeof TABS[number]
 
 export function OpportunityTabs({
@@ -48,6 +48,37 @@ export function OpportunityTabs({
   const [approvalError, setApprovalError]     = useState<string | null>(null)
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
+
+  type CommentItem = OpportunityDetail['comments'][number]
+  const [comments, setComments] = useState<CommentItem[]>(() => [...opp.comments].reverse())
+  const [newComment, setNewComment] = useState('')
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
+
+  async function submitComment() {
+    if (!newComment.trim()) return
+    setCommentLoading(true)
+    setCommentError(null)
+    try {
+      const res = await fetch(`/api/opportunities/${opp.opportunityId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newComment.trim() }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setCommentError(j.error ?? 'Failed to post comment')
+        return
+      }
+      const created = await res.json()
+      setComments(prev => [...prev, created as CommentItem])
+      setNewComment('')
+    } catch {
+      setCommentError('Network error')
+    } finally {
+      setCommentLoading(false)
+    }
+  }
 
   async function submitApproval() {
     if (!approverId) return
@@ -97,6 +128,11 @@ export function OpportunityTabs({
             {t === 'Approvals' && approvals.length > 0 && (
               <span className="ml-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5">
                 {approvals.length}
+              </span>
+            )}
+            {t === 'Comments' && comments.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.5">
+                {comments.length}
               </span>
             )}
           </button>
@@ -342,37 +378,48 @@ export function OpportunityTabs({
         </div>
       )}
 
-      {/* ── Tab: Others ──────────────────────────────────────── */}
-      {tab === 'Others' && (
+      {/* ── Tab: Comments ────────────────────────────────────── */}
+      {tab === 'Comments' && (
         <div className="max-w-2xl space-y-5">
-          {/* Comments */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
-              Comments {opp.comments.length > 0 && `(${opp.comments.length})`}
-            </h2>
-            {opp.comments.length === 0 ? (
-              <p className="text-sm text-slate-400">No comments yet.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+
+            {/* Thread */}
+            {comments.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <p className="text-sm text-slate-400">No comments yet. Be the first to add one.</p>
+              </div>
             ) : (
-              <div className="space-y-4">
-                {opp.comments.map((c: any) => (
-                  <div key={c.id} className="flex gap-3">
+              <div className="divide-y divide-slate-50 px-6 pt-6 pb-2 space-y-4">
+                {comments.map((c: any) => (
+                  <div key={c.id} className="flex gap-3 pb-4">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
-                      {c.author.name.split(' ').map((w: string) => w[0]).slice(0,2).join('')}
+                      {c.author.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-semibold text-slate-700">{c.author.name}</span>
-                        <span className="text-[10px] text-slate-400">{new Date(c.createdAt).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {' · '}
+                          {new Date(c.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl rounded-tl-none px-3 py-2">{c.content}</p>
+                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl rounded-tl-none px-3 py-2 whitespace-pre-wrap">
+                        {c.content}
+                      </p>
                       {c.replies?.map((r: any) => (
                         <div key={r.id} className="mt-2 ml-4 flex gap-2">
                           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-bold text-slate-600">
-                            {r.author.name.split(' ').map((w: string) => w[0]).slice(0,2).join('')}
+                            {r.author.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                           </div>
                           <div>
-                            <p className="text-[10px] font-semibold text-slate-500">{r.author.name}</p>
-                            <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5 mt-0.5">{r.content}</p>
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <p className="text-[10px] font-semibold text-slate-500">{r.author.name}</p>
+                              <span className="text-[9px] text-slate-300">
+                                {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5">{r.content}</p>
                           </div>
                         </div>
                       ))}
@@ -381,6 +428,33 @@ export function OpportunityTabs({
                 ))}
               </div>
             )}
+
+            {/* Compose box */}
+            <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+              <textarea
+                rows={3}
+                placeholder="Add a comment…"
+                value={newComment}
+                onChange={e => setNewComment(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment()
+                }}
+                className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-colors"
+              />
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[10px] text-slate-300">⌘ Enter to post</span>
+                <button
+                  onClick={submitComment}
+                  disabled={!newComment.trim() || commentLoading}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                >
+                  {commentLoading ? 'Posting…' : 'Post Comment'}
+                </button>
+              </div>
+              {commentError && (
+                <p className="mt-1.5 text-xs text-red-500">{commentError}</p>
+              )}
+            </div>
           </div>
 
           {/* SOW / Documents placeholder */}
