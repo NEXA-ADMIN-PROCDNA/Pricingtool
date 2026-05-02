@@ -3,9 +3,9 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ oppId: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { oppId } = await params
+  const { id: oppId } = await params
   const { description, amount } = await req.json()
 
   if (!description?.trim() || amount == null) {
