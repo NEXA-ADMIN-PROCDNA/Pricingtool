@@ -47,18 +47,18 @@ enum OpportunityStatus {
   ARCHIVED
 }
 
-// Stage drives status transitions:
-// LEAD → QUALIFICATION → PROPOSAL → SOW_SUBMITTED → SOW_SIGNED
-// → PO_RECEIVED → CLOSED_WON | CLOSED_LOST
+// Stage drives the pipeline workflow:
+// LEAD → PRICE_LINKING_PENDING → APPROVAL_PENDING → STATUS_CHANGE_PENDING
+//   → (Won) SOW_PENDING → PO_PENDING → TO_BE_ARCHIVED
+//   → (Lost / Abandoned) — captured in OpportunityStatus
 enum OpportunityStage {
   LEAD
-  QUALIFICATION
-  PROPOSAL
-  SOW_SUBMITTED
-  SOW_SIGNED
-  PO_RECEIVED
-  CLOSED_WON
-  CLOSED_LOST
+  PRICE_LINKING_PENDING
+  APPROVAL_PENDING
+  STATUS_CHANGE_PENDING
+  SOW_PENDING
+  PO_PENDING
+  TO_BE_ARCHIVED
 }
 
 // [Q1] 2 fixed locations — enum is correct

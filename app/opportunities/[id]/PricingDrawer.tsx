@@ -16,6 +16,8 @@ type StaffRow = {
   weeklyHours: { weekStartDate: string; hours: number }[]
 }
 
+type OtherCostRow = { id: string; description: string; amount: number }
+
 type ComputedMetrics = {
   totalHours: number
   totalCost: number
@@ -146,6 +148,39 @@ export function PricingDrawer({
   const [showAddRow, setShowAddRow] = useState(false)
   const [editCell, setEditCell] = useState<{ srId: string; wk: string } | null>(null)
   const [editVal, setEditVal] = useState('')
+
+  // ── Other Costs state ─────────────────────────────────────────
+  const [otherCosts, setOtherCosts] = useState<OtherCostRow[]>(() =>
+    ((opp as any).otherCosts ?? []).map((oc: any) => ({
+      id: oc.id,
+      description: oc.description,
+      amount: Number(oc.amount),
+    }))
+  )
+  const [showAddCost, setShowAddCost] = useState(false)
+  const [newDesc, setNewDesc] = useState('')
+  const [newAmount, setNewAmount] = useState('')
+
+  const addOtherCost = useCallback(async () => {
+    const amt = parseFloat(newAmount)
+    if (!newDesc.trim() || isNaN(amt)) return
+    const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description: newDesc.trim(), amount: amt }),
+    })
+    if (!res.ok) return
+    const created = await res.json()
+    setOtherCosts(prev => [...prev, { id: created.id, description: created.description, amount: Number(created.amount) }])
+    setNewDesc('')
+    setNewAmount('')
+    setShowAddCost(false)
+  }, [newDesc, newAmount, opp.opportunityId])
+
+  const removeOtherCost = useCallback(async (costId: string) => {
+    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
+    setOtherCosts(prev => prev.filter(oc => oc.id !== costId))
+  }, [opp.opportunityId])
 
   // ── Patch PricingVersion with computed metrics ────────────────
   const patchVersion = useCallback(async (rows: StaffRow[]) => {
@@ -607,58 +642,113 @@ export function PricingDrawer({
             )}
 
             {/* ── Other Cost ───────────────────────────── */}
-            {sub === 'Other Cost' && (() => {
-              const otherCosts: any[] = (opp as any).otherCosts ?? []
-              return (
-              <div className="space-y-4">
-                {otherCosts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-                    <p className="text-slate-400 text-sm">No other costs recorded.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-slate-100 bg-slate-50">
-                            {['Description', 'Month', 'Amount', 'Billable'].map(h => (
-                              <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {otherCosts.map((oc: any) => (
-                            <tr key={oc.id} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-slate-800 font-medium">{oc.description}</td>
-                              <td className="px-4 py-3 text-slate-500">{oc.month ? fmtDate(oc.month) : '—'}</td>
-                              <td className="px-4 py-3 font-semibold text-slate-800">{fmt(Number(oc.amount))}</td>
-                              <td className="px-4 py-3">
-                                {oc.isBillable ? (
-                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Billable</span>
-                                ) : (
-                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">Non-billable</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="flex justify-end">
-                      <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-2 text-sm">
-                        Total:{' '}
-                        <span className="font-bold text-slate-800">
-                          {fmt(otherCosts.reduce((s: number, oc: any) => s + Number(oc.amount), 0))}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
+            {sub === 'Other Cost' && (
+              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reason</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 w-40">Amount</th>
+                      <th className="px-2 py-3 w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {otherCosts.map(oc => (
+                      <tr key={oc.id} className="hover:bg-slate-50/50 group">
+                        <td className="px-4 py-3 text-slate-800">{oc.description}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-800">{fmt(oc.amount)}</td>
+                        <td className="px-2 py-3">
+                          <button
+                            onClick={() => removeOtherCost(oc.id)}
+                            title="Remove"
+                            className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {/* Total row */}
+                    {otherCosts.length > 0 && (
+                      <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
+                        <td className="px-4 py-3 text-slate-800">Total</td>
+                        <td className="px-4 py-3 text-right text-indigo-700">
+                          {fmt(otherCosts.reduce((s, oc) => s + oc.amount, 0))}
+                        </td>
+                        <td />
+                      </tr>
+                    )}
+
+                    {/* Add row */}
+                    <tr className="border-t border-dashed border-slate-200 bg-white">
+                      {showAddCost ? (
+                        <>
+                          <td className="px-3 py-2.5">
+                            <input
+                              autoFocus
+                              type="text"
+                              placeholder="e.g. Travel — client site visits"
+                              value={newDesc}
+                              onChange={e => setNewDesc(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') addOtherCost(); if (e.key === 'Escape') setShowAddCost(false) }}
+                              className="w-full text-xs rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            />
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <input
+                              type="number"
+                              min={0}
+                              step={1}
+                              placeholder="0"
+                              value={newAmount}
+                              onChange={e => setNewAmount(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') addOtherCost(); if (e.key === 'Escape') setShowAddCost(false) }}
+                              className="w-full text-xs text-right rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                            />
+                          </td>
+                          <td className="px-2 py-2.5">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={addOtherCost}
+                                disabled={!newDesc.trim() || !newAmount}
+                                className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                                title="Add"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount('') }}
+                                className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-100 transition-colors"
+                                title="Cancel"
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <td colSpan={3} className="px-4 py-2.5">
+                          <button
+                            onClick={() => setShowAddCost(true)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
+                          >
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-indigo-300 text-indigo-400 text-sm font-bold leading-none">+</span>
+                            Add Cost
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              )
-            })()}
+            )}
 
             {/* ── Financial ────────────────────────────── */}
             {sub === 'Financial' && (() => {

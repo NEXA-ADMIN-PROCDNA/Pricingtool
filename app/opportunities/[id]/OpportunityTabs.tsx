@@ -31,7 +31,7 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
-const TABS = ['Details', 'Pricing', 'Approvals', 'Others'] as const
+const TABS = ['Details', 'Pricing', 'Approvals', 'Comments'] as const
 type Tab = typeof TABS[number]
 
 export function OpportunityTabs({
@@ -97,6 +97,11 @@ export function OpportunityTabs({
             {t === 'Approvals' && approvals.length > 0 && (
               <span className="ml-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5">
                 {approvals.length}
+              </span>
+            )}
+            {t === 'Comments' && opp.comments.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.5">
+                {opp.comments.length}
               </span>
             )}
           </button>
@@ -342,14 +347,12 @@ export function OpportunityTabs({
         </div>
       )}
 
-      {/* ── Tab: Others ──────────────────────────────────────── */}
-      {tab === 'Others' && (
+      {/* ── Tab: Comments ────────────────────────────────────── */}
+      {tab === 'Comments' && (
         <div className="max-w-2xl space-y-5">
           {/* Comments */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
-              Comments {opp.comments.length > 0 && `(${opp.comments.length})`}
-            </h2>
+            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Comments</h2>
             {opp.comments.length === 0 ? (
               <p className="text-sm text-slate-400">No comments yet.</p>
             ) : (
