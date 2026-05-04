@@ -244,7 +244,7 @@ async function main() {
   // ─────────────────────────────────────────────
   // 6. PRICING VERSIONS
   // ─────────────────────────────────────────────
-  console.log("📊 Seeding pricing versions...");
+  console.log("📊 Seeding pricing versions");
 
   const pv1 = await prisma.pricingVersion.create({
     data: {
