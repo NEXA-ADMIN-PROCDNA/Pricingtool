@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client'
 const g = globalThis as unknown as { _prisma?: PrismaClient }
 
 function makePrisma(): PrismaClient {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 })
   const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
   return new PrismaClient({ adapter })
 }
