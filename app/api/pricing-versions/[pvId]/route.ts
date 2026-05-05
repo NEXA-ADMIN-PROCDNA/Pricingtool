@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ pvId: string }> },
+) {
+  const { pvId } = await params
+  const version = await prisma.pricingVersion.findUnique({
+    where: { id: pvId },
+    include: {
+      staffingResources: {
+        include: {
+          weeklyHours: { orderBy: { weekStartDate: 'asc' } },
+          rateCard: true,
+        },
+      },
+      scheduleOfPayments: { orderBy: { month: 'asc' } },
+      financialSnapshots: { orderBy: { month: 'asc' } },
+    },
+  })
+  if (!version) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json(version)
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }

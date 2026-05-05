@@ -43,6 +43,39 @@ export function OpportunityTabs({
 }) {
   const [tab, setTab]               = useState<Tab>('Details')
   const [drawerVersion, setDrawer]  = useState<OpportunityDetail['pricingVersions'][number] | null>(null)
+
+  type PricingVersion = OpportunityDetail['pricingVersions'][number]
+  const [pricingVersions, setPricingVersions] = useState<PricingVersion[]>(opp.pricingVersions)
+  const [creatingVersion, setCreatingVersion] = useState(false)
+
+  async function closeDrawer() {
+    if (drawerVersion) {
+      const res = await fetch(`/api/pricing-versions/${drawerVersion.id}`)
+      if (res.ok) {
+        const updated = await res.json() as PricingVersion
+        setPricingVersions(prev => prev.map(v => v.id === updated.id ? updated : v))
+      }
+    }
+    setDrawer(null)
+  }
+
+  async function createPricingVersion() {
+    setCreatingVersion(true)
+    try {
+      const res = await fetch(`/api/opportunities/${opp.opportunityId}/pricing-versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) return
+      const version = await res.json() as PricingVersion
+      setPricingVersions(prev => [...prev, version])
+      setDrawer(version)
+    } finally {
+      setCreatingVersion(false)
+    }
+  }
+
   const [approverId, setApproverId] = useState('')
   const [approvalLoading, setApprovalLoading] = useState(false)
   const [approvalError, setApprovalError]     = useState<string | null>(null)
@@ -120,9 +153,9 @@ export function OpportunityTabs({
             }`}
           >
             {t}
-            {t === 'Pricing' && opp.pricingVersions.length > 0 && (
+            {t === 'Pricing' && pricingVersions.length > 0 && (
               <span className="ml-1.5 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 py-0.5">
-                {opp.pricingVersions.length}
+                {pricingVersions.length}
               </span>
             )}
             {t === 'Approvals' && approvals.length > 0 && (
@@ -200,8 +233,8 @@ export function OpportunityTabs({
               </div>
             </div>
 
-            {opp.pricingVersions.length > 0 && (() => {
-              const final = opp.pricingVersions.find(v => v.isFinal) ?? opp.pricingVersions.at(-1)!
+            {pricingVersions.length > 0 && (() => {
+              const final = pricingVersions.find(v => v.isFinal) ?? pricingVersions.at(-1)!
               return (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">
@@ -238,17 +271,42 @@ export function OpportunityTabs({
       {tab === 'Pricing' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">Click a version to open detailed pricing.</p>
+            <p className="text-sm text-slate-500">
+              {pricingVersions.length > 0 ? 'Click a version to open detailed pricing.' : 'No pricing versions yet.'}
+            </p>
+            <button
+              onClick={createPricingVersion}
+              disabled={creatingVersion}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              {creatingVersion ? 'Creating…' : 'New Version'}
+            </button>
           </div>
 
-          {opp.pricingVersions.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
-              <p className="text-slate-400 text-sm">No pricing versions yet.</p>
+          {pricingVersions.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-16 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6 text-indigo-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-slate-600 mb-1">No pricing versions yet</p>
+              <p className="text-xs text-slate-400 mb-5">Create your first version to start adding staffing, costs, and financials.</p>
+              <button
+                onClick={createPricingVersion}
+                disabled={creatingVersion}
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                {creatingVersion ? 'Creating…' : 'Create First Pricing Version'}
+              </button>
             </div>
           )}
 
           <div className="space-y-2">
-            {opp.pricingVersions.map(v => {
+            {pricingVersions.map(v => {
               const billings = v.proposedBillings != null ? Number(v.proposedBillings) : null
               const margin   = v.grossMarginPct   != null ? Number(v.grossMarginPct)   : null
               return (
@@ -281,19 +339,19 @@ export function OpportunityTabs({
                       <div className="text-right">
                         <p className="text-slate-400">Billings</p>
                         <p className="font-bold text-slate-800">
-                          {billings != null ? `$${(billings / 1000).toFixed(0)}K` : '!'}
+                          {billings != null ? `$${(billings / 1000).toFixed(0)}K` : '—'}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-slate-400">Margin</p>
-                        <p className={`font-bold ${margin != null && margin >= 35 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {margin != null ? `${margin.toFixed(1)}%` : '!'}
+                        <p className={`font-bold ${margin != null && margin >= 35 ? 'text-emerald-600' : margin != null ? 'text-amber-600' : 'text-slate-300'}`}>
+                          {margin != null ? `${margin.toFixed(1)}%` : '—'}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-slate-400">Hours</p>
                         <p className="font-bold text-slate-800">
-                          {v.totalHours != null ? `${Number(v.totalHours).toLocaleString()} h` : '!'}
+                          {v.totalHours != null ? `${Number(v.totalHours).toLocaleString()} h` : '—'}
                         </p>
                       </div>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors">
@@ -470,7 +528,7 @@ export function OpportunityTabs({
         <PricingDrawer
           version={drawerVersion}
           opp={opp}
-          onClose={() => setDrawer(null)}
+          onClose={closeDrawer}
         />
       )}
     </>
