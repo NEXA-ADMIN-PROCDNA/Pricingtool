@@ -33,5 +33,11 @@
     "types/**/*.d.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "prisma/**",
+    "app/prisma/**",
+    "prisma.config.ts",
+    "app/prisma.config.ts"
+  ]
 }

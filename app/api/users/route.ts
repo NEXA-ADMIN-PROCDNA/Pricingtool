@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       data: {
         name: body.name,
         email: body.email,
+        role: body.role ?? 'BD',
       },
     })
 
