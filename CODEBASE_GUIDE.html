@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProcDNA BD Tracker — Codebase Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13.5px; color: #1e293b; background: #fff; padding: 40px; max-width: 960px; margin: auto; }
+  h1 { font-size: 24px; font-weight: 700; color: #1e293b; border-bottom: 3px solid #6366f1; padding-bottom: 10px; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 12px; margin-bottom: 32px; }
+  h2 { font-size: 16px; font-weight: 700; color: #4f46e5; margin: 32px 0 10px; padding-left: 10px; border-left: 4px solid #6366f1; }
+  h3 { font-size: 13px; font-weight: 700; color: #334155; margin: 18px 0 6px; }
+  p { line-height: 1.7; margin-bottom: 8px; color: #374151; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12.5px; }
+  th { background: #f1f5f9; text-align: left; padding: 7px 10px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; }
+  td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; line-height: 1.5; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 1px 5px; font-family: 'Consolas', 'Courier New', monospace; font-size: 11.5px; color: #7c3aed; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; margin: 1px; }
+  .tag-get    { background: #dcfce7; color: #166534; }
+  .tag-post   { background: #dbeafe; color: #1d4ed8; }
+  .tag-patch  { background: #fef9c3; color: #854d0e; }
+  .tag-delete { background: #fee2e2; color: #991b1b; }
+  .tag-put    { background: #f3e8ff; color: #6b21a8; }
+  .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+  .callout-warn { background: #fffbeb; border-color: #fde68a; }
+  ul { padding-left: 20px; margin: 6px 0 10px; }
+  li { line-height: 1.8; color: #374151; }
+  .section { margin-bottom: 8px; }
+  .flow-step { display: flex; gap: 10px; align-items: flex-start; margin: 5px 0; }
+  .flow-num { min-width: 22px; height: 22px; background: #6366f1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .flow-text { color: #374151; line-height: 1.6; }
+  @media print { body { padding: 20px; } }
+</style>
+</head>
+<body>
+
+<h1>ProcDNA BD Tracker — Codebase Guide</h1>
+<p class="subtitle">Generated May 2026 &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>1. High-Level Architecture</h2>
+
+<div class="callout">
+  <strong>One app, three layers:</strong><br/>
+  <strong>Frontend (React/Next.js)</strong> — pages and components served from <code>app/</code><br/>
+  <strong>Backend (Route Handlers)</strong> — REST API endpoints at <code>app/api/</code>, each a <code>route.ts</code> file<br/>
+  <strong>Database (Supabase)</strong> — PostgreSQL hosted on Supabase, accessed via Prisma ORM through a connection pool
+</div>
+
+<p>There is <strong>no separate backend server</strong>. Next.js runs everything — it serves the React pages and also handles the API calls. When the browser (or a React component) calls <code>fetch("/api/something")</code>, that request goes to the matching <code>route.ts</code> file in the same project, which talks to the database via Prisma.</p>
+
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Where</th></tr>
+  <tr><td>UI / Pages</td><td>React 19 + Tailwind CSS 4</td><td><code>app/**/page.tsx</code>, <code>app/**/*.tsx</code> components</td></tr>
+  <tr><td>API Endpoints</td><td>Next.js Route Handlers</td><td><code>app/api/**/route.ts</code></td></tr>
+  <tr><td>Auth</td><td>NextAuth v4 (email/password)</td><td><code>lib/auth.js</code>, <code>app/api/auth/[...nextauth]/</code></td></tr>
+  <tr><td>Database Client</td><td>Prisma 7 + pg Pool</td><td><code>lib/prisma.ts</code></td></tr>
+  <tr><td>Database Queries (helpers)</td><td>Typed Prisma queries</td><td><code>lib/db/*.ts</code></td></tr>
+  <tr><td>Database Host</td><td>Supabase (PostgreSQL)</td><td>Schema: <code>procdna_database</code>, AWS Mumbai (ap-south-1)</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>2. Folder Structure</h2>
+
+<table>
+  <tr><th>Folder / File</th><th>What it does</th></tr>
+  <tr><td><code>app/</code></td><td>Everything Next.js renders or serves. Pages, API routes, layout, global CSS.</td></tr>
+  <tr><td><code>app/layout.tsx</code></td><td>Root HTML shell. Sets the Geist font, page title ("ProcDNA BD Tracker"), and wraps all pages in <code>&lt;Providers&gt;</code> (NextAuth session).</td></tr>
+  <tr><td><code>app/Providers.tsx</code></td><td>Client component that wraps the app in <code>SessionProvider</code> so any component can call <code>useSession()</code> to know who is logged in.</td></tr>
+  <tr><td><code>app/page.tsx</code></td><td>Root route (<code>/</code>). Immediately redirects to <code>/dashboard</code>.</td></tr>
+  <tr><td><code>app/login/</code></td><td>Login page. Collects email and password, calls NextAuth's <code>signIn()</code>.</td></tr>
+  <tr><td><code>app/dashboard/</code></td><td>Main landing after login. Shows KPI cards (pipeline revenue, win rate, etc.) and the opportunity table. Data fetched server-side via <code>lib/db/opportunities.ts</code>.</td></tr>
+  <tr><td><code>app/opportunities/[id]/</code></td><td>Opportunity detail page. Loads full opportunity data server-side, then renders the tabbed layout: Basic Details, Comments, Pricing, Documents, Approvals.</td></tr>
+  <tr><td><code>app/opportunities/new/</code></td><td>Form to create a new opportunity. Submits to <code>POST /api/opportunities</code>.</td></tr>
+  <tr><td><code>app/clients/</code></td><td>Clients list page. Shows all clients, a button to request a new client (modal), and an admin panel to approve/reject client requests.</td></tr>
+  <tr><td><code>app/api/</code></td><td>All REST API endpoints. Each subfolder = one resource. Each <code>route.ts</code> = one or more HTTP verbs.</td></tr>
+  <tr><td><code>lib/</code></td><td>Shared server-side utilities: Prisma client, auth config, DB query helpers.</td></tr>
+  <tr><td><code>lib/prisma.ts</code></td><td>Singleton Prisma client. Connects to Supabase via a <code>pg.Pool</code> (max 5 connections). All <code>route.ts</code> files import <code>prisma</code> from here.</td></tr>
+  <tr><td><code>lib/auth.js</code></td><td>NextAuth config. Email-based login; auto-creates user in DB on first sign-in. Puts user id + role into the JWT session token.</td></tr>
+  <tr><td><code>lib/db/opportunities.ts</code></td><td>Heavy-lifting query functions for opportunities: list, detail, dashboard stats. Called directly from server-side page components (not from API routes).</td></tr>
+  <tr><td><code>lib/db/clients.ts</code></td><td>Query helpers for clients list and the select dropdown.</td></tr>
+  <tr><td><code>lib/db/users.ts</code></td><td>Query helper for the user select dropdown (owner, co-owner fields).</td></tr>
+  <tr><td><code>prisma/schema.prisma</code></td><td>The source of truth for the database schema. Defines all tables (models), columns, types, and relations.</td></tr>
+  <tr><td><code>prisma/seed.ts</code></td><td>Seeds the database with rate cards, sample users, clients, opportunities, pricing versions, and Azure AD users. Run with <code>npx tsx prisma/seed.ts</code>.</td></tr>
+  <tr><td><code>prisma.config.ts</code></td><td>Prisma CLI config. Points CLI commands (<code>db push</code>, migrations) at the correct DB URL from environment variables.</td></tr>
+  <tr><td><code>components/</code> (root)</td><td>Shared React components referenced as <code>@/components/</code>. Includes <code>MainLayout.tsx</code> (sidebar + header shell used on all authenticated pages).</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>3. How Data Flows — The Request Lifecycle</h2>
+
+<p>Two patterns are used depending on whether the component is a <em>server component</em> (page) or a <em>client component</em> (interactive UI):</p>
+
+<h3>Pattern A — Server-Side Fetch (pages, initial load)</h3>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User navigates to <code>/dashboard</code>. Next.js runs <code>app/dashboard/page.tsx</code> on the server.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The page calls <code>getDashboardStats()</code> from <code>lib/db/opportunities.ts</code> directly — no HTTP, just Prisma querying Supabase.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Prisma sends a SQL query to Supabase PostgreSQL (schema <code>procdna_database</code>) via the connection pool in <code>lib/prisma.ts</code>.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Data comes back, the page renders HTML with the data pre-filled, and sends it to the browser.</div></div>
+
+<h3>Pattern B — Client-Side Fetch (interactive components)</h3>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks a button (e.g. "Add staffing resource" in <code>PricingDrawer.tsx</code>).</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The React component calls <code>fetch("/api/pricing-versions/[pvId]/staffing", { method: "POST", body: ... })</code>.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Next.js routes that request to <code>app/api/pricing-versions/[pvId]/staffing/route.ts</code> — the <code>POST</code> function there runs on the server.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">The route handler imports <code>prisma</code> from <code>lib/prisma.ts</code> and calls Prisma methods which send SQL to Supabase.</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">The handler returns a JSON response. The React component updates its local state with the response and re-renders.</div></div>
+
+<div class="callout callout-warn">
+  <strong>Where does the data actually live?</strong> All application data is stored in <strong>Supabase PostgreSQL</strong>, schema <code>procdna_database</code>, hosted on AWS Mumbai (ap-south-1). The connection string is in the <code>DATABASE_URL</code> environment variable. Prisma is the only thing that reads/writes the database — there is no direct SQL anywhere else in the codebase.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>4. API Endpoints Reference</h2>
+
+<p>All endpoints live under <code>/api/</code>. They are JSON REST APIs called with <code>fetch()</code> from React components.</p>
+
+<h3>Opportunities</h3>
+<table>
+  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr>
+    <td><code>/api/opportunities</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td>GET: list all opportunities (with client, owner). POST: create new opportunity.</td>
+    <td><code>app/opportunities/new/NewOpportunityForm.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/pricing-versions</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Create a new pricing version for an opportunity. Auto-increments version number. Returns full version with staffing.</td>
+    <td><code>OpportunityTabs.tsx</code> (Create First Version / New Version button)</td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/comments</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Post a new comment on an opportunity. Gets author from session.</td>
+    <td><code>OpportunityTabs.tsx</code> (Comments tab compose box)</td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/approvals</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Submit an approval request. Sets status to PENDING.</td>
+    <td>Approvals tab</td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/other-costs</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Add a new other-cost line to an opportunity (description, amount, markupPct).</td>
+    <td><code>PricingDrawer.tsx</code> (Other Cost tab Add button)</td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/other-costs/[costId]</code></td>
+    <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
+    <td>PATCH: update isBillable or markupPct on a cost row. DELETE: remove the row.</td>
+    <td><code>PricingDrawer.tsx</code> (Other Cost tab checkbox / markup edit / delete)</td>
+  </tr>
+</table>
+
+<h3>Pricing Versions</h3>
+<table>
+  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr>
+    <td><code>/api/pricing-versions/[pvId]</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-patch">PATCH</span></td>
+    <td>GET: fetch full version data (staffing, SoP, snapshots). PATCH: save computed metrics (totalHours, totalCost, grossMarginPct, etc.) after Efforts tab changes.</td>
+    <td><code>PricingDrawer.tsx</code> (on open and after every edit)</td>
+  </tr>
+  <tr>
+    <td><code>/api/pricing-versions/[pvId]/staffing</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Add a staffing resource row. Looks up the rate card, copies role/location/domain/rates. Returns new row with empty weekly hours.</td>
+    <td><code>PricingDrawer.tsx</code> (Efforts tab role dropdown)</td>
+  </tr>
+  <tr>
+    <td><code>/api/pricing-versions/[pvId]/staffing/[srId]</code></td>
+    <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
+    <td>PATCH: update utilization, weekly hours, effective bill rate, or isActive on a staffing row. DELETE: remove the row.</td>
+    <td><code>PricingDrawer.tsx</code> (every edit in Efforts tab: hours, eff rate, D/P, util %, checkbox, delete)</td>
+  </tr>
+</table>
+
+<h3>Other Resources</h3>
+<table>
+  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr>
+    <td><code>/api/rate-cards</code></td>
+    <td><span class="tag tag-get">GET</span></td>
+    <td>Returns all active rate cards (role, location, domain, cost rate, bill rate). Used to populate the Add Resource dropdown.</td>
+    <td><code>PricingDrawer.tsx</code> (Efforts tab, on first open)</td>
+  </tr>
+  <tr>
+    <td><code>/api/users</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td>GET: list users. POST: create user (used during Azure AD sync in seed).</td>
+    <td>Admin / seed script</td>
+  </tr>
+  <tr>
+    <td><code>/api/client-requests</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td>GET: list all client requests (admin). POST: submit a new client request from the Clients page.</td>
+    <td><code>app/clients/AddClientModal.tsx</code>, <code>AdminRequestsPanel.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/client-requests/[reqId]/approve</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Approve a client request — creates the Client record and marks request APPROVED.</td>
+    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/client-requests/[reqId]/reject</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td>Mark a client request as REJECTED.</td>
+    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/auth/[...nextauth]</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td>NextAuth magic route. Handles sign-in, sign-out, session tokens. Configured in <code>lib/auth.js</code>.</td>
+    <td>Browser automatically (login page, session refresh)</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>5. Database Schema — Key Models</h2>
+
+<p>The database lives in Supabase under schema <code>procdna_database</code>. Every table below is a Prisma model defined in <code>prisma/schema.prisma</code>.</p>
+
+<table>
+  <tr><th>Model / Table</th><th>What it stores</th><th>Key fields</th></tr>
+  <tr><td><code>User</code></td><td>App users (BD, Directors, Partners, Admins)</td><td>email, name, role (enum), managerId (self-ref), isActive</td></tr>
+  <tr><td><code>Client</code></td><td>Client companies</td><td>clientId (CL-001), name, businessUnit, industry, region, isActive</td></tr>
+  <tr><td><code>ClientPOC</code></td><td>Points of contact at each client</td><td>clientId (FK), name, email, phone, jobTitle</td></tr>
+  <tr><td><code>ClientRequest</code></td><td>Requests to add a new client (PENDING → APPROVED/REJECTED)</td><td>name, status (enum), requestedById, reviewedById</td></tr>
+  <tr><td><code>Opportunity</code></td><td>BD deals/pursuits</td><td>opportunityId (BD-001), clientId, primaryLob (LoB enum), status, stage, ownerId, startDate, endDate, estimatedRevenue, probability</td></tr>
+  <tr><td><code>RateCard</code></td><td>Standard billing and cost rates per role/location</td><td>jobRole (enum), location (enum), domain (TECH/ANALYTICS/MS/DS), costRatePerHour, billRatePerHour, effectiveFrom</td></tr>
+  <tr><td><code>PricingVersion</code></td><td>A pricing scenario for an opportunity (v1, v2…)</td><td>opportunityId (FK), versionNumber, isFinal, totalHours, totalCost, proposedBillings, grossMarginPct, offshorePct</td></tr>
+  <tr><td><code>StaffingResource</code></td><td>One person/role in a pricing version's Efforts tab</td><td>pricingVersionId (FK), resourceDesignation, location, domain, costRatePerHour, systemBillRatePerHour, effectiveBillRate, utilization, isActive</td></tr>
+  <tr><td><code>StaffingWeekEntry</code></td><td>Hours for a staffing resource in one week</td><td>staffingResourceId (FK), weekStartDate, hours — unique per (resource, week)</td></tr>
+  <tr><td><code>OtherCost</code></td><td>Non-staffing costs (travel, software, training…)</td><td>opportunityId (FK), description, amount, markupPct, isBillable</td></tr>
+  <tr><td><code>ScheduleOfPayment</code></td><td>Monthly billing schedule for a pricing version</td><td>pricingVersionId (FK), month, recommendedBillings, proposedBillings, discountPct, premiumPct</td></tr>
+  <tr><td><code>FinancialSnapshot</code></td><td>Computed P&amp;L per month (and overall) for a pricing version</td><td>pricingVersionId (FK), month (null = project total), totalRevenue (A), employeeCost (B), otherCost (C), grossMargin (D), grossMarginPct</td></tr>
+  <tr><td><code>ApprovalRequest</code></td><td>Approval workflow entries for an opportunity</td><td>opportunityId (FK), requestedById, approverId, status (PENDING/APPROVED/REJECTED), rejectionReason</td></tr>
+  <tr><td><code>Comment</code></td><td>Comments on an opportunity (threaded)</td><td>opportunityId (FK), authorId (FK), content, parentId (nullable for replies)</td></tr>
+  <tr><td><code>ActivityLog</code></td><td>Audit trail of changes</td><td>opportunityId (FK), userId, action, oldValue (JSON), newValue (JSON)</td></tr>
+  <tr><td><code>SOWDocument</code></td><td>Statement of Work file attachments</td><td>opportunityId (FK), fileName, fileUrl, storagePath, version</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>6. Key UI Files — What They Do</h2>
+
+<table>
+  <tr><th>File</th><th>What it does &amp; which APIs it calls</th></tr>
+  <tr>
+    <td><code>app/dashboard/page.tsx</code><br/><code>app/dashboard/OpportunityTable.tsx</code></td>
+    <td>Server component. Calls <code>getDashboardStats()</code> and <code>getOpportunities()</code> directly (no HTTP). Renders KPI cards and the opportunity table with stage, owner, revenue columns.</td>
+  </tr>
+  <tr>
+    <td><code>app/opportunities/[id]/page.tsx</code></td>
+    <td>Server component. Calls <code>getOpportunityDetail(id)</code> directly. Passes the result to <code>OpportunityTabs</code>.</td>
+  </tr>
+  <tr>
+    <td><code>app/opportunities/[id]/OpportunityTabs.tsx</code></td>
+    <td>Client component. Manages the tab strip (Basic Details, Comments, Pricing, Documents, Approvals). Calls:<br/>
+      &bull; <code>POST /api/opportunities/[id]/pricing-versions</code> — create pricing version<br/>
+      &bull; <code>GET /api/pricing-versions/[pvId]</code> — re-fetch version on drawer close<br/>
+      &bull; <code>POST /api/opportunities/[id]/comments</code> — submit comment
+    </td>
+  </tr>
+  <tr>
+    <td><code>app/opportunities/[id]/PricingDrawer.tsx</code></td>
+    <td>Client component. The pricing modal/drawer. All Efforts tab logic is here. Calls:<br/>
+      &bull; <code>GET /api/rate-cards</code> — load role dropdown<br/>
+      &bull; <code>POST /api/pricing-versions/[pvId]/staffing</code> — add resource row<br/>
+      &bull; <code>PATCH /api/pricing-versions/[pvId]/staffing/[srId]</code> — save hours, eff rate, D/P%, util%, isActive<br/>
+      &bull; <code>DELETE /api/pricing-versions/[pvId]/staffing/[srId]</code> — remove resource row<br/>
+      &bull; <code>PATCH /api/pricing-versions/[pvId]</code> — save computed metrics after every edit<br/>
+      &bull; <code>POST /api/opportunities/[id]/other-costs</code> — add other cost row<br/>
+      &bull; <code>PATCH /api/opportunities/[id]/other-costs/[costId]</code> — update isBillable or markupPct<br/>
+      &bull; <code>DELETE /api/opportunities/[id]/other-costs/[costId]</code> — remove other cost row
+    </td>
+  </tr>
+  <tr>
+    <td><code>app/opportunities/new/NewOpportunityForm.tsx</code></td>
+    <td>Client component. The new opportunity form. Calls <code>POST /api/opportunities</code>.</td>
+  </tr>
+  <tr>
+    <td><code>app/clients/page.tsx</code></td>
+    <td>Server component. Calls <code>getClients()</code> directly. Renders client cards, the Add Client modal, and the Admin Requests panel.</td>
+  </tr>
+  <tr>
+    <td><code>app/clients/AddClientModal.tsx</code></td>
+    <td>Client component. Form to request a new client. Calls <code>POST /api/client-requests</code>.</td>
+  </tr>
+  <tr>
+    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
+    <td>Client component. Admin view of pending client requests. Calls <code>POST /api/client-requests/[reqId]/approve</code> and <code>/reject</code>.</td>
+  </tr>
+  <tr>
+    <td><code>app/components/layout/MainLayout.tsx</code></td>
+    <td>The sidebar + top header shell. Rendered on every authenticated page. Uses <code>useSession()</code> to show the logged-in user's name.</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>7. Authentication Flow</h2>
+
+<div class="callout">
+  <strong>Library:</strong> NextAuth v4 &nbsp;&bull;&nbsp; <strong>Provider:</strong> Credentials (email + password) &nbsp;&bull;&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
+</div>
+
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User submits email + password on <code>/login</code>.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">NextAuth's <code>CredentialsProvider.authorize()</code> checks if the user exists in the <code>User</code> table by email.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">If not found, it <strong>auto-creates</strong> a new User record with role <code>BD</code> — so any email can log in for the first time.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">A JWT is issued containing <code>user.id</code> and <code>user.role</code>. Stored in a cookie.</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">On subsequent requests, <code>getServerSession(authOptions)</code> (in API routes) or <code>useSession()</code> (in client components) reads the JWT to know who is logged in.</div></div>
+<div class="flow-step"><div class="flow-num">6</div><div class="flow-text">Comments use <code>getServerSession</code> to set the <code>authorId</code> server-side — the client cannot fake who posted a comment.</div></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>8. Supabase Connection — How the DB is Reached</h2>
+
+<table>
+  <tr><th>Step</th><th>Detail</th></tr>
+  <tr><td>Connection string</td><td>Stored in <code>DATABASE_URL</code> env var. Format: <code>postgresql://postgres.[project]:[password]@aws-1-ap-south-1.pooler.supabase.com:6543/postgres</code></td></tr>
+  <tr><td>Connection pool</td><td><code>lib/prisma.ts</code> creates a <code>pg.Pool</code> with <code>max: 5</code> connections. This avoids hitting Supabase's session-mode limit.</td></tr>
+  <tr><td>Prisma adapter</td><td><code>PrismaPg</code> from <code>@prisma/adapter-pg</code> bridges Prisma 7 to the pg pool.</td></tr>
+  <tr><td>Schema namespace</td><td>All tables are under <code>procdna_database</code> schema (not the default <code>public</code>). Set via the adapter's <code>schema</code> option.</td></tr>
+  <tr><td>Schema changes</td><td>Run <code>npx prisma db push</code> to sync schema changes. Run <code>npx prisma generate</code> to regenerate the TypeScript client after any model change.</td></tr>
+  <tr><td>Seeding</td><td>Run <code>npx tsx prisma/seed.ts</code>. Also syncs BD users from Azure Active Directory via Microsoft Graph API.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>9. Pricing Drawer — Detailed Calculations</h2>
+
+<p>The pricing drawer (<code>PricingDrawer.tsx</code>) is the most complex component. Here is what each column in the Efforts tab computes:</p>
+
+<table>
+  <tr><th>Column</th><th>Source / Formula</th><th>Editable</th><th>Persisted</th></tr>
+  <tr><td>☑ (Checkbox)</td><td><code>isActive</code> on StaffingResource</td><td>Yes</td><td>DB via PATCH /staffing/[srId]</td></tr>
+  <tr><td>Role</td><td><code>resourceDesignation</code> (copied from RateCard at add time)</td><td>No</td><td>—</td></tr>
+  <tr><td>Location</td><td><code>location</code> (INDIA / US)</td><td>No</td><td>—</td></tr>
+  <tr><td>Domain</td><td><code>domain</code> copied from RateCard (ANALYTICS, TECH, MS, DS)</td><td>No</td><td>—</td></tr>
+  <tr><td>Cost Rate</td><td><code>costRatePerHour</code> from RateCard</td><td>No</td><td>—</td></tr>
+  <tr><td>Bill Rate</td><td><code>systemBillRatePerHour</code> from RateCard</td><td>No</td><td>—</td></tr>
+  <tr><td>Eff. Rate</td><td><code>effectiveBillRate</code> — the actual rate charged to client</td><td>Yes (click)</td><td>DB via PATCH</td></tr>
+  <tr><td>D/P %</td><td><code>(effRate − sysRate) / sysRate × 100</code>. Negative = discount (amber), positive = premium (green)</td><td>Yes (click)</td><td>Derived from effectiveBillRate</td></tr>
+  <tr><td>Util %</td><td><code>utilization</code> (1–100). Entering a value auto-fills all week columns: <code>hours = round(util/100 × 40)</code></td><td>Yes</td><td>DB via PATCH (utilization + weekEntries)</td></tr>
+  <tr><td>W1…Wn</td><td><code>StaffingWeekEntry.hours</code> per week</td><td>Yes (click)</td><td>DB via PATCH (weekEntries)</td></tr>
+  <tr><td>Total Cost</td><td><code>Σ(hours × costRatePerHour)</code> for active rows only</td><td>No (computed)</td><td>Rolled up to PricingVersion via PATCH</td></tr>
+</table>
+
+<p>After any edit, <code>patchVersion()</code> recomputes and saves to the <code>PricingVersion</code> record: totalHours, totalCost, proposedBillings (Σ hours × effRate), grossMarginPct, offshorePct, effectiveRatePerHour.</p>
+
+<p>In the <strong>Other Cost</strong> tab:</p>
+<ul>
+  <li><strong>Bill checkbox</strong> → <code>isBillable</code>. Unchecked = not charged to client, Billed shows $0.</li>
+  <li><strong>Markup %</strong> → stored as <code>markupPct</code>. Click to edit.</li>
+  <li><strong>Billed</strong> = <code>amount × (1 + markupPct/100)</code>. Click to enter manually — back-calculates markupPct.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>10. External Services</h2>
+
+<table>
+  <tr><th>Service</th><th>Used for</th><th>Where</th></tr>
+  <tr><td>Supabase</td><td>PostgreSQL database hosting. All application data stored here.</td><td><code>DATABASE_URL</code> env var → <code>lib/prisma.ts</code></td></tr>
+  <tr><td>Azure Active Directory (AAD)</td><td>Syncing BD users from the company directory. Runs during <code>seed.ts</code> only.</td><td><code>prisma/seed.ts</code> via <code>@azure/identity</code> + <code>@microsoft/microsoft-graph-client</code></td></tr>
+  <tr><td>Vercel</td><td>Hosting + deployment. <code>postinstall: prisma generate</code> in <code>package.json</code> ensures Prisma client is built on deploy.</td><td>GitHub → Vercel CI</td></tr>
+</table>
+
+<br/>
+<hr style="border-color:#e2e8f0; margin-top:32px;"/>
+<p style="color:#94a3b8; font-size:11px; text-align:center; margin-top:12px;">
+  ProcDNA BD Tracker &nbsp;·&nbsp; Codebase Guide &nbsp;·&nbsp; To save as PDF: File → Print → Save as PDF in your browser.
+</p>
+
+</body>
+</html>

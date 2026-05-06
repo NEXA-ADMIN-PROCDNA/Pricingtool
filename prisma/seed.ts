@@ -140,37 +140,38 @@ async function main() {
   type RateRow = {
     jobRole: JobRole
     location: Location
+    domain: string
     costRatePerHour: number
     billRatePerHour: number
   }
 
   const rateRows: RateRow[] = [
     // ── INDIA ────────────────────────────────────────────────────
-    { jobRole: JobRole.BUSINESS_ANALYST_TRAINEE,   location: Location.INDIA, costRatePerHour: 22,  billRatePerHour: 38  },
-    { jobRole: JobRole.BUSINESS_ANALYST,           location: Location.INDIA, costRatePerHour: 36,  billRatePerHour: 53  },
-    { jobRole: JobRole.SENIOR_BUSINESS_ANALYST,    location: Location.INDIA, costRatePerHour: 62,  billRatePerHour: 158 },
-    { jobRole: JobRole.TECHNOLOGY_ANALYST_TRAINEE, location: Location.INDIA, costRatePerHour: 25,  billRatePerHour: 42  },
-    { jobRole: JobRole.TECHNOLOGY_ANALYST,         location: Location.INDIA, costRatePerHour: 32,  billRatePerHour: 48  },
-    { jobRole: JobRole.SENIOR_TECHNOLOGY_ANALYST,  location: Location.INDIA, costRatePerHour: 55,  billRatePerHour: 140 },
-    { jobRole: JobRole.CONSULTANT,                 location: Location.INDIA, costRatePerHour: 75,  billRatePerHour: 165 },
-    { jobRole: JobRole.SENIOR_CONSULTANT,          location: Location.INDIA, costRatePerHour: 95,  billRatePerHour: 200 },
-    { jobRole: JobRole.ASSOCIATE_ENGAGEMENT_LEAD,  location: Location.INDIA, costRatePerHour: 120, billRatePerHour: 240 },
-    { jobRole: JobRole.ENGAGEMENT_LEAD,            location: Location.INDIA, costRatePerHour: 145, billRatePerHour: 290 },
-    { jobRole: JobRole.ENGAGEMENT_DIRECTOR,        location: Location.INDIA, costRatePerHour: 170, billRatePerHour: 340 },
-    { jobRole: JobRole.PARTNER,                    location: Location.INDIA, costRatePerHour: 200, billRatePerHour: 400 },
+    { jobRole: JobRole.BUSINESS_ANALYST_TRAINEE,   location: Location.INDIA, domain: 'ANALYTICS', costRatePerHour: 22,  billRatePerHour: 38  },
+    { jobRole: JobRole.BUSINESS_ANALYST,           location: Location.INDIA, domain: 'ANALYTICS', costRatePerHour: 36,  billRatePerHour: 53  },
+    { jobRole: JobRole.SENIOR_BUSINESS_ANALYST,    location: Location.INDIA, domain: 'ANALYTICS', costRatePerHour: 62,  billRatePerHour: 158 },
+    { jobRole: JobRole.TECHNOLOGY_ANALYST_TRAINEE, location: Location.INDIA, domain: 'TECH',      costRatePerHour: 25,  billRatePerHour: 42  },
+    { jobRole: JobRole.TECHNOLOGY_ANALYST,         location: Location.INDIA, domain: 'TECH',      costRatePerHour: 32,  billRatePerHour: 48  },
+    { jobRole: JobRole.SENIOR_TECHNOLOGY_ANALYST,  location: Location.INDIA, domain: 'TECH',      costRatePerHour: 55,  billRatePerHour: 140 },
+    { jobRole: JobRole.CONSULTANT,                 location: Location.INDIA, domain: 'MS',        costRatePerHour: 75,  billRatePerHour: 165 },
+    { jobRole: JobRole.SENIOR_CONSULTANT,          location: Location.INDIA, domain: 'MS',        costRatePerHour: 95,  billRatePerHour: 200 },
+    { jobRole: JobRole.ASSOCIATE_ENGAGEMENT_LEAD,  location: Location.INDIA, domain: 'MS',        costRatePerHour: 120, billRatePerHour: 240 },
+    { jobRole: JobRole.ENGAGEMENT_LEAD,            location: Location.INDIA, domain: 'MS',        costRatePerHour: 145, billRatePerHour: 290 },
+    { jobRole: JobRole.ENGAGEMENT_DIRECTOR,        location: Location.INDIA, domain: 'MS',        costRatePerHour: 170, billRatePerHour: 340 },
+    { jobRole: JobRole.PARTNER,                    location: Location.INDIA, domain: 'MS',        costRatePerHour: 200, billRatePerHour: 400 },
     // ── US ───────────────────────────────────────────────────────
-    { jobRole: JobRole.BUSINESS_ANALYST_TRAINEE,   location: Location.US, costRatePerHour: 65,  billRatePerHour: 110 },
-    { jobRole: JobRole.BUSINESS_ANALYST,           location: Location.US, costRatePerHour: 85,  billRatePerHour: 140 },
-    { jobRole: JobRole.SENIOR_BUSINESS_ANALYST,    location: Location.US, costRatePerHour: 110, billRatePerHour: 195 },
-    { jobRole: JobRole.TECHNOLOGY_ANALYST_TRAINEE, location: Location.US, costRatePerHour: 60,  billRatePerHour: 100 },
-    { jobRole: JobRole.TECHNOLOGY_ANALYST,         location: Location.US, costRatePerHour: 80,  billRatePerHour: 130 },
-    { jobRole: JobRole.SENIOR_TECHNOLOGY_ANALYST,  location: Location.US, costRatePerHour: 105, billRatePerHour: 180 },
-    { jobRole: JobRole.CONSULTANT,                 location: Location.US, costRatePerHour: 140, billRatePerHour: 240 },
-    { jobRole: JobRole.SENIOR_CONSULTANT,          location: Location.US, costRatePerHour: 170, billRatePerHour: 290 },
-    { jobRole: JobRole.ASSOCIATE_ENGAGEMENT_LEAD,  location: Location.US, costRatePerHour: 160, billRatePerHour: 253 },
-    { jobRole: JobRole.ENGAGEMENT_LEAD,            location: Location.US, costRatePerHour: 195, billRatePerHour: 310 },
-    { jobRole: JobRole.ENGAGEMENT_DIRECTOR,        location: Location.US, costRatePerHour: 230, billRatePerHour: 370 },
-    { jobRole: JobRole.PARTNER,                    location: Location.US, costRatePerHour: 280, billRatePerHour: 450 },
+    { jobRole: JobRole.BUSINESS_ANALYST_TRAINEE,   location: Location.US, domain: 'ANALYTICS', costRatePerHour: 65,  billRatePerHour: 110 },
+    { jobRole: JobRole.BUSINESS_ANALYST,           location: Location.US, domain: 'ANALYTICS', costRatePerHour: 85,  billRatePerHour: 140 },
+    { jobRole: JobRole.SENIOR_BUSINESS_ANALYST,    location: Location.US, domain: 'ANALYTICS', costRatePerHour: 110, billRatePerHour: 195 },
+    { jobRole: JobRole.TECHNOLOGY_ANALYST_TRAINEE, location: Location.US, domain: 'TECH',      costRatePerHour: 60,  billRatePerHour: 100 },
+    { jobRole: JobRole.TECHNOLOGY_ANALYST,         location: Location.US, domain: 'TECH',      costRatePerHour: 80,  billRatePerHour: 130 },
+    { jobRole: JobRole.SENIOR_TECHNOLOGY_ANALYST,  location: Location.US, domain: 'TECH',      costRatePerHour: 105, billRatePerHour: 180 },
+    { jobRole: JobRole.CONSULTANT,                 location: Location.US, domain: 'MS',        costRatePerHour: 140, billRatePerHour: 240 },
+    { jobRole: JobRole.SENIOR_CONSULTANT,          location: Location.US, domain: 'MS',        costRatePerHour: 170, billRatePerHour: 290 },
+    { jobRole: JobRole.ASSOCIATE_ENGAGEMENT_LEAD,  location: Location.US, domain: 'MS',        costRatePerHour: 160, billRatePerHour: 253 },
+    { jobRole: JobRole.ENGAGEMENT_LEAD,            location: Location.US, domain: 'MS',        costRatePerHour: 195, billRatePerHour: 310 },
+    { jobRole: JobRole.ENGAGEMENT_DIRECTOR,        location: Location.US, domain: 'MS',        costRatePerHour: 230, billRatePerHour: 370 },
+    { jobRole: JobRole.PARTNER,                    location: Location.US, domain: 'MS',        costRatePerHour: 280, billRatePerHour: 450 },
   ]
 
   const rateCardMap: Record<string, string | null> = {} // "ANALYST_INDIA" → id
@@ -178,10 +179,11 @@ async function main() {
   for (const row of rateRows) {
     const rc = await prisma.rateCard.upsert({
       where: { jobRole_location_effectiveFrom: { jobRole: row.jobRole, location: row.location, effectiveFrom } },
-      update: {},
+      update: { domain: row.domain },
       create: {
         jobRole: row.jobRole,
         location: row.location,
+        domain: row.domain,
         costRatePerHour: row.costRatePerHour,
         billRatePerHour: row.billRatePerHour,
         effectiveFrom,

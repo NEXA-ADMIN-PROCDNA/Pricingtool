@@ -4,20 +4,22 @@ import type { OpportunityDetail } from '@/lib/db/opportunities'
 
 type Version = OpportunityDetail['pricingVersions'][number]
 
-type RateCardItem = { id: string; jobRole: string; location: string; costRatePerHour: number; billRatePerHour: number }
+type RateCardItem = { id: string; jobRole: string; location: string; domain: string | null; costRatePerHour: number; billRatePerHour: number }
 type StaffRow = {
   id: string
   rateCardId: string | null
   resourceDesignation: string
   location: string
+  domain: string | null
+  utilization: number | null
   costRatePerHour: number | null
   systemBillRatePerHour: number | null
   effectiveBillRate: number | null
-  utilization: number | null
+  isActive: boolean
   weeklyHours: { weekStartDate: string; hours: number }[]
 }
 
-type OtherCostRow = { id: string; description: string; amount: number }
+type OtherCostRow = { id: string; description: string; amount: number; markupPct: number | null; isBillable: boolean }
 
 type ComputedMetrics = {
   totalHours: number
@@ -35,7 +37,7 @@ function fmtRole(r: string) {
 
 function computeFromRows(rows: StaffRow[]): ComputedMetrics {
   let totalHours = 0, totalCost = 0, proposedBillings = 0, indiaHours = 0
-  for (const row of rows) {
+  for (const row of rows.filter(r => r.isActive)) {
     for (const wh of row.weeklyHours) {
       const h = wh.hours
       const bill = row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0
@@ -130,10 +132,12 @@ export function PricingDrawer({
     rateCardId: sr.rateCardId ?? null,
     resourceDesignation: sr.resourceDesignation,
     location: sr.location,
+    domain: sr.domain ?? null,
+    utilization: sr.utilization ?? null,
     costRatePerHour: sr.costRatePerHour != null ? Number(sr.costRatePerHour) : null,
     systemBillRatePerHour: sr.systemBillRatePerHour != null ? Number(sr.systemBillRatePerHour) : null,
     effectiveBillRate: sr.effectiveBillRate != null ? Number(sr.effectiveBillRate) : null,
-    utilization: sr.utilization != null ? Number(sr.utilization) : null,
+    isActive: sr.isActive ?? true,
     weeklyHours: (sr.weeklyHours ?? []).map((w: any) => ({
       weekStartDate: new Date(w.weekStartDate).toISOString().slice(0, 10),
       hours: Number(w.hours),
@@ -150,6 +154,8 @@ export function PricingDrawer({
   const [showAddRow, setShowAddRow] = useState(false)
   const [editCell, setEditCell] = useState<{ srId: string; wk: string } | null>(null)
   const [editVal, setEditVal] = useState('')
+  const [editRateCell, setEditRateCell] = useState<{ srId: string; field: 'eff' | 'dp' } | null>(null)
+  const [editRateVal, setEditRateVal] = useState('')
 
   // ── Other Costs state ─────────────────────────────────────────
   const [otherCosts, setOtherCosts] = useState<OtherCostRow[]>(() =>
@@ -157,11 +163,15 @@ export function PricingDrawer({
       id: oc.id,
       description: oc.description,
       amount: Number(oc.amount),
+      markupPct: oc.markupPct != null ? Number(oc.markupPct) : null,
+      isBillable: oc.isBillable ?? true,
     }))
   )
   const [showAddCost, setShowAddCost] = useState(false)
   const [newDesc, setNewDesc] = useState('')
   const [newAmount, setNewAmount] = useState('')
+  const [editCostCell, setEditCostCell] = useState<{ id: string; field: 'markup' | 'billed' } | null>(null)
+  const [editCostVal, setEditCostVal] = useState('')
 
   const addOtherCost = useCallback(async () => {
     const amt = parseFloat(newAmount)
@@ -173,11 +183,47 @@ export function PricingDrawer({
     })
     if (!res.ok) return
     const created = await res.json()
-    setOtherCosts(prev => [...prev, { id: created.id, description: created.description, amount: Number(created.amount) }])
+    setOtherCosts(prev => [...prev, { id: created.id, description: created.description, amount: Number(created.amount), markupPct: null, isBillable: true }])
     setNewDesc('')
     setNewAmount('')
     setShowAddCost(false)
   }, [newDesc, newAmount, opp.opportunityId])
+
+  const toggleBillable = useCallback(async (costId: string, billable: boolean) => {
+    setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, isBillable: billable } : oc))
+    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isBillable: billable }),
+    })
+  }, [opp.opportunityId])
+
+  const commitMarkup = useCallback(async (costId: string, val: string) => {
+    setEditCostCell(null)
+    const pct = val === '' ? null : parseFloat(val)
+    if (pct !== null && isNaN(pct)) return
+    setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, markupPct: pct } : oc))
+    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markupPct: pct }),
+    })
+  }, [opp.opportunityId])
+
+  const commitBilled = useCallback(async (costId: string, val: string) => {
+    setEditCostCell(null)
+    const billed = parseFloat(val)
+    if (isNaN(billed)) return
+    const oc = otherCosts.find(r => r.id === costId)
+    if (!oc || oc.amount === 0) return
+    const pct = ((billed / oc.amount) - 1) * 100
+    setOtherCosts(prev => prev.map(r => r.id === costId ? { ...r, markupPct: pct } : r))
+    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markupPct: pct }),
+    })
+  }, [opp.opportunityId, otherCosts])
 
   const removeOtherCost = useCallback(async (costId: string) => {
     await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
@@ -223,8 +269,10 @@ export function PricingDrawer({
       location: rc.location,
       costRatePerHour: rc.costRatePerHour,
       systemBillRatePerHour: rc.billRatePerHour,
-      effectiveBillRate: null,
+      domain: rc.domain ?? null,
       utilization: null,
+      effectiveBillRate: null,
+      isActive: true,
       weeklyHours: [],
     }
     const newRows = [...staffRows, newRow]
@@ -258,6 +306,49 @@ export function PricingDrawer({
     })
     setStaffRows(newRows)
     setEditCell(null)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const commitEffectiveRate = useCallback(async (srId: string, val: string) => {
+    const eff = parseFloat(val)
+    setEditRateCell(null)
+    if (isNaN(eff) || eff < 0) return
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ effectiveBillRate: eff }),
+    })
+    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, effectiveBillRate: eff })
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const commitDP = useCallback(async (srId: string, val: string) => {
+    const dp = parseFloat(val)
+    setEditRateCell(null)
+    if (isNaN(dp)) return
+    const row = staffRows.find(r => r.id === srId)
+    if (!row) return
+    const sysRate = row.systemBillRatePerHour ?? 0
+    const eff = sysRate * (1 + dp / 100)
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ effectiveBillRate: eff }),
+    })
+    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, effectiveBillRate: eff })
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const toggleRow = useCallback(async (srId: string, isActive: boolean) => {
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive }),
+    })
+    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, isActive })
+    setStaffRows(newRows)
     await patchVersion(newRows)
   }, [version.id, staffRows, patchVersion])
 
@@ -464,13 +555,12 @@ export function PricingDrawer({
             {sub === 'Efforts' && (
               <div className="space-y-4">
 
-                {/* Hint */}
                 <p className="text-xs text-slate-400">
-                  Click any hour cell to edit. Use the + row at the bottom to add a resource.
+                  Tick rows to include in calculations. Click Eff. Rate or D/P to edit — they auto-fill each other.
                 </p>
 
-                {/* Live metrics banner */}
-                {staffRows.length > 0 && (
+                {/* Live metrics banner — active rows only */}
+                {staffRows.some(r => r.isActive) && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[
                       { label: 'Total Hours',     value: `${versionMetrics.totalHours.toLocaleString()} h`, color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
@@ -486,35 +576,34 @@ export function PricingDrawer({
                   </div>
                 )}
 
-                {/* Staffing table — always shown */}
+                {/* Staffing table */}
                 <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-0 bg-slate-50 z-20 min-w-[190px] whitespace-nowrap border-r border-slate-200">
+                          {/* Checkbox */}
+                          <th className="px-2 py-3 sticky left-0 bg-slate-50 z-20 w-10 border-r border-slate-200" />
+                          {/* Role */}
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-10 bg-slate-50 z-20 min-w-[170px] whitespace-nowrap border-r border-slate-200">
                             Role
                           </th>
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[190px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
+                          {/* Location */}
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[210px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
                             Location
                           </th>
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[260px] bg-slate-50 z-20 min-w-[88px] whitespace-nowrap border-r border-slate-200">
-                            Cost Rate
-                          </th>
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">
-                            Bill Rate
-                          </th>
-                          <th className="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[72px]">
-                            Util %
-                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">Domain</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Cost Rate</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Bill Rate</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[96px]">Eff. Rate</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[80px]">D/P %</th>
+                          <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400 whitespace-nowrap min-w-[72px]">Util %</th>
                           {weeks.map((_, i) => (
-                            <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[52px]">
+                            <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[48px]">
                               W{i + 1}
                             </th>
                           ))}
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[100px]">
-                            Total Cost
-                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[96px]">Total Cost</th>
                           <th className="px-2 py-3 w-8" />
                         </tr>
                       </thead>
@@ -523,40 +612,116 @@ export function PricingDrawer({
                           const hoursMap: Record<string, number> = {}
                           sr.weeklyHours.forEach(w => { hoursMap[w.weekStartDate] = w.hours })
                           const totalHrs = weeks.reduce((s, w) => s + (hoursMap[weekKey(w)] ?? 0), 0)
-                          const rowCost  = totalHrs * (sr.costRatePerHour ?? 0)
-                          const billRate = sr.effectiveBillRate ?? sr.systemBillRatePerHour
+                          const rowCost  = sr.isActive ? totalHrs * (sr.costRatePerHour ?? 0) : 0
+                          const sysRate  = sr.systemBillRatePerHour
+                          const effRate  = sr.effectiveBillRate
+                          const dp       = (effRate != null && sysRate != null && sysRate > 0)
+                            ? ((effRate - sysRate) / sysRate) * 100
+                            : null
+                          const isEditingEff = editRateCell?.srId === sr.id && editRateCell?.field === 'eff'
+                          const isEditingDP  = editRateCell?.srId === sr.id && editRateCell?.field === 'dp'
+                          const inactive = !sr.isActive
 
                           return (
-                            <tr key={sr.id} className="hover:bg-slate-50/50 group">
-                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-0 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
-                                {fmtRole(sr.resourceDesignation)}
-                              </td>
-                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[190px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
-                                {sr.location === 'INDIA' ? 'India' : 'US'}
-                              </td>
-                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap sticky left-[260px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
-                                {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
-                              </td>
-                              <td className="px-3 py-2.5 text-slate-700 whitespace-nowrap">
-                                {billRate != null ? `$${billRate}` : '—'}
-                              </td>
-                              <td className="px-2 py-2 text-center">
+                            <tr key={sr.id} className={`group transition-colors ${inactive ? 'opacity-40' : 'hover:bg-slate-50/50'}`}>
+                              {/* Checkbox */}
+                              <td className="px-2 py-2.5 text-center sticky left-0 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 <input
-                                  key={`${sr.id}-util-${sr.utilization}`}
-                                  type="number"
-                                  min={1}
-                                  max={100}
-                                  defaultValue={sr.utilization ?? ''}
-                                  placeholder="—"
-                                  onBlur={e => {
-                                    const raw = e.target.value.trim()
-                                    const val = raw === '' ? null : Math.min(100, Math.max(1, parseInt(raw)))
-                                    if (val !== sr.utilization) applyUtilization(sr.id, val)
-                                  }}
-                                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                                  className="w-14 text-center text-xs rounded-lg border border-slate-200 px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                                  type="checkbox"
+                                  checked={sr.isActive}
+                                  onChange={e => toggleRow(sr.id, e.target.checked)}
+                                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                 />
                               </td>
+                              {/* Role */}
+                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-10 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                {fmtRole(sr.resourceDesignation)}
+                              </td>
+                              {/* Location */}
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[210px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                {sr.location === 'INDIA' ? 'India' : 'US'}
+                              </td>
+                              {/* Domain */}
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap text-xs">
+                                {sr.domain ?? <span className="text-slate-300">—</span>}
+                              </td>
+                              {/* Cost Rate */}
+                              <td className="px-3 py-2.5 text-right text-slate-700 whitespace-nowrap">
+                                {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
+                              </td>
+                              {/* Bill Rate (system, read-only) */}
+                              <td className="px-3 py-2.5 text-right text-slate-500 whitespace-nowrap">
+                                {sysRate != null ? `$${sysRate}` : '—'}
+                              </td>
+                              {/* Eff. Rate — editable */}
+                              <td className="px-2 py-2 text-right whitespace-nowrap">
+                                {isEditingEff ? (
+                                  <input
+                                    autoFocus
+                                    type="number" min={0} step={0.01}
+                                    value={editRateVal}
+                                    onChange={e => setEditRateVal(e.target.value)}
+                                    onBlur={() => commitEffectiveRate(sr.id, editRateVal)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                      if (e.key === 'Escape') setEditRateCell(null)
+                                    }}
+                                    className="w-20 text-right text-xs rounded-lg border border-indigo-400 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                  />
+                                ) : (
+                                  <span
+                                    onClick={() => { setEditRateCell({ srId: sr.id, field: 'eff' }); setEditRateVal(String(effRate ?? sysRate ?? '')) }}
+                                    className="cursor-pointer rounded px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
+                                  >
+                                    {effRate != null ? `$${effRate.toFixed(2)}` : <span className="font-normal text-slate-300">click</span>}
+                                  </span>
+                                )}
+                              </td>
+                              {/* D/P % — editable, linked */}
+                              <td className="px-2 py-2 text-right whitespace-nowrap">
+                                {isEditingDP ? (
+                                  <input
+                                    autoFocus
+                                    type="number" step={0.1}
+                                    value={editRateVal}
+                                    onChange={e => setEditRateVal(e.target.value)}
+                                    onBlur={() => commitDP(sr.id, editRateVal)}
+                                    onKeyDown={e => {
+                                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                                      if (e.key === 'Escape') setEditRateCell(null)
+                                    }}
+                                    className="w-16 text-right text-xs rounded-lg border border-indigo-400 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                  />
+                                ) : (
+                                  <span
+                                    onClick={() => { setEditRateCell({ srId: sr.id, field: 'dp' }); setEditRateVal(dp != null ? dp.toFixed(1) : '-') }}
+                                    className={`cursor-pointer rounded px-2 py-1 text-xs font-semibold hover:bg-slate-50 ${
+                                      dp == null ? 'text-slate-300' : dp < 0 ? 'text-amber-600' : dp > 0 ? 'text-emerald-600' : 'text-slate-500'
+                                    }`}
+                                  >
+                                    {dp != null ? `${dp.toFixed(1)}%` : 'click'}
+                                  </span>
+                                )}
+                              </td>
+                              {/* Util % — editable, auto-fills weeks */}
+                              <td className="px-2 py-2 text-right whitespace-nowrap">
+                                <input
+                                  type="number" min={0} max={100} step={5}
+                                  placeholder="—"
+                                  value={sr.utilization ?? ''}
+                                  onChange={e => {
+                                    const val = e.target.value === '' ? null : Number(e.target.value)
+                                    setStaffRows(prev => prev.map(r => r.id === sr.id ? { ...r, utilization: val } : r))
+                                  }}
+                                  onBlur={e => {
+                                    const val = e.target.value === '' ? null : Number(e.target.value)
+                                    applyUtilization(sr.id, val)
+                                  }}
+                                  onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                                  className="w-14 text-right text-xs rounded-lg border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-transparent placeholder-slate-300"
+                                />
+                              </td>
+                              {/* Week cells */}
                               {weeks.map((w, i) => {
                                 const wk = weekKey(w)
                                 const h = hoursMap[wk] ?? 0
@@ -565,10 +730,7 @@ export function PricingDrawer({
                                   <td key={i} className="px-1 py-2 text-center">
                                     {isEditing ? (
                                       <input
-                                        autoFocus
-                                        type="number"
-                                        min={0}
-                                        step={1}
+                                        autoFocus type="number" min={0} step={1}
                                         value={editVal}
                                         onChange={e => setEditVal(e.target.value)}
                                         onBlur={() => commitHours(sr.id, wk, editVal)}
@@ -576,7 +738,7 @@ export function PricingDrawer({
                                           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                                           if (e.key === 'Escape') setEditCell(null)
                                         }}
-                                        className="w-14 text-center text-xs rounded-lg border border-indigo-400 px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                        className="w-12 text-center text-xs rounded-lg border border-indigo-400 px-1 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                                       />
                                     ) : (
                                       <span
@@ -584,9 +746,9 @@ export function PricingDrawer({
                                         onClick={() => { setEditCell({ srId: sr.id, wk }); setEditVal(String(h || '')) }}
                                       >
                                         {h > 0 ? (
-                                          <span className="inline-flex h-7 min-w-[32px] items-center justify-center rounded-full bg-indigo-50 px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100">
-                                            {h}
-                                          </span>
+                                          <span className={`inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${
+                                            inactive ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                                          }`}>{h}</span>
                                         ) : (
                                           <span className="text-slate-300 text-xs hover:text-slate-400">·</span>
                                         )}
@@ -595,14 +757,16 @@ export function PricingDrawer({
                                   </td>
                                 )
                               })}
+                              {/* Total Cost */}
                               <td className="px-4 py-2.5 text-right font-semibold text-slate-800 whitespace-nowrap">
-                                {rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">—</span>}
+                                {sr.isActive && rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">—</span>}
                               </td>
+                              {/* Delete */}
                               <td className="px-2 py-2.5">
                                 <button
                                   onClick={() => removeRow(sr.id)}
                                   title="Remove row"
-                                  className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all"
+                                  className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
                                 >
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
@@ -613,16 +777,15 @@ export function PricingDrawer({
                           )
                         })}
 
-                        {/* Total row — only when there are rows */}
+                        {/* Total row — active rows only */}
                         {staffRows.length > 0 && (
                           <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
-                            <td className="px-4 py-3 text-slate-800 sticky left-0 bg-slate-50 z-10 border-r border-slate-200">Total</td>
-                            <td className="sticky left-[190px] bg-slate-50 z-10 border-r border-slate-200" />
-                            <td className="sticky left-[260px] bg-slate-50 z-10 border-r border-slate-200" />
-                            <td />
-                            <td />
+                            <td className="sticky left-0 bg-slate-50 z-10 border-r border-slate-200 w-10" />
+                            <td className="px-4 py-3 text-slate-800 sticky left-10 bg-slate-50 z-10 border-r border-slate-200">Total</td>
+                            <td className="sticky left-[210px] bg-slate-50 z-10 border-r border-slate-200" />
+                            <td /><td /><td /><td /><td />
                             {weeks.map((w, i) => {
-                              const wt = staffRows.reduce((s, sr) => {
+                              const wt = staffRows.filter(r => r.isActive).reduce((s, sr) => {
                                 const hm: Record<string, number> = {}
                                 sr.weeklyHours.forEach(wh => { hm[wh.weekStartDate] = wh.hours })
                                 return s + (hm[weekKey(w)] ?? 0)
@@ -633,9 +796,7 @@ export function PricingDrawer({
                                 </td>
                               )
                             })}
-                            <td className="px-4 py-3 text-right font-bold text-indigo-700">
-                              {fmt(versionMetrics.totalCost)}
-                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-indigo-700">{fmt(versionMetrics.totalCost)}</td>
                             <td />
                           </tr>
                         )}
@@ -644,7 +805,7 @@ export function PricingDrawer({
                         <tr className="border-t border-dashed border-slate-200 bg-white">
                           {showAddRow ? (
                             <>
-                              <td colSpan={5} className="px-4 py-2.5 sticky left-0 bg-white z-10">
+                              <td colSpan={4} className="px-4 py-2.5 sticky left-0 bg-white z-10">
                                 <select
                                   autoFocus
                                   className="w-full text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
@@ -656,33 +817,25 @@ export function PricingDrawer({
                                 >
                                   <option value="" disabled>Select a role…</option>
                                   {allRateCards
-                                    .filter(rc => !staffRows.some(r => r.rateCardId === rc.id))
                                     .map(rc => (
                                       <option key={rc.id} value={rc.id}>
-                                        {fmtRole(rc.jobRole)} — {rc.location === 'INDIA' ? 'India' : 'US'} · ${rc.costRatePerHour}/hr
+                                        {fmtRole(rc.jobRole)} — {rc.location === 'INDIA' ? 'India' : 'US'}{rc.domain ? ` · ${rc.domain}` : ''} · $${rc.costRatePerHour}/hr
                                       </option>
                                     ))
                                   }
                                 </select>
                               </td>
-                              <td colSpan={weeks.length + 2} className="px-4 py-2.5">
-                                <button
-                                  onClick={() => setShowAddRow(false)}
-                                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                                >
-                                  Cancel
-                                </button>
+                              <td colSpan={5 + weeks.length + 2} className="px-4 py-2.5">
+                                <button onClick={() => setShowAddRow(false)} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
                               </td>
                             </>
                           ) : (
-                            <td colSpan={5 + weeks.length + 2} className="px-4 py-2.5">
+                            <td colSpan={9 + weeks.length + 2} className="px-4 py-2.5">
                               <button
                                 onClick={() => setShowAddRow(true)}
                                 className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
                               >
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-indigo-300 text-indigo-400 text-sm font-bold leading-none">
-                                  +
-                                </span>
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-indigo-300 text-indigo-400 text-sm font-bold leading-none">+</span>
                                 Add Resource
                               </button>
                             </td>
@@ -701,36 +854,101 @@ export function PricingDrawer({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reason</th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 w-40">Amount</th>
+                      <th className="px-2 py-3 w-10 text-xs font-semibold uppercase tracking-wide text-slate-500 text-center">Bill</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nature of Expense</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 w-36">Cost</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-28">Markup %</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-36">Billed</th>
                       <th className="px-2 py-3 w-10" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {otherCosts.map(oc => (
-                      <tr key={oc.id} className="hover:bg-slate-50/50 group">
-                        <td className="px-4 py-3 text-slate-800">{oc.description}</td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-800">{fmt(oc.amount)}</td>
-                        <td className="px-2 py-3">
-                          <button
-                            onClick={() => removeOtherCost(oc.id)}
-                            title="Remove"
-                            className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {otherCosts.map(oc => {
+                      const billed = oc.isBillable ? oc.amount * (1 + (oc.markupPct ?? 0) / 100) : 0
+                      const isEditingMarkup = editCostCell?.id === oc.id && editCostCell?.field === 'markup'
+                      const isEditingBilled = editCostCell?.id === oc.id && editCostCell?.field === 'billed'
+                      return (
+                        <tr key={oc.id} className={`group transition-colors ${!oc.isBillable ? 'opacity-40' : 'hover:bg-slate-50/50'}`}>
+                          {/* Billable checkbox */}
+                          <td className="px-2 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={oc.isBillable}
+                              onChange={e => toggleBillable(oc.id, e.target.checked)}
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
+                          {/* Description */}
+                          <td className="px-4 py-3 text-slate-800">{oc.description}</td>
+                          {/* Cost */}
+                          <td className="px-4 py-3 text-right font-semibold text-slate-800">{fmt(oc.amount)}</td>
+                          {/* Markup % — editable */}
+                          <td className="px-2 py-2 text-right">
+                            {isEditingMarkup ? (
+                              <input
+                                autoFocus type="number" step={0.1} placeholder="0"
+                                value={editCostVal}
+                                onChange={e => setEditCostVal(e.target.value)}
+                                onBlur={() => commitMarkup(oc.id, editCostVal)}
+                                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditCostCell(null) }}
+                                className="w-20 text-right text-xs rounded-lg border border-indigo-400 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                              />
+                            ) : (
+                              <span
+                                onClick={() => { setEditCostCell({ id: oc.id, field: 'markup' }); setEditCostVal(oc.markupPct != null ? String(oc.markupPct) : '') }}
+                                className="cursor-pointer rounded px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700"
+                              >
+                                {oc.markupPct != null ? `${oc.markupPct.toFixed(1)}%` : <span className="text-slate-300">0%</span>}
+                              </span>
+                            )}
+                          </td>
+                          {/* Billed — editable (back-calculates markup) */}
+                          <td className="px-2 py-2 text-right">
+                            {isEditingBilled ? (
+                              <input
+                                autoFocus type="number" min={0} step={1} placeholder="0"
+                                value={editCostVal}
+                                onChange={e => setEditCostVal(e.target.value)}
+                                onBlur={() => commitBilled(oc.id, editCostVal)}
+                                onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditCostCell(null) }}
+                                className="w-24 text-right text-xs rounded-lg border border-indigo-400 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                              />
+                            ) : (
+                              <span
+                                onClick={() => { if (!oc.isBillable) return; setEditCostCell({ id: oc.id, field: 'billed' }); setEditCostVal(billed.toFixed(0)) }}
+                                className={`rounded px-2 py-1 text-xs font-semibold ${oc.isBillable ? 'cursor-pointer text-indigo-700 hover:bg-indigo-50' : 'text-slate-400 cursor-default'}`}
+                              >
+                                {fmt(billed)}
+                              </span>
+                            )}
+                          </td>
+                          {/* Delete */}
+                          <td className="px-2 py-3">
+                            <button
+                              onClick={() => removeOtherCost(oc.id)}
+                              title="Remove"
+                              className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
 
-                    {/* Total row */}
+                    {/* Total row — billable rows only */}
                     {otherCosts.length > 0 && (
                       <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
+                        <td />
                         <td className="px-4 py-3 text-slate-800">Total</td>
+                        <td className="px-4 py-3 text-right text-slate-700">
+                          {fmt(otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount, 0))}
+                        </td>
+                        <td />
                         <td className="px-4 py-3 text-right text-indigo-700">
-                          {fmt(otherCosts.reduce((s, oc) => s + oc.amount, 0))}
+                          {fmt(otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0))}
                         </td>
                         <td />
                       </tr>
@@ -740,6 +958,7 @@ export function PricingDrawer({
                     <tr className="border-t border-dashed border-slate-200 bg-white">
                       {showAddCost ? (
                         <>
+                          <td />
                           <td className="px-3 py-2.5">
                             <input
                               autoFocus
@@ -763,6 +982,8 @@ export function PricingDrawer({
                               className="w-full text-xs text-right rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                             />
                           </td>
+                          <td />
+                          <td />
                           <td className="px-2 py-2.5">
                             <div className="flex gap-1">
                               <button
@@ -788,7 +1009,7 @@ export function PricingDrawer({
                           </td>
                         </>
                       ) : (
-                        <td colSpan={3} className="px-4 py-2.5">
+                        <td colSpan={6} className="px-4 py-2.5">
                           <button
                             onClick={() => setShowAddCost(true)}
                             className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"

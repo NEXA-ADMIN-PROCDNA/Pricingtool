@@ -7,12 +7,16 @@ export async function PATCH(
 ) {
   try {
     const { srId } = await params
-    const { utilization, weekEntries } = await req.json()
+    const { utilization, weekEntries, effectiveBillRate, isActive } = await req.json()
 
     await prisma.$transaction(async (tx) => {
       await tx.staffingResource.update({
         where: { id: srId },
-        data: { utilization: utilization ?? null },
+        data: {
+          ...(utilization       !== undefined && { utilization: utilization ?? null }),
+          ...(effectiveBillRate !== undefined && { effectiveBillRate }),
+          ...(isActive          !== undefined && { isActive }),
+        },
       })
       if (Array.isArray(weekEntries) && weekEntries.length > 0) {
         for (const { weekStartDate, hours } of weekEntries) {

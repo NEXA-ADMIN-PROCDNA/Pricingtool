@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: oppId } = await params
-  const { description, amount } = await req.json()
+  const { description, amount, markupPct } = await req.json()
 
   if (!description?.trim() || amount == null) {
     return NextResponse.json({ error: 'description and amount are required' }, { status: 400 })
@@ -20,6 +20,7 @@ export async function POST(
       opportunityId: opp.id,
       description: description.trim(),
       amount,
+      markupPct: markupPct ?? null,
     },
   })
 
