@@ -7,7 +7,7 @@ export async function PATCH(
 ) {
   try {
     const { srId } = await params
-    const { utilization, weekEntries, effectiveBillRate, isActive } = await req.json()
+    const { utilization, weekEntries, effectiveBillRate, isActive, isBillable } = await req.json()
 
     await prisma.$transaction(async (tx) => {
       await tx.staffingResource.update({
@@ -16,6 +16,7 @@ export async function PATCH(
           ...(utilization       !== undefined && { utilization: utilization ?? null }),
           ...(effectiveBillRate !== undefined && { effectiveBillRate }),
           ...(isActive          !== undefined && { isActive }),
+          ...(isBillable        !== undefined && { isBillable }),
         },
       })
       if (Array.isArray(weekEntries) && weekEntries.length > 0) {

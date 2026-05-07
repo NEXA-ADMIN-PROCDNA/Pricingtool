@@ -16,6 +16,7 @@ type StaffRow = {
   systemBillRatePerHour: number | null
   effectiveBillRate: number | null
   isActive: boolean
+  isBillable: boolean
   weeklyHours: { weekStartDate: string; hours: number }[]
 }
 
@@ -23,6 +24,8 @@ type OtherCostRow = { id: string; description: string; amount: number; markupPct
 
 type ComputedMetrics = {
   totalHours: number
+  billedHours: number
+  unbilledHours: number
   totalCost: number
   proposedBillings: number
   grossMargin: number
@@ -36,22 +39,26 @@ function fmtRole(r: string) {
 }
 
 function computeFromRows(rows: StaffRow[]): ComputedMetrics {
-  let totalHours = 0, totalCost = 0, proposedBillings = 0, indiaHours = 0
+  let billedHours = 0, unbilledHours = 0, totalCost = 0, proposedBillings = 0, indiaHours = 0
   for (const row of rows.filter(r => r.isActive)) {
     for (const wh of row.weeklyHours) {
       const h = wh.hours
-      const bill = row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0
-      totalHours     += h
-      totalCost      += h * (row.costRatePerHour ?? 0)
-      proposedBillings += h * bill
-      if (row.location === 'INDIA') indiaHours += h
+      totalCost += h * (row.costRatePerHour ?? 0)
+      if (row.isBillable) {
+        billedHours      += h
+        proposedBillings += h * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
+        if (row.location === 'INDIA') indiaHours += h
+      } else {
+        unbilledHours += h
+      }
     }
   }
-  const grossMargin    = proposedBillings - totalCost
-  const grossMarginPct = proposedBillings > 0 ? (grossMargin / proposedBillings) * 100 : 0
-  const offshorePct    = totalHours > 0 ? (indiaHours / totalHours) * 100 : 0
-  const effectiveRatePerHour = totalHours > 0 ? proposedBillings / totalHours : 0
-  return { totalHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour }
+  const totalHours       = billedHours + unbilledHours
+  const grossMargin      = proposedBillings - totalCost
+  const grossMarginPct   = proposedBillings > 0 ? (grossMargin / proposedBillings) * 100 : 0
+  const offshorePct      = billedHours > 0 ? (indiaHours / billedHours) * 100 : 0
+  const effectiveRatePerHour = billedHours > 0 ? proposedBillings / billedHours : 0
+  return { totalHours, billedHours, unbilledHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour }
 }
 
 const SUB_TABS = [
@@ -138,6 +145,7 @@ export function PricingDrawer({
     systemBillRatePerHour: sr.systemBillRatePerHour != null ? Number(sr.systemBillRatePerHour) : null,
     effectiveBillRate: sr.effectiveBillRate != null ? Number(sr.effectiveBillRate) : null,
     isActive: sr.isActive ?? true,
+    isBillable: sr.isBillable ?? true,
     weeklyHours: (sr.weeklyHours ?? []).map((w: any) => ({
       weekStartDate: new Date(w.weekStartDate).toISOString().slice(0, 10),
       hours: Number(w.hours),
@@ -273,6 +281,7 @@ export function PricingDrawer({
       utilization: null,
       effectiveBillRate: null,
       isActive: true,
+      isBillable: true,
       weeklyHours: [],
     }
     const newRows = [...staffRows, newRow]
@@ -348,6 +357,17 @@ export function PricingDrawer({
       body: JSON.stringify({ isActive }),
     })
     const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, isActive })
+    setStaffRows(newRows)
+    await patchVersion(newRows)
+  }, [version.id, staffRows, patchVersion])
+
+  const toggleStaffBillable = useCallback(async (srId: string, isBillable: boolean) => {
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isBillable }),
+    })
+    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, isBillable })
     setStaffRows(newRows)
     await patchVersion(newRows)
   }, [version.id, staffRows, patchVersion])
@@ -563,9 +583,10 @@ export function PricingDrawer({
                 {staffRows.some(r => r.isActive) && (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[
-                      { label: 'Total Hours',     value: `${versionMetrics.totalHours.toLocaleString()} h`, color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
-                      { label: 'Employee Cost',   value: fmt(versionMetrics.totalCost),                     color: 'bg-slate-50 border-slate-200 text-slate-800' },
-                      { label: 'Implied Revenue', value: fmt(versionMetrics.proposedBillings),              color: 'bg-slate-50 border-slate-200 text-slate-800' },
+                      { label: 'Billed Hours',    value: `${versionMetrics.billedHours.toLocaleString()} h`,   color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
+                      { label: 'Unbilled Hours',  value: `${versionMetrics.unbilledHours.toLocaleString()} h`, color: 'bg-slate-50 border-slate-200 text-slate-500' },
+                      { label: 'Employee Cost',   value: fmt(versionMetrics.totalCost),                        color: 'bg-slate-50 border-slate-200 text-slate-800' },
+                      { label: 'Implied Revenue', value: fmt(versionMetrics.proposedBillings),                 color: 'bg-slate-50 border-slate-200 text-slate-800' },
                       { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '—', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
                     ].map(({ label, value, color }) => (
                       <div key={label} className={`rounded-xl border px-4 py-3 ${color}`}>
@@ -582,14 +603,16 @@ export function PricingDrawer({
                     <table className="text-sm">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200">
-                          {/* Checkbox */}
-                          <th className="px-2 py-3 sticky left-0 bg-slate-50 z-20 w-10 border-r border-slate-200" />
+                          {/* Active checkbox */}
+                          <th className="px-2 py-3 sticky left-0 bg-slate-50 z-20 w-10 border-r border-slate-200 text-[10px] font-semibold text-slate-400 text-center">Active</th>
+                          {/* Billable checkbox */}
+                          <th className="px-2 py-3 sticky left-10 bg-slate-50 z-20 w-10 border-r border-slate-200 text-[10px] font-semibold text-slate-400 text-center">Bill</th>
                           {/* Role */}
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-10 bg-slate-50 z-20 min-w-[170px] whitespace-nowrap border-r border-slate-200">
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-20 bg-slate-50 z-20 min-w-[170px] whitespace-nowrap border-r border-slate-200">
                             Role
                           </th>
                           {/* Location */}
-                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[210px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
+                          <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[250px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
                             Location
                           </th>
                           <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">Domain</th>
@@ -618,13 +641,14 @@ export function PricingDrawer({
                           const dp       = (effRate != null && sysRate != null && sysRate > 0)
                             ? ((effRate - sysRate) / sysRate) * 100
                             : null
-                          const isEditingEff = editRateCell?.srId === sr.id && editRateCell?.field === 'eff'
-                          const isEditingDP  = editRateCell?.srId === sr.id && editRateCell?.field === 'dp'
-                          const inactive = !sr.isActive
+                          const isEditingEff  = editRateCell?.srId === sr.id && editRateCell?.field === 'eff'
+                          const isEditingDP   = editRateCell?.srId === sr.id && editRateCell?.field === 'dp'
+                          const inactive      = !sr.isActive
+                          const nonBillable   = sr.isActive && !sr.isBillable
 
                           return (
                             <tr key={sr.id} className={`group transition-colors ${inactive ? 'opacity-40' : 'hover:bg-slate-50/50'}`}>
-                              {/* Checkbox */}
+                              {/* Active checkbox */}
                               <td className="px-2 py-2.5 text-center sticky left-0 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 <input
                                   type="checkbox"
@@ -633,12 +657,22 @@ export function PricingDrawer({
                                   className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                                 />
                               </td>
+                              {/* Billable checkbox */}
+                              <td className="px-2 py-2.5 text-center sticky left-10 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={sr.isBillable}
+                                  disabled={!sr.isActive}
+                                  onChange={e => toggleStaffBillable(sr.id, e.target.checked)}
+                                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                />
+                              </td>
                               {/* Role */}
-                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-10 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                              <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-20 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 {fmtRole(sr.resourceDesignation)}
                               </td>
                               {/* Location */}
-                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[210px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[250px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                                 {sr.location === 'INDIA' ? 'India' : 'US'}
                               </td>
                               {/* Domain */}
@@ -650,11 +684,11 @@ export function PricingDrawer({
                                 {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
                               </td>
                               {/* Bill Rate (system, read-only) */}
-                              <td className="px-3 py-2.5 text-right text-slate-500 whitespace-nowrap">
+                              <td className={`px-3 py-2.5 text-right whitespace-nowrap ${nonBillable ? 'text-slate-300 line-through' : 'text-slate-500'}`}>
                                 {sysRate != null ? `$${sysRate}` : '—'}
                               </td>
                               {/* Eff. Rate — editable */}
-                              <td className="px-2 py-2 text-right whitespace-nowrap">
+                              <td className={`px-2 py-2 text-right whitespace-nowrap ${nonBillable ? 'pointer-events-none opacity-30' : ''}`}>
                                 {isEditingEff ? (
                                   <input
                                     autoFocus
@@ -678,7 +712,7 @@ export function PricingDrawer({
                                 )}
                               </td>
                               {/* D/P % — editable, linked */}
-                              <td className="px-2 py-2 text-right whitespace-nowrap">
+                              <td className={`px-2 py-2 text-right whitespace-nowrap ${nonBillable ? 'pointer-events-none opacity-30' : ''}`}>
                                 {isEditingDP ? (
                                   <input
                                     autoFocus
