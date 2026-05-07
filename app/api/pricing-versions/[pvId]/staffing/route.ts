@@ -19,6 +19,7 @@ export async function POST(
         rateCardId,
         resourceDesignation: rc.jobRole,
         location: rc.location,
+        domain: rc.domain ?? null,
         costRatePerHour: rc.costRatePerHour,
         systemBillRatePerHour: rc.billRatePerHour,
       },

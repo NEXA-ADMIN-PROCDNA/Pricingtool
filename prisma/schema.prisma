@@ -259,6 +259,7 @@ model RateCard {
   id                String    @id @default(cuid())
   jobRole           JobRole               // [Q1] enum
   location          Location              // [Q1] enum
+  domain            String?               // e.g. Analytics, Tech, Data Science, MS
   costRatePerHour   Decimal   @db.Decimal(10, 2)
   billRatePerHour   Decimal   @db.Decimal(10, 2)
   effectiveFrom     DateTime  @default(now())
@@ -327,7 +328,9 @@ model StaffingResource {
 
   resourceDesignation    JobRole                    // [Q1] enum
   location               Location       @default(INDIA)
+  domain                 String?                            // copied from rate card
   isBillable             Boolean        @default(true)
+  isActive               Boolean        @default(true)     // checkbox — exclude from calcs when false
 
   systemBillRatePerHour  Decimal?       @db.Decimal(10, 2)
   manualBillRatePerHour  Decimal?       @db.Decimal(10, 2)
@@ -369,6 +372,7 @@ model OtherCost {
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   description   String
   amount        Decimal     @db.Decimal(12, 2)
+  markupPct     Decimal?    @db.Decimal(8, 4)
   isBillable    Boolean     @default(true)
   month         DateTime?   @db.Timestamptz(3)
  createdAt DateTime @default(now()) @db.Timestamptz(3)
