@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ pvId: string }> }
+) {
+  try {
+    const { pvId } = await params
+    await prisma.pricingVersion.delete({ where: { id: pvId } })
+    return new NextResponse(null, { status: 204 })
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ error: 'Failed to delete pricing version' }, { status: 500 })
+  }
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> },
