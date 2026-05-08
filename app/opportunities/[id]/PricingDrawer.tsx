@@ -28,10 +28,12 @@ type ComputedMetrics = {
   unbilledHours: number
   totalCost: number
   proposedBillings: number
+  recommendedBillings: number
   grossMargin: number
   grossMarginPct: number
   offshorePct: number
   effectiveRatePerHour: number
+  discountPremiumPct: number
 }
 
 function fmtRole(r: string) {
@@ -39,26 +41,28 @@ function fmtRole(r: string) {
 }
 
 function computeFromRows(rows: StaffRow[]): ComputedMetrics {
-  let billedHours = 0, unbilledHours = 0, totalCost = 0, proposedBillings = 0, indiaHours = 0
+  let billedHours = 0, unbilledHours = 0, totalCost = 0, proposedBillings = 0, recommendedBillings = 0, indiaHours = 0
   for (const row of rows.filter(r => r.isActive)) {
     for (const wh of row.weeklyHours) {
       const h = wh.hours
       totalCost += h * (row.costRatePerHour ?? 0)
       if (row.isBillable) {
-        billedHours      += h
-        proposedBillings += h * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
+        billedHours          += h
+        proposedBillings     += h * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
+        recommendedBillings  += h * (row.systemBillRatePerHour ?? 0)
         if (row.location === 'INDIA') indiaHours += h
       } else {
         unbilledHours += h
       }
     }
   }
-  const totalHours       = billedHours + unbilledHours
-  const grossMargin      = proposedBillings - totalCost
-  const grossMarginPct   = proposedBillings > 0 ? (grossMargin / proposedBillings) * 100 : 0
-  const offshorePct      = billedHours > 0 ? (indiaHours / billedHours) * 100 : 0
+  const totalHours           = billedHours + unbilledHours
+  const grossMargin          = proposedBillings - totalCost
+  const grossMarginPct       = proposedBillings > 0 ? (grossMargin / proposedBillings) * 100 : 0
+  const offshorePct          = billedHours > 0 ? (indiaHours / billedHours) * 100 : 0
   const effectiveRatePerHour = billedHours > 0 ? proposedBillings / billedHours : 0
-  return { totalHours, billedHours, unbilledHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour }
+  const discountPremiumPct   = recommendedBillings > 0 ? ((proposedBillings / recommendedBillings) - 1) * 100 : 0
+  return { totalHours, billedHours, unbilledHours, totalCost, proposedBillings, recommendedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour, discountPremiumPct }
 }
 
 const SUB_TABS = [
@@ -270,6 +274,16 @@ export function PricingDrawer({
   const patchVersion = useCallback(async (rows: StaffRow[]) => {
     const m = computeFromRows(rows)
     setVersionMetrics(m)
+
+    // Wallet Share = (staffing billings + billed other-cost revenue) / estimated revenue
+    const a2 = otherCosts
+      .filter(oc => oc.isBillable)
+      .reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
+    const estRev = opp.estimatedRevenue != null ? Number(opp.estimatedRevenue) : null
+    const revenueSharePct = estRev && estRev > 0
+      ? ((m.proposedBillings + a2) / estRev) * 100
+      : null
+
     await fetch(`/api/pricing-versions/${version.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -280,9 +294,11 @@ export function PricingDrawer({
         grossMarginPct:       m.grossMarginPct,
         offshorePct:          m.offshorePct,
         effectiveRatePerHour: m.effectiveRatePerHour,
+        discountPremiumPct:   m.discountPremiumPct,
+        revenueSharePct,
       }),
     })
-  }, [version.id])
+  }, [version.id, otherCosts, opp.estimatedRevenue])
 
   useEffect(() => {
     if (sub === 'Efforts' && allRateCards.length === 0) {
@@ -550,25 +566,61 @@ export function PricingDrawer({
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                    {[
-                      { label: 'Revenue Share',      value: version.revenueSharePct != null ? `${Number(version.revenueSharePct).toFixed(2)}%` : '—' },
-                      { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings : (version.proposedBillings != null ? Number(version.proposedBillings) : null)), hi: true },
-                      { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost        : (version.totalCost        != null ? Number(version.totalCost)        : null)) },
-                      { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : (version.grossMarginPct != null ? `${Number(version.grossMarginPct).toFixed(1)}%` : '—'), hi: true },
-                      { label: 'Discount / Premium', value: version.discountPremiumPct != null ? `${Number(version.discountPremiumPct).toFixed(1)}%` : '—' },
-                      { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour) : null)) },
-                      { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h` : (version.totalHours != null ? `${Number(version.totalHours).toLocaleString()} h` : '—') },
-                      { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%` : (version.offshorePct != null ? `${Number(version.offshorePct).toFixed(0)}%` : '—') },
-                    ].map(({ label, value, hi }) => (
-                      <div key={label} className={`rounded-xl p-3 ${hi ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50'}`}>
-                        <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                        <p className={`text-base font-bold ${hi ? 'text-indigo-700' : 'text-slate-800'}`}>
-                          {value}
-                        </p>
+                  {(() => {
+                    const a2Live = otherCosts
+                      .filter(oc => oc.isBillable)
+                      .reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
+                    const estRev = opp.estimatedRevenue != null ? Number(opp.estimatedRevenue) : null
+                    const walletShareLive = estRev && estRev > 0 && versionMetrics.totalHours > 0
+                      ? ((versionMetrics.proposedBillings + a2Live) / estRev) * 100
+                      : null
+                    const walletShareStored = version.revenueSharePct != null ? Number(version.revenueSharePct) : null
+                    const walletShareVal = walletShareLive ?? walletShareStored
+                    const walletShareOver = walletShareVal != null && walletShareVal > 100
+
+                    return (
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        {[
+                          {
+                            label: 'Wallet Share',
+                            value: walletShareVal != null ? `${walletShareVal.toFixed(1)}%` : '—',
+                            hi: false,
+                            warn: walletShareOver,
+                            tip: walletShareOver
+                              ? 'Billings exceed estimated revenue'
+                              : estRev == null
+                                ? 'Set Estimated Revenue on the opportunity to compute Wallet Share'
+                                : undefined,
+                          },
+                          { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
+                          { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
+                          { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '—'), hi: true },
+                          { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '—') },
+                          { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
+                          { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '—') },
+                          { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '—') },
+                        ].map(({ label, value, hi, warn, tip }) => (
+                          <div key={label} title={tip} className={`rounded-xl p-3 ${
+                            warn ? 'bg-amber-50 border border-amber-200'
+                            : hi  ? 'bg-indigo-50 border border-indigo-100'
+                            :       'bg-slate-50'
+                          }`}>
+                            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+                            <p className={`text-base font-bold ${
+                              warn ? 'text-amber-600'
+                              : hi  ? 'text-indigo-700'
+                              :       'text-slate-800'
+                            }`}>
+                              {value}
+                            </p>
+                            {warn && (
+                              <p className="text-[9px] text-amber-500 mt-0.5">Exceeds estimate</p>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )
+                  })()}
                 </div>
 
                 {version.businessJustification && (

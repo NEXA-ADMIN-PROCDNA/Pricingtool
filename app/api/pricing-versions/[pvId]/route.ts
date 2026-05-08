@@ -66,6 +66,8 @@ export async function PATCH(
         ...(body.grossMarginPct      != null && { grossMarginPct:      body.grossMarginPct      }),
         ...(body.offshorePct         != null && { offshorePct:         body.offshorePct         }),
         ...(body.effectiveRatePerHour!= null && { effectiveRatePerHour:body.effectiveRatePerHour}),
+        ...(body.discountPremiumPct  != null && { discountPremiumPct:  body.discountPremiumPct  }),
+        ...(body.revenueSharePct    != null && { revenueSharePct:     body.revenueSharePct     }),
       },
     })
     return NextResponse.json(updated)
