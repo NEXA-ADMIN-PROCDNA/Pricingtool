@@ -1,77 +1,57 @@
-"use client"
-import { signIn } from "next-auth/react"
-import { useState } from "react"
+'use client'
+import { signIn } from 'next-auth/react'
+import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+
+const ERROR_MESSAGES = {
+  not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
+  account_disabled: 'Your account has been disabled. Contact your admin.',
+}
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const params = useSearchParams()
+  const errorKey = params.get('error')
+  const errorMsg = ERROR_MESSAGES[errorKey] ?? null
 
-  async function handleLogin() {
-    if (!email) {
-      setError("Please enter your email")
-      return
-    }
+  async function handleSignIn() {
     setLoading(true)
-    setError("")
-
-    const result = await signIn("credentials", {
-      email,
-      password,
-      callbackUrl: "/dashboard",
-      redirect: false
-    })
-
-    if (result?.error) {
-      setError("Sign in failed. Please try again.")
-      setLoading(false)
-    } else {
-      window.location.href = "/dashboard"
-    }
+    await signIn('azure-ad', { callbackUrl: '/dashboard' })
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96 space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 w-full max-w-sm space-y-8">
 
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">NEXA | Pricing Tool</h1>
-          <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
+          <h1 className="text-2xl font-bold text-slate-900">ProcDNA</h1>
+          <p className="text-slate-500 text-sm mt-1">BD Tracker &amp; Pricing Tool</p>
         </div>
 
-        {error && (
-          <div className="bg-red-50 text-red-600 text-sm p-3 rounded">
-            {error}
+        {errorMsg && (
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {errorMsg}
           </div>
         )}
 
-        <div className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full border border-gray-300 p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleLogin()}
-          />
-        </div>
-
         <button
-          onClick={handleLogin}
+          onClick={handleSignIn}
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white p-2.5 rounded font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
         >
-          {loading ? "Signing in..." : "Sign In"}
+          {/* Microsoft logo */}
+          <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
+            <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+            <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+            <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+          </svg>
+          {loading ? 'Redirecting…' : 'Sign in with Microsoft'}
         </button>
+
+        <p className="text-center text-xs text-slate-400">
+          Use your ProcDNA company account
+        </p>
 
       </div>
     </div>

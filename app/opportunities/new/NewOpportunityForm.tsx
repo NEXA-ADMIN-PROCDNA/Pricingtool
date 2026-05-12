@@ -16,7 +16,7 @@ const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
   { value: 'ANALYTICS', label: 'Analytics'         },
   { value: 'DS',        label: 'Data Science'      },
   { value: 'MS',        label: 'Managed Services'  },
-  { value: 'OTHERS',    label: 'Others'            },
+  { value: 'DESIGN',    label: 'Design'            },
 ]
 
 
@@ -37,17 +37,25 @@ const disabledCls =
 export function NewOpportunityForm({ clients, users }: { clients: Client[]; users: User[] }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [error, setError]   = useState<string | null>(null)
-  const [clientId, setClientId]     = useState('')
+  const [error, setError]             = useState<string | null>(null)
+  const [clientId, setClientId]       = useState('')
   const [starConnect, setStarConnect] = useState<'yes' | 'no'>('no')
+  const [newPocs, setNewPocs]         = useState<{ name: string; contact: string }[]>([])
 
   const selectedClient = clients.find(c => c.id === clientId) ?? null
+
+  function addPoc()    { setNewPocs(p => [...p, { name: '', contact: '' }]) }
+  function removePoc(i: number) { setNewPocs(p => p.filter((_, idx) => idx !== i)) }
+  function updatePoc(i: number, field: 'name' | 'contact', value: string) {
+    setNewPocs(p => p.map((poc, idx) => idx === i ? { ...poc, [field]: value } : poc))
+  }
 
   async function handleSubmit(e: { preventDefault(): void; currentTarget: HTMLFormElement }) {
     e.preventDefault()
     setError(null)
-    const data = Object.fromEntries(new FormData(e.currentTarget))
+    const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
+    data.pocs = newPocs.filter(p => p.name.trim())
 
     startTransition(async () => {
       try {
@@ -102,23 +110,26 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
             )}
           </div>
 
-          {/* Client BU — autofilled, greyed out */}
+          {/* Business Unit — free text */}
           <div>
-            <Label text="Client Business Unit" />
-            <div className={disabledCls}>
-              {selectedClient?.businessUnit ?? <span className="text-slate-300 italic">Select a client first</span>}
-            </div>
+            <Label text="Business Unit" />
+            <input
+              name="businessUnit"
+              type="text"
+              placeholder="e.g. Commercial, R&D, IT…"
+              className={inputCls}
+            />
           </div>
 
-          {/* Client POCs — displayed when client selected */}
+          {/* Existing POCs from client master */}
           {selectedClient && selectedClient.pocs.length > 0 && (
             <div className="col-span-full">
-              <Label text="Client POCs (from master)" />
+              <Label text="Existing Client POCs" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
                 {selectedClient.pocs.map(poc => (
                   <div key={poc.id} className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-700">
-                      {poc.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                      {poc.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-slate-700 truncate">{poc.name}</p>
@@ -130,12 +141,57 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
               </div>
             </div>
           )}
-          {selectedClient && selectedClient.pocs.length === 0 && (
-            <div className="col-span-full">
-              <Label text="Client POCs" />
-              <p className="text-xs text-slate-400 italic mt-1">No POCs on file for this client.</p>
+
+          {/* Add new POCs */}
+          <div className="col-span-full">
+            <div className="flex items-center justify-between mb-2">
+              <Label text="Add Client POCs" />
+              <button
+                type="button"
+                onClick={addPoc}
+                className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add POC
+              </button>
             </div>
-          )}
+
+            {newPocs.length === 0 && (
+              <p className="text-xs text-slate-400 italic">No POCs added yet.</p>
+            )}
+
+            <div className="space-y-2">
+              {newPocs.map((poc, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={poc.name}
+                    onChange={e => updatePoc(i, 'name', e.target.value)}
+                    className={inputCls + ' flex-1'}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Contact info (email / phone)"
+                    value={poc.contact}
+                    onChange={e => updatePoc(i, 'contact', e.target.value)}
+                    className={inputCls + ' flex-1'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePoc(i)}
+                    className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -275,25 +331,14 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
       {/* Section: Notes */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Notes</h2>
-        <div className="space-y-4">
-          <div>
-            <Label text="Next Steps" />
-            <textarea
-              name="nextSteps"
-              rows={2}
-              placeholder="What needs to happen next?"
-              className={inputCls + ' resize-none'}
-            />
-          </div>
-          <div>
-            <Label text="Notes" />
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="Any additional context…"
-              className={inputCls + ' resize-none'}
-            />
-          </div>
+        <div>
+          <Label text="Notes" />
+          <textarea
+            name="notes"
+            rows={3}
+            placeholder="Any additional context…"
+            className={inputCls + ' resize-none'}
+          />
         </div>
       </div>
 

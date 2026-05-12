@@ -3,9 +3,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { OpportunityRow } from '@/lib/db/opportunities'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { StageBadge } from '@/components/ui/StageBadge'
-import { LOBBadge } from '@/components/ui/LOBBadge'
 import { OpportunityStatus } from '@prisma/client'
+import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 
 const STATUS_FILTERS: { label: string; value: 'ALL' | OpportunityStatus }[] = [
   { label: 'All',       value: 'ALL'      },
@@ -23,7 +22,7 @@ function fmtDate(d: string | Date | null | undefined) {
 
 const HEADERS = [
   'ID', 'Client', 'Project Name', 'Creator', 'Co-owner',
-  'Start', 'End', 'Status', 'Next Steps', '💬Comments', 'Others',
+  'Start', 'End', 'Status', '💬Comments', 'Next Steps',
 ]
 
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
@@ -140,14 +139,6 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     <StatusBadge status={row.status} />
                   </td>
 
-                  {/* Others — Stage + LOB at a glance */}
-                  <td className="px-4 py-3.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                    <div className="flex flex-col gap-1">
-                      <StageBadge stage={row.stage} />
-                      <LOBBadge   lob={row.primaryLob} />
-                    </div>
-                  </td>
-
                   {/* Comments */}
                   <td className="px-4 py-3.5 text-center">
                     {row._count.comments > 0 ? (
@@ -159,9 +150,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     )}
                   </td>
 
-                  {/* Next Steps */}
+                  {/* Next Steps — computed from stage */}
                   <td className="px-4 py-3.5 max-w-[160px]">
-                    <p className="truncate text-slate-500 text-xs">{row.nextSteps ?? '—'}</p>
+                    <p className="truncate text-slate-500 text-xs">{STAGE_NEXT_STEPS[row.stage]}</p>
                   </td>
                 </tr>
               ))}

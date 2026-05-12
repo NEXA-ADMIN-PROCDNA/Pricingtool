@@ -36,7 +36,7 @@ enum LineOfBusiness {
   ANALYTICS
   MS
   DS
-  OTHERS
+  DESIGN
 }
 
 enum OpportunityStatus {
@@ -222,6 +222,7 @@ model Opportunity {
   opportunityName   String
   opportunityType   OpportunityType   @default(NEW)
   primaryLob        LineOfBusiness
+  businessUnit      String?
   startDate         DateTime
   endDate           DateTime
   status            OpportunityStatus @default(OPEN)

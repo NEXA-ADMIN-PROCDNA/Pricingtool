@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       opportunityName,
       opportunityType,
       primaryLob,
+      businessUnit,
       stage,
       ownerId,
       coOwnerId,
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
       starConnect,
       estimatedRevenue,
       probability,
+      pocs,
     } = body
 
     if (!clientId || !opportunityName || !primaryLob || !ownerId || !startDate) {
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
         opportunityName,
         opportunityType:  (opportunityType as OpportunityType) ?? 'NEW',
         primaryLob:       primaryLob as LineOfBusiness,
+        businessUnit:     businessUnit?.trim() || null,
         stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,
         coOwnerId:        coOwnerId || null,
@@ -78,6 +81,19 @@ export async function POST(req: NextRequest) {
         probability:      parsedProbability,
       },
     })
+
+    // Create any new POCs linked to the client
+    if (Array.isArray(pocs) && pocs.length > 0) {
+      await prisma.clientPOC.createMany({
+        data: pocs
+          .filter((p: { name: string; contact: string }) => p.name?.trim())
+          .map((p: { name: string; contact: string }) => ({
+            clientId,
+            name:  p.name.trim(),
+            email: p.contact?.trim() || null,
+          })),
+      })
+    }
 
     return NextResponse.json(opp, { status: 201 })
   } catch (err) {
