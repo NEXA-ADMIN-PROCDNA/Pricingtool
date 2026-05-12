@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
 // BD TRACKER + PRICING TOOL — PRISMA SCHEMA
-// Stack: Next.js · Supabase (PostgreSQL) · Kinde · Vercel
+// Stack: Next.js · Supabase (PostgreSQL) · Azure AD (NextAuth) · Vercel
 // RLS enforced at DB level via Supabase policies
-// Role hierarchy: SEL < DIRECTOR < ED < PARTNER < COFOUNDER < ADMIN
+// Role hierarchy: SEL < DIRECTOR < ED < PARTNER < ADMIN
 // ═══════════════════════════════════════════════════════════════
 
 generator client {
@@ -109,16 +109,18 @@ enum RequestStatus {
 
 // ───────────────────────────────────────────────────────────────
 // USER
-// kindeId links to Kinde auth — populated on first SSO login
+// azureId links to Azure AD — populated on first SSO login
+// location pulled from usageLocation in Azure AD profile (IN → INDIA, US → US)
 // managerId enables the reporting hierarchy used by RLS
 // ───────────────────────────────────────────────────────────────
 
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
+  id          String    @id @default(cuid())
+  email       String    @unique
   name        String
   role        UserRole
-  kindeId     String?  @unique
+  location    Location?
+  azureId     String?   @unique
   managerId   String?
   manager     User?    @relation("UserHierarchy", fields: [managerId], references: [id])
   reports     User[]   @relation("UserHierarchy")

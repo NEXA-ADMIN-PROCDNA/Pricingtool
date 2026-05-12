@@ -49,6 +49,15 @@ function mapTitleToRole(jobTitle: string | null | undefined): UserRole | null {
 
 
 
+// ── Location mapping ─────────────────────────────────────────────
+// Azure AD usageLocation is a 2-letter ISO code set by IT admin in Azure portal
+function mapLocation(usageLocation: string | null | undefined) {
+  if (!usageLocation) return null
+  if (usageLocation === 'IN') return 'INDIA' as const
+  if (usageLocation === 'US') return 'US' as const
+  return null
+}
+
 // ── Graph API types ───────────────────────────────────────────────
 interface GraphUser {
   id: string
@@ -56,6 +65,7 @@ interface GraphUser {
   mail: string | null
   userPrincipalName: string | null
   jobTitle: string | null
+  usageLocation: string | null
 }
 
 interface GraphResponse {
@@ -69,7 +79,7 @@ interface GraphResponse {
 async function fetchAllAzureUsers(graphClient: Client): Promise<GraphUser[]> {
   const users: GraphUser[] = []
   let url: string | undefined =
-    '/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle&$top=999'
+    '/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle,usageLocation&$top=999'
 
   while (url) {
     const page: GraphResponse = await graphClient.api(url).get()
@@ -101,7 +111,7 @@ async function main() {
   const azureUsers = await fetchAllAzureUsers(graphClient)
   console.log(`  Found ${azureUsers.length} total Azure AD users\n`)
 
-  const synced:  { name: string; email: string; role: string; source: string }[] = []
+  const synced:  { name: string; email: string; role: string; location: string; source: string }[] = []
   let skipped = 0
 
   for (const azUser of azureUsers) {
@@ -133,12 +143,13 @@ async function main() {
       continue
     }
 
+    const location = mapLocation(azUser.usageLocation)
     await prisma.user.upsert({
       where:  { email },
-      update: { name, role, kindeId: azUser.id, isActive: true },
-      create: { email, name, role, kindeId: azUser.id, isActive: true },
+      update: { name, role, azureId: azUser.id, isActive: true, ...(location && { location }) },
+      create: { email, name, role, azureId: azUser.id, isActive: true, location },
     })
-    synced.push({ name, email, role, source: `jobTitle: "${azUser.jobTitle}"` })
+    synced.push({ name, email, role, location: location ?? '—', source: `jobTitle: "${azUser.jobTitle}"` })
   }
 
   // ── Summary report ────────────────────────────────────────────────
@@ -146,7 +157,7 @@ async function main() {
   console.log(`✅  SYNCED (${synced.length})`)
   console.log('─'.repeat(70))
   for (const u of synced) {
-    console.log(`  ${u.role.padEnd(10)} ${u.name.padEnd(30)} ${u.email}`)
+    console.log(`  ${u.role.padEnd(10)} ${u.location.padEnd(8)} ${u.name.padEnd(30)} ${u.email}`)
     console.log(`             └─ ${u.source}`)
   }
 
