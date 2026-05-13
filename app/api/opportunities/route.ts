@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { LineOfBusiness, OpportunityStage, OpportunityType } from '@prisma/client'
 
@@ -17,7 +18,6 @@ export async function GET() {
     include: {
       client:  { select: { name: true, clientId: true } },
       owner:   { select: { name: true } },
-      coOwner: { select: { name: true } },
       pricingVersions: {
         where: { isFinal: true },
         select: { proposedBillings: true, grossMarginPct: true },
@@ -32,6 +32,12 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const token = await getToken({ req })
+    const ownerId = token?.id as string | undefined
+    if (!ownerId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await req.json()
     const {
       clientId,
@@ -40,11 +46,8 @@ export async function POST(req: NextRequest) {
       primaryLob,
       businessUnit,
       stage,
-      ownerId,
-      coOwnerId,
       startDate,
       endDate,
-      nextSteps,
       notes,
       starConnect,
       estimatedRevenue,
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
       pocs,
     } = body
 
-    if (!clientId || !opportunityName || !primaryLob || !ownerId || !startDate) {
+    if (!clientId || !opportunityName || !primaryLob || !startDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -71,10 +74,8 @@ export async function POST(req: NextRequest) {
         businessUnit:     businessUnit?.trim() || null,
         stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,
-        coOwnerId:        coOwnerId || null,
         startDate:        new Date(startDate),
         endDate:          endDate ? new Date(endDate) : new Date(startDate),
-        nextSteps:        nextSteps || null,
         notes:            notes || null,
         starConnect:      starConnect === 'true' || starConnect === true,
         estimatedRevenue: parsedEstimatedRevenue,
@@ -86,11 +87,12 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(pocs) && pocs.length > 0) {
       await prisma.clientPOC.createMany({
         data: pocs
-          .filter((p: { name: string; contact: string }) => p.name?.trim())
-          .map((p: { name: string; contact: string }) => ({
+          .filter((p: { name: string; email: string; phone: string }) => p.name?.trim())
+          .map((p: { name: string; email: string; phone: string }) => ({
             clientId,
             name:  p.name.trim(),
-            email: p.contact?.trim() || null,
+            email: p.email?.trim() || null,
+            phone: p.phone?.trim() || null,
           })),
       })
     }

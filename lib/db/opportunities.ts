@@ -20,7 +20,6 @@ export async function getOpportunities(status?: OpportunityStatus | 'ALL') {
     include: {
       client:  { select: { name: true, clientId: true } },
       owner:   { select: { name: true } },
-      coOwner: { select: { name: true } },
       _count:  { select: { comments: true } },
     },
     orderBy: { createdAt: 'desc' },
@@ -36,7 +35,6 @@ export async function getOpportunityDetail(opportunityId: string) {
     include: {
       client: { include: { pocs: true } },
       owner: true,
-      coOwner: true,
       pricingVersions: {
         include: {
           staffingResources: {

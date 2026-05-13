@@ -224,8 +224,7 @@ export function OpportunityTabs({
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Team</h2>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                <Field label="Owner"    value={opp.owner.name} />
-                <Field label="Co-Owner" value={opp.coOwner?.name} />
+                <Field label="Owner" value={opp.owner.name} />
               </dl>
             </div>
 

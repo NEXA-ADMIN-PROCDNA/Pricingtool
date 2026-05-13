@@ -21,7 +21,7 @@ function fmtDate(d: string | Date | null | undefined) {
 }
 
 const HEADERS = [
-  'ID', 'Client', 'Project Name', 'Creator', 'Co-owner',
+  'ID', 'Client', 'Project Name', 'Owner',
   'Start', 'End', 'Status', '💬Comments', 'Next Steps',
 ]
 
@@ -114,14 +114,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     <p className="truncate text-slate-700">{row.opportunityName}</p>
                   </td>
 
-                  {/* Creator (owner) */}
+                  {/* Owner */}
                   <td className="px-4 py-3.5 whitespace-nowrap text-slate-600 text-sm">
                     {row.owner.name}
-                  </td>
-
-                  {/* Co-owner */}
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-500 text-sm">
-                    {row.coOwner?.name ?? <span className="text-slate-300">—</span>}
                   </td>
 
                   {/* Start date */}
