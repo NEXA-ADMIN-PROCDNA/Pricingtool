@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
+  const token = await getToken({ req })
+  if (!token?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -28,7 +27,7 @@ export async function POST(
   const comment = await prisma.comment.create({
     data: {
       opportunityId: opp.id,
-      authorId: session.user.id,
+      authorId: token.id as string,
       content: content.trim(),
       parentId: parentId ?? null,
     },
