@@ -1,10 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 
-const nav = [
+const staticNav = [
   {
     href: '/dashboard',
     label: 'BD Tracker',
@@ -32,12 +32,29 @@ const nav = [
       </svg>
     ),
   },
+  {
+    href: '/approvals',
+    label: 'Approvals',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const [sessionOpen, setSessionOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   const { data: session } = useSession()
+
+  useEffect(() => {
+    fetch('/api/approvals?pending=true')
+      .then(r => r.json())
+      .then((data: unknown[]) => setPendingCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => {})
+  }, [])
   const user = session?.user as any
   const name  = user?.name  ?? '…'
   const email = user?.email ?? ''
@@ -64,8 +81,9 @@ export function Sidebar() {
         <p className="px-2 mb-2 text-[10px] uppercase tracking-widest text-slate-600 font-semibold">
           Main menu
         </p>
-        {nav.map(({ href, label, icon }) => {
+        {staticNav.map(({ href, label, icon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          const showBadge = href === '/approvals' && pendingCount > 0
           return (
             <Link
               key={href}
@@ -78,6 +96,11 @@ export function Sidebar() {
             >
               {icon}
               {label}
+              {showBadge && (
+                <span className="ml-auto rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 min-w-[18px] text-center">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           )
         })}
