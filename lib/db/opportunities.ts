@@ -17,10 +17,25 @@ function serialize<T>(data: T): T {
 export async function getOpportunities(status?: OpportunityStatus | 'ALL') {
   const data = await prisma.opportunity.findMany({
     where: status && status !== 'ALL' ? { status } : {},
-    include: {
+    select: {
+      id: true,
+      opportunityId: true,
+      opportunityName: true,
+      status: true,
+      stage: true,
+      startDate: true,
+      endDate: true,
+      estimatedRevenue: true,
+      probability: true,
+      createdAt: true,
       client:  { select: { name: true, clientId: true } },
       owner:   { select: { name: true } },
       _count:  { select: { comments: true } },
+      pricingVersions: {
+        where:  { isFinal: true },
+        select: { proposedBillings: true },
+        take: 1,
+      },
     },
     orderBy: { createdAt: 'desc' },
   })

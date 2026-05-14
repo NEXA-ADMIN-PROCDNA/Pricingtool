@@ -5,6 +5,14 @@ import type { OpportunityRow } from '@/lib/db/opportunities'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { OpportunityStatus } from '@prisma/client'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const STATUS_FILTERS: { label: string; value: 'ALL' | OpportunityStatus }[] = [
   { label: 'All',       value: 'ALL'      },
@@ -20,10 +28,19 @@ function fmtDate(d: string | Date | null | undefined) {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })
 }
 
-const HEADERS = [
-  'ID', 'Client', 'Project Name', 'Owner',
-  'Start', 'End', 'Status', '💬Comments', 'Next Steps',
-]
+function fmtRevenue(row: OpportunityRow) {
+  const n = row.pricingVersions[0]?.proposedBillings != null
+    ? Number(row.pricingVersions[0].proposedBillings)
+    : Number(row.estimatedRevenue ?? 0)
+  if (!n) return '—'
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n}`
+}
+
+function hasFinalPricing(row: OpportunityRow) {
+  return row.pricingVersions.length > 0 && row.pricingVersions[0]?.proposedBillings != null
+}
 
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const router = useRouter()
@@ -37,9 +54,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const visible = active === 'ALL' ? rows : rows.filter(r => r.status === active)
 
   return (
-    <div className="flex flex-1 flex-col gap-4 min-h-0">
-      {/* Filter pills */}
-      <div className="flex items-center gap-2 flex-wrap shrink-0">
+    <div className="flex flex-1 flex-col gap-0 min-h-0">
+      {/* Tab-style filter strip */}
+      <div className="flex border-b border-border shrink-0 bg-white">
         {STATUS_FILTERS.map(f => {
           const count = f.value === 'ALL'
             ? rows.length
@@ -48,14 +65,16 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
                 active === f.value
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 ring-1 ring-slate-200'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
               }`}
             >
               {f.label}
-              <span className={`ml-1.5 text-xs ${active === f.value ? 'text-indigo-200' : 'text-slate-400'}`}>
+              <span className={`ml-1.5 text-xs tabular-nums ${
+                active === f.value ? 'text-indigo-400' : 'text-muted-foreground'
+              }`}>
                 {count}
               </span>
             </button>
@@ -64,37 +83,39 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
       </div>
 
       {/* Table card */}
-      <div className="flex flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden min-h-0">
+      <div className="flex flex-1 flex-col rounded-b-xl border border-t-0 border-border bg-white shadow-sm overflow-hidden min-h-0">
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                {HEADERS.map(h => (
-                  <th
-                    key={h}
-                    className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="w-24">ID</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Project</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Revenue</TableHead>
+                <TableHead>Start</TableHead>
+                <TableHead>End</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">Comments</TableHead>
+                <TableHead>Next Steps</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {visible.length === 0 && (
-                <tr>
-                  <td colSpan={HEADERS.length} className="py-16 text-center text-slate-400 text-sm">
+                <TableRow>
+                  <TableCell colSpan={10} className="py-16 text-center text-muted-foreground">
                     No opportunities found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
               {visible.map(row => (
-                <tr
+                <TableRow
                   key={row.id}
-                  className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                  className="cursor-pointer"
                   onClick={() => router.push(`/opportunities/${row.opportunityId}`)}
                 >
                   {/* ID */}
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <TableCell>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
                       className="font-mono text-xs font-semibold text-indigo-600 hover:text-indigo-800"
@@ -102,63 +123,77 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     >
                       {row.opportunityId}
                     </Link>
-                  </td>
+                  </TableCell>
 
                   {/* Client */}
-                  <td className="px-4 py-3.5 font-medium text-slate-800 whitespace-nowrap">
+                  <TableCell className="font-medium text-foreground whitespace-nowrap">
                     {row.client.name}
-                  </td>
+                  </TableCell>
 
-                  {/* Project Name */}
-                  <td className="px-4 py-3.5 max-w-[180px]">
-                    <p className="truncate text-slate-700">{row.opportunityName}</p>
-                  </td>
+                  {/* Project */}
+                  <TableCell className="max-w-[180px]">
+                    <p className="truncate text-sm text-foreground">{row.opportunityName}</p>
+                  </TableCell>
 
                   {/* Owner */}
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-600 text-sm">
+                  <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
                     {row.owner.name}
-                  </td>
+                  </TableCell>
 
-                  {/* Start date */}
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-500 text-xs tabular-nums">
+                  {/* Revenue */}
+                  <TableCell className="whitespace-nowrap tabular-nums text-sm font-medium">
+                    <span className={hasFinalPricing(row) ? 'text-emerald-700' : 'text-foreground'}>
+                      {fmtRevenue(row)}
+                    </span>
+                    {hasFinalPricing(row) && (
+                      <span className="ml-1.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">
+                        FINAL
+                      </span>
+                    )}
+                  </TableCell>
+
+                  {/* Start */}
+                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs tabular-nums">
                     {fmtDate(row.startDate)}
-                  </td>
+                  </TableCell>
 
-                  {/* End date */}
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-500 text-xs tabular-nums">
+                  {/* End */}
+                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs tabular-nums">
                     {fmtDate(row.endDate)}
-                  </td>
+                  </TableCell>
 
                   {/* Status */}
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <TableCell className="whitespace-nowrap">
                     <StatusBadge status={row.status} />
-                  </td>
+                  </TableCell>
 
                   {/* Comments */}
-                  <td className="px-4 py-3.5 text-center">
+                  <TableCell className="text-center">
                     {row._count.comments > 0 ? (
-                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                      <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-muted text-xs font-semibold text-muted-foreground px-1.5">
                         {row._count.comments}
                       </span>
                     ) : (
-                      <span className="text-slate-200 text-xs">—</span>
+                      <span className="text-muted-foreground/30 text-xs">—</span>
                     )}
-                  </td>
+                  </TableCell>
 
-                  {/* Next Steps — computed from stage */}
-                  <td className="px-4 py-3.5 max-w-[160px]">
-                    <p className="truncate text-slate-500 text-xs">{STAGE_NEXT_STEPS[row.stage]}</p>
-                  </td>
-                </tr>
+                  {/* Next Steps */}
+                  <TableCell className="max-w-[160px]">
+                    <p className="truncate text-muted-foreground text-xs">
+                      {STAGE_NEXT_STEPS[row.stage]}
+                    </p>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 shrink-0">
+        <div className="border-t border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground shrink-0">
           {visible.length} {visible.length === 1 ? 'opportunity' : 'opportunities'}
-          {active !== 'ALL' && ` · filtered by ${active}`}
+          {active !== 'ALL' && ` · filtered by ${active.toLowerCase()}`}
         </div>
       </div>
     </div>
