@@ -11,6 +11,9 @@ type Client = {
   pocs: POC[]
 }
 
+// Each row in the POC form — existingPocId lets us filter the dropdown
+type PocRow = { name: string; email: string; phone: string; existingPocId?: string }
+
 const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
   { value: 'TECH',      label: 'Technology'       },
   { value: 'ANALYTICS', label: 'Analytics'         },
@@ -51,35 +54,42 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   const [error, setError]             = useState<string | null>(null)
   const [clientId, setClientId]       = useState('')
   const [starConnect, setStarConnect] = useState<'yes' | 'no'>('no')
-  const [newPocs, setNewPocs]         = useState<{ name: string; email: string; phone: string }[]>([])
-  const [deletedPocIds, setDeletedPocIds] = useState<Set<string>>(new Set())
-  const [deletingPocId, setDeletingPocId] = useState<string | null>(null)
-  const [dateError, setDateError]         = useState<string | null>(null)
-  const [pocErrors, setPocErrors]         = useState<{ phone?: string; email?: string }[]>([])
+  const [pocRows, setPocRows]         = useState<PocRow[]>([])
+  const [dateError, setDateError]     = useState<string | null>(null)
+  const [pocErrors, setPocErrors]     = useState<{ phone?: string; email?: string }[]>([])
 
   const selectedClient = clients.find(c => c.id === clientId) ?? null
-  const visibleExistingPocs = selectedClient?.pocs.filter(p => !deletedPocIds.has(p.id)) ?? []
 
-  function addPoc()    { setNewPocs(p => [...p, { name: '', email: '', phone: '' }]) }
-  function removePoc(i: number) { setNewPocs(p => p.filter((_, idx) => idx !== i)) }
+  // POC IDs already added via dropdown — hidden from the dropdown options
+  const usedPocIds = new Set(pocRows.filter(r => r.existingPocId).map(r => r.existingPocId!))
+  const availableExisting = selectedClient?.pocs.filter(p => !usedPocIds.has(p.id)) ?? []
+
+  function addPocFromExisting(poc: POC) {
+    setPocRows(prev => [...prev, {
+      name: poc.name,
+      email: poc.email ?? '',
+      phone: poc.phone ?? '',
+      existingPocId: poc.id,
+    }])
+  }
+
+  function addBlankPoc() {
+    setPocRows(prev => [...prev, { name: '', email: '', phone: '' }])
+  }
+
+  function removePoc(i: number) {
+    setPocRows(prev => prev.filter((_, idx) => idx !== i))
+    setPocErrors(prev => prev.filter((_, idx) => idx !== i))
+  }
+
   function updatePoc(i: number, field: 'name' | 'email' | 'phone', value: string) {
-    setNewPocs(p => p.map((poc, idx) => idx === i ? { ...poc, [field]: value } : poc))
+    setPocRows(prev => prev.map((row, idx) => idx === i ? { ...row, [field]: value } : row))
   }
 
   function handleClientChange(id: string) {
     setClientId(id)
-    setDeletedPocIds(new Set())
-    setNewPocs([])
-  }
-
-  async function deleteExistingPoc(pocId: string) {
-    setDeletingPocId(pocId)
-    try {
-      const res = await fetch(`/api/client-pocs/${pocId}`, { method: 'DELETE' })
-      if (res.ok) setDeletedPocIds(prev => new Set([...prev, pocId]))
-    } finally {
-      setDeletingPocId(null)
-    }
+    setPocRows([])
+    setPocErrors([])
   }
 
   function validatePhone(phone: string): string | undefined {
@@ -104,7 +114,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   }
 
   function validatePocs() {
-    const errors = newPocs.map(p => ({
+    const errors = pocRows.map(p => ({
       phone: validatePhone(p.phone),
       email: validateEmail(p.email),
     }))
@@ -117,7 +127,10 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
     setError(null)
     const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
-    data.pocs = newPocs.filter(p => p.name.trim())
+    // Strip the internal existingPocId before sending
+    data.pocs = pocRows
+      .filter(p => p.name.trim())
+      .map(({ name, email, phone }) => ({ name, email, phone }))
 
     const datesOk = checkDates(data.startDate as string, data.endDate as string)
     const pocsOk  = validatePocs()
@@ -195,46 +208,13 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
             />
           </div>
 
-          {/* Existing POCs from client master */}
-          {visibleExistingPocs.length > 0 && (
-            <div className="col-span-full">
-              <Label text="Existing Client POCs" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                {visibleExistingPocs.map(poc => (
-                  <div key={poc.id} className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-700">
-                      {poc.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{poc.name}</p>
-                      {poc.jobTitle && <p className="text-[10px] text-slate-400">{poc.jobTitle}</p>}
-                      {poc.email    && <p className="text-[10px] text-indigo-500 truncate">{poc.email}</p>}
-                      {poc.phone    && <p className="text-[10px] text-slate-400">{poc.phone}</p>}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteExistingPoc(poc.id)}
-                      disabled={deletingPocId === poc.id}
-                      className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-red-50 hover:text-red-400 transition-colors disabled:opacity-40"
-                      title="Delete POC"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Add new POCs */}
+          {/* POC section */}
           <div className="col-span-full">
             <div className="flex items-center justify-between mb-2">
-              <Label text="Add Client POCs" />
+              <Label text="Client POCs" />
               <button
                 type="button"
-                onClick={addPoc}
+                onClick={addBlankPoc}
                 className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
@@ -244,12 +224,35 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
               </button>
             </div>
 
-            {newPocs.length === 0 && (
-              <p className="text-xs text-slate-400 italic">No POCs added yet.</p>
+            {/* Dropdown to pick from existing client POCs */}
+            {availableExisting.length > 0 && (
+              <div className="mb-3">
+                <select
+                  value=""
+                  onChange={e => {
+                    const poc = selectedClient!.pocs.find(p => p.id === e.target.value)
+                    if (poc) addPocFromExisting(poc)
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">Select from existing POCs…</option>
+                  {availableExisting.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.jobTitle ? ` — ${p.jobTitle}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {pocRows.length === 0 && availableExisting.length === 0 && (
+              <p className="text-xs text-slate-400 italic">
+                {selectedClient ? 'No existing POCs for this client.' : 'Select a client to see existing POCs.'}
+              </p>
             )}
 
             <div className="space-y-3">
-              {newPocs.map((poc, i) => (
+              {pocRows.map((poc, i) => (
                 <div key={i} className="space-y-1">
                   <div className="flex items-center gap-2">
                     <input
@@ -291,10 +294,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        removePoc(i)
-                        setPocErrors(prev => prev.filter((_, idx) => idx !== i))
-                      }}
+                      onClick={() => removePoc(i)}
                       className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
@@ -302,6 +302,9 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
                       </svg>
                     </button>
                   </div>
+                  {poc.existingPocId && (
+                    <p className="text-[10px] text-indigo-400 pl-1">Autofilled from existing POC — edit if needed</p>
+                  )}
                   {pocErrors[i]?.email && <FieldError msg={pocErrors[i].email} />}
                   {pocErrors[i]?.phone && <FieldError msg={pocErrors[i].phone} />}
                 </div>
