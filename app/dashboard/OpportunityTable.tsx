@@ -2,17 +2,29 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { OpportunityRow } from '@/lib/db/opportunities'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { OpportunityStatus } from '@prisma/client'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+
+// V8 palette
+const C = {
+  ink:       '#0A1F44',
+  inkSoft:   '#3A4A6A',
+  inkMuted:  '#6B7591',
+  inkFaint:  '#9AA3B8',
+  accent:    '#1E5BB8',
+  accentDeep:'#143E80',
+  accentSoft:'#DCE7F5',
+  rule:      '#D6DCE8',
+  ruleSoft:  '#E2E6EE',
+}
+
+const MONO: React.CSSProperties = {
+  fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+}
+
+const SERIF: React.CSSProperties = {
+  fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
+}
 
 const STATUS_FILTERS: { label: string; value: 'ALL' | OpportunityStatus }[] = [
   { label: 'All',       value: 'ALL'      },
@@ -42,6 +54,47 @@ function hasFinalPricing(row: OpportunityRow) {
   return row.pricingVersions.length > 0 && row.pricingVersions[0]?.proposedBillings != null
 }
 
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { bg: string; fg: string; dot: string }> = {
+    OPEN:      { bg: C.accentSoft, fg: C.accentDeep, dot: C.accent },
+    WON:       { bg: '#E1F1E9', fg: '#1F6B3C', dot: '#1E9E5B' },
+    LOST:      { bg: '#FBE9E7', fg: '#8A2A1F', dot: '#C6432F' },
+    ABANDONED: { bg: '#EEF0F4', fg: '#5A6478', dot: '#9AA3B8' },
+    ARCHIVED:  { bg: '#EEF0F4', fg: '#5A6478', dot: '#9AA3B8' },
+  }
+  const s = map[status] ?? map.OPEN
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '2px 8px 2px 7px', borderRadius: 999,
+      background: s.bg, color: s.fg,
+      fontFamily: "'Inter', system-ui, sans-serif",
+      fontSize: 11, fontWeight: 600, letterSpacing: '0.01em', lineHeight: 1.6,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: s.dot, display: 'inline-block', flexShrink: 0 }} />
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
+  )
+}
+
+// Tiny initials avatar
+function Avatar({ initials }: { initials: string }) {
+  return (
+    <div style={{
+      width: 22, height: 22, borderRadius: 999,
+      background: C.accentSoft, color: C.accentDeep,
+      display: 'inline-grid', placeItems: 'center',
+      fontSize: 9, fontWeight: 700, letterSpacing: '-0.01em',
+      fontFamily: "'Inter', system-ui, sans-serif",
+      flexShrink: 0,
+    }}>{initials}</div>
+  )
+}
+
+function ownerInitials(name: string) {
+  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+}
+
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const router = useRouter()
   const params = useSearchParams()
@@ -54,147 +107,233 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const visible = active === 'ALL' ? rows : rows.filter(r => r.status === active)
 
   return (
-    <div className="flex flex-1 flex-col gap-0 min-h-0">
-      {/* Tab-style filter strip */}
-      <div className="flex border-b border-border shrink-0 bg-white">
-        {STATUS_FILTERS.map(f => {
-          const count = f.value === 'ALL'
-            ? rows.length
-            : rows.filter(r => r.status === f.value).length
-          return (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
-                active === f.value
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-              }`}
-            >
-              {f.label}
-              <span className={`ml-1.5 text-xs tabular-nums ${
-                active === f.value ? 'text-indigo-400' : 'text-muted-foreground'
-              }`}>
-                {count}
-              </span>
-            </button>
-          )
-        })}
+    <div className="flex flex-1 flex-col min-h-0">
+      {/* ─── Filter row ─── */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+        padding: '20px 0 14px', flexShrink: 0,
+      }}>
+        {/* Tab filters */}
+        <div style={{ display: 'flex', gap: 28, alignItems: 'baseline' }}>
+          {STATUS_FILTERS.map(f => {
+            const count = f.value === 'ALL' ? rows.length : rows.filter(r => r.status === f.value).length
+            const isActive = active === f.value
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                style={{
+                  display: 'inline-flex', gap: 6, alignItems: 'baseline',
+                  paddingBottom: 8, cursor: 'pointer', background: 'none', border: 'none',
+                  borderBottom: isActive ? `1.5px solid ${C.accent}` : '1.5px solid transparent',
+                  color: isActive ? C.ink : C.inkMuted,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontSize: 13, fontWeight: isActive ? 600 : 500, letterSpacing: '0.01em',
+                }}
+              >
+                {f.label}
+                <span style={{
+                  ...MONO,
+                  fontSize: 10.5,
+                  color: isActive ? C.accent : C.inkFaint,
+                }}>
+                  {String(count).padStart(2, '0')}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Right: filter dropdowns + export */}
+        <div style={{
+          display: 'flex', gap: 18, alignItems: 'baseline',
+          fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12.5, color: C.inkMuted,
+        }}>
+          {['Owner', 'Practice', 'Period'].map(label => (
+            <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'default' }}>
+              {label}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 11, height: 11 }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
+          ))}
+          <span style={{ color: C.accent, borderBottom: `1px dotted ${C.accent}`, cursor: 'pointer', paddingBottom: 1 }}>
+            Export
+          </span>
+        </div>
       </div>
 
-      {/* Table card */}
-      <div className="flex flex-1 flex-col rounded-b-xl border border-t-0 border-border bg-white shadow-sm overflow-hidden min-h-0">
-        <div className="flex-1 overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-24">ID</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Project</TableHead>
-                <TableHead>Owner</TableHead>
-                <TableHead>Revenue</TableHead>
-                <TableHead>Start</TableHead>
-                <TableHead>End</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Comments</TableHead>
-                <TableHead>Next Steps</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={10} className="py-16 text-center text-muted-foreground">
-                    No opportunities found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {visible.map(row => (
-                <TableRow
+      {/* ─── Table ─── */}
+      <div className="flex-1 overflow-auto min-h-0">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Inter', system-ui, sans-serif" }}>
+          <thead>
+            <tr style={{ borderBottom: `1.5px solid ${C.ink}` }}>
+              {[
+                { label: '№',          w: 56  },
+                { label: 'Client',     w: 140 },
+                { label: 'Engagement', w: 220 },
+                { label: 'Partner',    w: 160 },
+                { label: 'Revenue',    w: 110, right: true },
+                { label: 'Win %',      w: 72,  right: true },
+                { label: 'Window',     w: 180 },
+                { label: 'Status',     w: 100 },
+                { label: 'Next step',  w: undefined },
+              ].map(col => (
+                <th
+                  key={col.label}
+                  style={{
+                    padding: '12px 12px 12px 0',
+                    textAlign: col.right ? 'right' : 'left',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontSize: 11, fontWeight: 600,
+                    letterSpacing: '0.14em', textTransform: 'uppercase',
+                    color: C.inkMuted,
+                    width: col.w,
+                    whiteSpace: 'nowrap',
+                  }}
+                >{col.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={9} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
+                  No opportunities found.
+                </td>
+              </tr>
+            )}
+            {visible.map(row => {
+              const revStr = fmtRevenue(row)
+              const isFinal = hasFinalPricing(row)
+              const prob = row.probability != null ? Math.round(Number(row.probability) * 100) : null
+              const start = fmtDate(row.startDate)
+              const end   = fmtDate(row.endDate)
+              const nextStep = STAGE_NEXT_STEPS[row.stage] ?? '—'
+
+              return (
+                <tr
                   key={row.id}
-                  className="cursor-pointer"
                   onClick={() => router.push(`/opportunities/${row.opportunityId}`)}
+                  style={{
+                    borderBottom: `1px solid ${C.ruleSoft}`,
+                    cursor: 'pointer',
+                    transition: 'background 120ms',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.accentSoft + '55')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  {/* ID */}
-                  <TableCell>
+                  {/* № */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
-                      className="font-mono text-xs font-semibold text-indigo-600 hover:text-indigo-800"
                       onClick={e => e.stopPropagation()}
+                      style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, letterSpacing: '0.02em', textDecoration: 'none' }}
                     >
-                      {row.opportunityId}
+                      {row.opportunityId.replace('BD-', '')}
                     </Link>
-                  </TableCell>
+                  </td>
 
                   {/* Client */}
-                  <TableCell className="font-medium text-foreground whitespace-nowrap">
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', fontWeight: 500, color: C.ink, fontSize: 14, whiteSpace: 'nowrap' }}>
                     {row.client.name}
-                  </TableCell>
+                  </td>
 
-                  {/* Project */}
-                  <TableCell className="max-w-[180px]">
-                    <p className="truncate text-sm text-foreground">{row.opportunityName}</p>
-                  </TableCell>
+                  {/* Engagement */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {row.opportunityName}
+                    </div>
+                  </td>
 
-                  {/* Owner */}
-                  <TableCell className="whitespace-nowrap text-muted-foreground text-sm">
-                    {row.owner.name}
-                  </TableCell>
+                  {/* Partner */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
+                      <Avatar initials={ownerInitials(row.owner.name)} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {row.owner.name}
+                      </span>
+                    </div>
+                  </td>
 
                   {/* Revenue */}
-                  <TableCell className="whitespace-nowrap tabular-nums text-sm font-medium">
-                    <span className={hasFinalPricing(row) ? 'text-emerald-700' : 'text-foreground'}>
-                      {fmtRevenue(row)}
-                    </span>
-                    {hasFinalPricing(row) && (
-                      <span className="ml-1.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 rounded px-1 py-0.5">
-                        FINAL
-                      </span>
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', textAlign: 'right' }}>
+                    <span style={{
+                      ...SERIF,
+                      fontSize: 19,
+                      fontWeight: 400,
+                      letterSpacing: '-0.01em',
+                      fontVariantNumeric: 'tabular-nums',
+                      color: revStr === '—' ? C.inkFaint : isFinal ? '#1F6B3C' : C.ink,
+                    }}>{revStr}</span>
+                    {isFinal && revStr !== '—' && (
+                      <span style={{
+                        ...MONO,
+                        display: 'block',
+                        fontSize: 9, fontWeight: 600, letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        color: '#1F6B3C', textAlign: 'right',
+                      }}>FINAL</span>
                     )}
-                  </TableCell>
+                  </td>
 
-                  {/* Start */}
-                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs tabular-nums">
-                    {fmtDate(row.startDate)}
-                  </TableCell>
-
-                  {/* End */}
-                  <TableCell className="whitespace-nowrap text-muted-foreground text-xs tabular-nums">
-                    {fmtDate(row.endDate)}
-                  </TableCell>
-
-                  {/* Status */}
-                  <TableCell className="whitespace-nowrap">
-                    <StatusBadge status={row.status} />
-                  </TableCell>
-
-                  {/* Comments */}
-                  <TableCell className="text-center">
-                    {row._count.comments > 0 ? (
-                      <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-muted text-xs font-semibold text-muted-foreground px-1.5">
-                        {row._count.comments}
+                  {/* Win % */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', textAlign: 'right' }}>
+                    {prob !== null ? (
+                      <span style={{ ...MONO, fontSize: 12.5, color: C.inkSoft, fontVariantNumeric: 'tabular-nums' }}>
+                        {prob}%
                       </span>
                     ) : (
-                      <span className="text-muted-foreground/30 text-xs">—</span>
+                      <span style={{ color: C.inkFaint }}>—</span>
                     )}
-                  </TableCell>
+                  </td>
 
-                  {/* Next Steps */}
-                  <TableCell className="max-w-[160px]">
-                    <p className="truncate text-muted-foreground text-xs">
-                      {STAGE_NEXT_STEPS[row.stage]}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  {/* Window */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
+                    <span style={{ ...MONO, fontSize: 12, color: C.inkMuted, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                      {start} → {end}
+                    </span>
+                  </td>
 
-        {/* Footer */}
-        <div className="border-t border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground shrink-0">
-          {visible.length} {visible.length === 1 ? 'opportunity' : 'opportunities'}
-          {active !== 'ALL' && ` · filtered by ${active.toLowerCase()}`}
-        </div>
+                  {/* Status */}
+                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                    <StatusPill status={row.status} />
+                  </td>
+
+                  {/* Next step */}
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {nextStep}
+                      </span>
+                      {row._count.comments > 0 && (
+                        <span style={{ ...MONO, fontSize: 11, color: C.inkFaint, flexShrink: 0 }}>
+                          {row._count.comments} ↩
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ─── Footer ─── */}
+      <div style={{
+        padding: '12px 0',
+        borderTop: `1px solid ${C.rule}`,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexShrink: 0,
+        background: '#F4F6FB',
+      }}>
+        <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
+          {visible.length} OF {rows.length} SHOWN · CONFIDENTIAL · NEXA · PARTNERS&apos; VIEW
+        </span>
+        <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
+          {active !== 'ALL' && `FILTERED BY ${active}`}
+        </span>
       </div>
     </div>
   )

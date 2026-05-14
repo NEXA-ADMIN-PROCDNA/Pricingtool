@@ -14,9 +14,18 @@ function serialize<T>(data: T): T {
 }
 
 // ✅ LIST VIEW
-export async function getOpportunities(status?: OpportunityStatus | 'ALL') {
+export async function getOpportunities(status?: OpportunityStatus | 'ALL', q?: string) {
+  const search = q?.trim()
   const data = await prisma.opportunity.findMany({
-    where: status && status !== 'ALL' ? { status } : {},
+    where: {
+      ...(status && status !== 'ALL' ? { status } : {}),
+      ...(search ? {
+        OR: [
+          { opportunityName: { contains: search, mode: 'insensitive' } },
+          { client: { name: { contains: search, mode: 'insensitive' } } },
+        ],
+      } : {}),
+    },
     select: {
       id: true,
       opportunityId: true,
