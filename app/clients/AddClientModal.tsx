@@ -16,6 +16,7 @@ export function AddClientModal() {
   const [form, setForm] = useState({
     name: '', businessUnit: '', industry: '', region: '', notes: '',
   })
+  const [customIndustry, setCustomIndustry] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
@@ -24,6 +25,7 @@ export function AddClientModal() {
     setOpen(false)
     setDone(false)
     setError('')
+    setCustomIndustry('')
     setForm({ name: '', businessUnit: '', industry: '', region: '', notes: '' })
   }
 
@@ -34,13 +36,14 @@ export function AddClientModal() {
       setError('Session not ready — please refresh the page and try again.')
       return
     }
+    const industry = form.industry === 'Other' ? customIndustry.trim() : form.industry
     setSubmitting(true)
     setError('')
     try {
       const res = await fetch('/api/client-requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, requestedById: userId }),
+        body: JSON.stringify({ ...form, industry, requestedById: userId }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
@@ -129,12 +132,22 @@ export function AddClientModal() {
                       <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Industry</label>
                       <select
                         value={form.industry}
-                        onChange={e => setForm(f => ({ ...f, industry: e.target.value }))}
+                        onChange={e => { setForm(f => ({ ...f, industry: e.target.value })); setCustomIndustry('') }}
                         className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-white"
                       >
                         <option value="">Select…</option>
                         {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
                       </select>
+                      {form.industry === 'Other' && (
+                        <input
+                          type="text"
+                          placeholder="Specify industry…"
+                          value={customIndustry}
+                          onChange={e => setCustomIndustry(e.target.value)}
+                          className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                          autoFocus
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Region</label>

@@ -22,7 +22,7 @@ export async function getClientsForSelect() {
       businessUnit: true,
       industry: true,
       region: true,
-      pocs: { select: { id: true, name: true, email: true, jobTitle: true } },
+      pocs: { select: { id: true, name: true, email: true, phone: true, jobTitle: true } },
     },
     orderBy: { name: 'asc' },
   })

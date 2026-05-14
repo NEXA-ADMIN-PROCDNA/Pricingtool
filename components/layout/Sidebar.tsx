@@ -1,9 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 
-const nav = [
+const staticNav = [
   {
     href: '/dashboard',
     label: 'BD Tracker',
@@ -31,19 +32,34 @@ const nav = [
       </svg>
     ),
   },
+  {
+    href: '/approvals',
+    label: 'Approvals',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    ),
+  },
 ]
-
-// Mock session — replace with real Kinde session when auth is wired up
-const MOCK_SESSION = {
-  name:  'Demo User',
-  email: 'demo@procdna.com',
-  role:  'SEL',
-  since: '29 Apr 2026, 09:41',
-}
 
 export function Sidebar() {
   const pathname = usePathname()
   const [sessionOpen, setSessionOpen] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    fetch('/api/approvals?pending=true')
+      .then(r => r.json())
+      .then((data: unknown[]) => setPendingCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => {})
+  }, [])
+  const user = session?.user as any
+  const name  = user?.name  ?? '…'
+  const email = user?.email ?? ''
+  const role  = user?.role  ?? ''
+  const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')
 
   return (
     <aside className="relative flex flex-col w-60 min-h-screen bg-slate-950 text-slate-400">
@@ -65,8 +81,9 @@ export function Sidebar() {
         <p className="px-2 mb-2 text-[10px] uppercase tracking-widest text-slate-600 font-semibold">
           Main menu
         </p>
-        {nav.map(({ href, label, icon }) => {
+        {staticNav.map(({ href, label, icon }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
+          const showBadge = href === '/approvals' && pendingCount > 0
           return (
             <Link
               key={href}
@@ -79,6 +96,11 @@ export function Sidebar() {
             >
               {icon}
               {label}
+              {showBadge && (
+                <span className="ml-auto rounded-full bg-amber-400 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 min-w-[18px] text-center">
+                  {pendingCount}
+                </span>
+              )}
             </Link>
           )
         })}
@@ -95,34 +117,26 @@ export function Sidebar() {
           <div className="absolute bottom-20 left-3 right-3 z-30 rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-2xl shadow-black/50">
             <div className="flex items-center gap-3 mb-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-sm font-bold text-white">
-                {MOCK_SESSION.name.split(' ').map(w => w[0]).join('')}
+                {initials}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{MOCK_SESSION.name}</p>
-                <p className="text-[10px] text-slate-400 truncate">{MOCK_SESSION.email}</p>
+                <p className="text-sm font-semibold text-white truncate">{name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{email}</p>
               </div>
             </div>
 
             <div className="space-y-1 border-t border-slate-800 pt-3 text-xs">
               <div className="flex justify-between">
                 <span className="text-slate-500">Role</span>
-                <span className="font-semibold text-indigo-400">{MOCK_SESSION.role}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Session since</span>
-                <span className="text-slate-300">{MOCK_SESSION.since}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Auth</span>
-                <span className="text-amber-400">! Kinde not wired</span>
+                <span className="font-semibold text-indigo-400">{role}</span>
               </div>
             </div>
 
             <button
-              onClick={() => setSessionOpen(false)}
-              className="mt-3 w-full rounded-lg border border-slate-700 py-1.5 text-xs font-semibold text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="mt-3 w-full rounded-lg border border-red-800 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
             >
-              Close
+              Sign out
             </button>
           </div>
         </>
@@ -135,11 +149,11 @@ export function Sidebar() {
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all hover:bg-slate-800"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
-            {MOCK_SESSION.name.split(' ').map(w => w[0]).join('')}
+            {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-slate-300">{MOCK_SESSION.name}</p>
-            <p className="text-[10px] text-slate-500">{MOCK_SESSION.role} · View session</p>
+            <p className="truncate text-xs font-semibold text-slate-300">{name}</p>
+            <p className="text-[10px] text-slate-500">{role} · View session</p>
           </div>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={`w-3.5 h-3.5 text-slate-600 transition-transform ${sessionOpen ? 'rotate-180' : ''}`}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />

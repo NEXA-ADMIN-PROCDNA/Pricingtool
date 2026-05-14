@@ -36,7 +36,7 @@ enum LineOfBusiness {
   ANALYTICS
   MS
   DS
-  OTHERS
+  DESIGN
 }
 
 enum OpportunityStatus {
@@ -130,7 +130,6 @@ model User {
  deletedAt DateTime? @db.Timestamptz(3)
 
   opportunitiesOwned    Opportunity[]     @relation("OpportunityOwner")
-  opportunitiesCoOwned  Opportunity[]     @relation("OpportunityCoOwner")
   approvalsRequested    ApprovalRequest[] @relation("Requester")
   approvalsGiven        ApprovalRequest[] @relation("Approver")
   comments              Comment[]
@@ -222,6 +221,7 @@ model Opportunity {
   opportunityName   String
   opportunityType   OpportunityType   @default(NEW)
   primaryLob        LineOfBusiness
+  businessUnit      String?
   startDate         DateTime
   endDate           DateTime
   status            OpportunityStatus @default(OPEN)
@@ -231,9 +231,6 @@ model Opportunity {
   probability       Int?                              // win probability 1–100
   ownerId           String
   owner             User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
-  coOwnerId         String?
-  coOwner           User?             @relation("OpportunityCoOwner", fields: [coOwnerId], references: [id])
-  nextSteps         String?
   notes             String?           @db.Text
   isActive          Boolean           @default(true)
  createdAt DateTime @default(now()) @db.Timestamptz(3)

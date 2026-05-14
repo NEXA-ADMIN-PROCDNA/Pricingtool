@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ApprovalStatus } from '@prisma/client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
+import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { StageBadge } from '@/components/ui/StageBadge'
 import { LOBBadge } from '@/components/ui/LOBBadge'
@@ -214,7 +215,7 @@ export function OpportunityTabs({
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes ⭐' : 'No'} />
-                {opp.nextSteps && <Field label="Next Steps" value={opp.nextSteps} wide />}
+                <Field label="Next Steps" value={STAGE_NEXT_STEPS[opp.stage]} wide />
                 {opp.notes     && <Field label="Notes"      value={opp.notes}     wide />}
               </dl>
             </div>
@@ -223,8 +224,7 @@ export function OpportunityTabs({
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Team</h2>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                <Field label="Owner"    value={opp.owner.name} />
-                <Field label="Co-Owner" value={opp.coOwner?.name} />
+                <Field label="Owner" value={opp.owner.name} />
               </dl>
             </div>
 

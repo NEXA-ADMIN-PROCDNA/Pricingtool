@@ -1,24 +1,26 @@
 'use client'
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { LineOfBusiness } from '@prisma/client'
 
-type POC    = { id: string; name: string; email: string | null; jobTitle: string | null }
+type POC    = { id: string; name: string; email: string | null; phone: string | null; jobTitle: string | null }
 type Client = {
   id: string; name: string; clientId: string
   businessUnit: string | null; industry: string | null; region: string | null
   pocs: POC[]
 }
-type User = { id: string; name: string; role: string }
+
+// Each row in the POC form — existingPocId lets us filter the dropdown
+type PocRow = { name: string; email: string; phone: string; existingPocId?: string }
 
 const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
   { value: 'TECH',      label: 'Technology'       },
   { value: 'ANALYTICS', label: 'Analytics'         },
   { value: 'DS',        label: 'Data Science'      },
   { value: 'MS',        label: 'Managed Services'  },
-  { value: 'OTHERS',    label: 'Others'            },
+  { value: 'DESIGN',    label: 'Design'            },
 ]
-
 
 function Label({ text, required }: { text: string; required?: boolean }) {
   return (
@@ -28,26 +30,111 @@ function Label({ text, required }: { text: string; required?: boolean }) {
   )
 }
 
+// +1–3 digit country code (optional) followed by exactly 10 digits
+const PHONE_RE = /^(\+\d{1,3})?\d{10}$/
+
 const inputCls =
   'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition'
 
-const disabledCls =
-  'w-full rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500 shadow-sm cursor-default'
+const inputErrCls =
+  'w-full rounded-xl border border-red-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition'
 
-export function NewOpportunityForm({ clients, users }: { clients: Client[]; users: User[] }) {
+function FieldError({ msg }: { msg: string | undefined }) {
+  if (!msg) return null
+  return <p className="mt-1 text-xs text-red-500">{msg}</p>
+}
+
+export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   const router = useRouter()
+  const { data: session } = useSession()
+  const sessionUser = session?.user as any
+  const ownerName = sessionUser?.name ?? '…'
+
   const [isPending, startTransition] = useTransition()
-  const [error, setError]   = useState<string | null>(null)
-  const [clientId, setClientId]     = useState('')
+  const [error, setError]             = useState<string | null>(null)
+  const [clientId, setClientId]       = useState('')
   const [starConnect, setStarConnect] = useState<'yes' | 'no'>('no')
+  const [pocRows, setPocRows]         = useState<PocRow[]>([])
+  const [dateError, setDateError]     = useState<string | null>(null)
+  const [pocErrors, setPocErrors]     = useState<{ phone?: string; email?: string }[]>([])
 
   const selectedClient = clients.find(c => c.id === clientId) ?? null
+
+  // POC IDs already added via dropdown — hidden from the dropdown options
+  const usedPocIds = new Set(pocRows.filter(r => r.existingPocId).map(r => r.existingPocId!))
+  const availableExisting = selectedClient?.pocs.filter(p => !usedPocIds.has(p.id)) ?? []
+
+  function addPocFromExisting(poc: POC) {
+    setPocRows(prev => [...prev, {
+      name: poc.name,
+      email: poc.email ?? '',
+      phone: poc.phone ?? '',
+      existingPocId: poc.id,
+    }])
+  }
+
+  function addBlankPoc() {
+    setPocRows(prev => [...prev, { name: '', email: '', phone: '' }])
+  }
+
+  function removePoc(i: number) {
+    setPocRows(prev => prev.filter((_, idx) => idx !== i))
+    setPocErrors(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  function updatePoc(i: number, field: 'name' | 'email' | 'phone', value: string) {
+    setPocRows(prev => prev.map((row, idx) => idx === i ? { ...row, [field]: value } : row))
+  }
+
+  function handleClientChange(id: string) {
+    setClientId(id)
+    setPocRows([])
+    setPocErrors([])
+  }
+
+  function validatePhone(phone: string): string | undefined {
+    const v = phone.trim()
+    if (!v) return undefined
+    return PHONE_RE.test(v) ? undefined : 'Use +XX followed by 10 digits, or just 10 digits'
+  }
+
+  function validateEmail(email: string): string | undefined {
+    const v = email.trim()
+    if (!v) return undefined
+    return v.includes('@') ? undefined : 'Email must contain @'
+  }
+
+  function checkDates(start: string, end: string) {
+    if (start && end && new Date(end) < new Date(start)) {
+      setDateError('End date must be on or after start date')
+      return false
+    }
+    setDateError(null)
+    return true
+  }
+
+  function validatePocs() {
+    const errors = pocRows.map(p => ({
+      phone: validatePhone(p.phone),
+      email: validateEmail(p.email),
+    }))
+    setPocErrors(errors)
+    return errors.every(e => !e.phone && !e.email)
+  }
 
   async function handleSubmit(e: { preventDefault(): void; currentTarget: HTMLFormElement }) {
     e.preventDefault()
     setError(null)
-    const data = Object.fromEntries(new FormData(e.currentTarget))
+    const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
+    // Strip the internal existingPocId before sending
+    data.pocs = pocRows
+      .filter(p => p.name.trim())
+      .map(({ name, email, phone }) => ({ name, email, phone }))
+
+    const datesOk = checkDates(data.startDate as string, data.endDate as string)
+    const pocsOk  = validatePocs()
+    if (!datesOk || !pocsOk) return
 
     startTransition(async () => {
       try {
@@ -82,14 +169,13 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
         <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Client</h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
 
-          {/* Client Name (dropdown — hidden clientId sent via name="clientId") */}
           <div>
             <Label text="Client Name" required />
             <select
               name="clientId"
               required
               value={clientId}
-              onChange={e => setClientId(e.target.value)}
+              onChange={e => handleClientChange(e.target.value)}
               className={inputCls}
             >
               <option value="">Select client…</option>
@@ -97,45 +183,134 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
                 <option key={c.id} value={c.id}>{c.name} ({c.clientId})</option>
               ))}
             </select>
-            {selectedClient && (
-              <p className="mt-1 text-[10px] text-slate-400 font-mono">{selectedClient.clientId}</p>
-            )}
+            <div className="mt-1 flex items-center justify-between">
+              {selectedClient
+                ? <p className="text-[10px] text-slate-400 font-mono">{selectedClient.clientId}</p>
+                : <span />
+              }
+              <a
+                href="/clients"
+                target="_blank"
+                className="text-[10px] text-indigo-500 hover:text-indigo-700 hover:underline transition-colors"
+              >
+                + Request new client →
+              </a>
+            </div>
           </div>
 
-          {/* Client BU — autofilled, greyed out */}
           <div>
-            <Label text="Client Business Unit" />
-            <div className={disabledCls}>
-              {selectedClient?.businessUnit ?? <span className="text-slate-300 italic">Select a client first</span>}
-            </div>
+            <Label text="Business Unit" />
+            <input
+              name="businessUnit"
+              type="text"
+              placeholder="e.g. Commercial, R&D, IT…"
+              className={inputCls}
+            />
           </div>
 
-          {/* Client POCs — displayed when client selected */}
-          {selectedClient && selectedClient.pocs.length > 0 && (
-            <div className="col-span-full">
-              <Label text="Client POCs (from master)" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-                {selectedClient.pocs.map(poc => (
-                  <div key={poc.id} className="flex items-start gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-700">
-                      {poc.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-700 truncate">{poc.name}</p>
-                      {poc.jobTitle && <p className="text-[10px] text-slate-400">{poc.jobTitle}</p>}
-                      {poc.email    && <p className="text-[10px] text-indigo-500 truncate">{poc.email}</p>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {selectedClient && selectedClient.pocs.length === 0 && (
-            <div className="col-span-full">
+          {/* POC section */}
+          <div className="col-span-full">
+            <div className="flex items-center justify-between mb-2">
               <Label text="Client POCs" />
-              <p className="text-xs text-slate-400 italic mt-1">No POCs on file for this client.</p>
+              <button
+                type="button"
+                onClick={addBlankPoc}
+                className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add POC
+              </button>
             </div>
-          )}
+
+            {/* Dropdown to pick from existing client POCs */}
+            {availableExisting.length > 0 && (
+              <div className="mb-3">
+                <select
+                  value=""
+                  onChange={e => {
+                    const poc = selectedClient!.pocs.find(p => p.id === e.target.value)
+                    if (poc) addPocFromExisting(poc)
+                  }}
+                  className={inputCls}
+                >
+                  <option value="">Select from existing POCs…</option>
+                  {availableExisting.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.jobTitle ? ` — ${p.jobTitle}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {pocRows.length === 0 && availableExisting.length === 0 && (
+              <p className="text-xs text-slate-400 italic">
+                {selectedClient ? 'No existing POCs for this client.' : 'Select a client to see existing POCs.'}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {pocRows.map((poc, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      value={poc.name}
+                      onChange={e => updatePoc(i, 'name', e.target.value)}
+                      className={inputCls + ' flex-1'}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Email"
+                      value={poc.email}
+                      onChange={e => {
+                        updatePoc(i, 'email', e.target.value)
+                        const err = validateEmail(e.target.value)
+                        setPocErrors(prev => {
+                          const next = [...prev]
+                          next[i] = { ...next[i], email: err }
+                          return next
+                        })
+                      }}
+                      className={(pocErrors[i]?.email ? inputErrCls : inputCls) + ' flex-1'}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="e.g. +919876543210"
+                      value={poc.phone}
+                      onChange={e => {
+                        updatePoc(i, 'phone', e.target.value)
+                        const err = validatePhone(e.target.value)
+                        setPocErrors(prev => {
+                          const next = [...prev]
+                          next[i] = { ...next[i], phone: err }
+                          return next
+                        })
+                      }}
+                      className={(pocErrors[i]?.phone ? inputErrCls : inputCls) + ' flex-1'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePoc(i)}
+                      className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  {poc.existingPocId && (
+                    <p className="text-[10px] text-indigo-400 pl-1">Autofilled from existing POC — edit if needed</p>
+                  )}
+                  {pocErrors[i]?.email && <FieldError msg={pocErrors[i].email} />}
+                  {pocErrors[i]?.phone && <FieldError msg={pocErrors[i].phone} />}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -170,7 +345,17 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
 
           <div>
             <Label text="End Date" />
-            <input name="endDate" type="date" className={inputCls} />
+            <input
+              name="endDate"
+              type="date"
+              className={dateError ? inputErrCls : inputCls}
+              onChange={e => {
+                const form = e.currentTarget.form
+                const start = (form?.elements.namedItem('startDate') as HTMLInputElement)?.value ?? ''
+                checkDates(start, e.target.value)
+              }}
+            />
+            <FieldError msg={dateError ?? undefined} />
           </div>
 
           <div>
@@ -247,27 +432,16 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
         </div>
       </div>
 
-      {/* Section: Team */}
+      {/* Section: Owner (auto-filled) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Team</h2>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <div>
-            <Label text="Owner" required />
-            <select name="ownerId" required className={inputCls}>
-              <option value="">Select owner…</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-              ))}
-            </select>
+        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Owner</h2>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
+            {ownerName.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
           </div>
           <div>
-            <Label text="Co-Owner" />
-            <select name="coOwnerId" className={inputCls}>
-              <option value="">None</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-              ))}
-            </select>
+            <p className="text-sm font-semibold text-slate-800">{ownerName}</p>
+            <p className="text-xs text-slate-400">Automatically set to you</p>
           </div>
         </div>
       </div>
@@ -275,25 +449,14 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
       {/* Section: Notes */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Notes</h2>
-        <div className="space-y-4">
-          <div>
-            <Label text="Next Steps" />
-            <textarea
-              name="nextSteps"
-              rows={2}
-              placeholder="What needs to happen next?"
-              className={inputCls + ' resize-none'}
-            />
-          </div>
-          <div>
-            <Label text="Notes" />
-            <textarea
-              name="notes"
-              rows={3}
-              placeholder="Any additional context…"
-              className={inputCls + ' resize-none'}
-            />
-          </div>
+        <div>
+          <Label text="Notes" />
+          <textarea
+            name="notes"
+            rows={3}
+            placeholder="Any additional context…"
+            className={inputCls + ' resize-none'}
+          />
         </div>
       </div>
 
