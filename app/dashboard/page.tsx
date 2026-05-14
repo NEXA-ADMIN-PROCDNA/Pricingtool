@@ -44,20 +44,21 @@ function fyLabel(now: Date) {
 
 function NexaWordmark() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{
-        fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
-        fontWeight: 400,
-        fontSize: 32,
-        letterSpacing: '0.04em',
+        fontFamily: "var(--font-playfair), 'Georgia', serif",
+        fontWeight: 800,
+        fontSize: 28,
+        letterSpacing: '0.18em',
         color: C.ink,
-        lineHeight: 0.95,
+        lineHeight: 1,
+        textTransform: 'uppercase',
       }}>
-        N<span style={{ fontStyle: 'italic', letterSpacing: '0.02em' }}>e</span>xa
+        NEXA
       </span>
       <span style={{
-        display: 'inline-block', width: 8, height: 8,
-        background: C.accent, transform: 'rotate(45deg)', marginTop: -4, flexShrink: 0,
+        display: 'inline-block', width: 7, height: 7,
+        background: C.accent, transform: 'rotate(45deg)', marginTop: -2, flexShrink: 0,
       }} />
     </div>
   )

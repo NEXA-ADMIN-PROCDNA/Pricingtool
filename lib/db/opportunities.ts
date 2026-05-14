@@ -32,6 +32,7 @@ export async function getOpportunities(status?: OpportunityStatus | 'ALL', q?: s
       opportunityName: true,
       status: true,
       stage: true,
+      primaryLob: true,
       startDate: true,
       endDate: true,
       estimatedRevenue: true,

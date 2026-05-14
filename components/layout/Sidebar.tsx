@@ -109,21 +109,22 @@ export function Sidebar() {
 
         {/* Expanded: Nexa wordmark */}
         <div className={`transition-all duration-150 overflow-hidden whitespace-nowrap ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, lineHeight: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1 }}>
             <span style={{
-              fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
-              fontWeight: 400,
-              fontSize: 20,
-              letterSpacing: '0.04em',
+              fontFamily: "var(--font-playfair), 'Georgia', serif",
+              fontWeight: 800,
+              fontSize: 18,
+              letterSpacing: '0.18em',
               color: '#F4F6FB',
-              lineHeight: 0.95,
+              lineHeight: 1,
+              textTransform: 'uppercase',
             }}>
-              N<span style={{ fontStyle: 'italic', letterSpacing: '0.02em' }}>e</span>xa
+              NEXA
             </span>
             <span style={{
-              display: 'inline-block', width: 6, height: 6,
+              display: 'inline-block', width: 5, height: 5,
               background: C.accent, transform: 'rotate(45deg)',
-              marginTop: -2, flexShrink: 0,
+              marginTop: -1, flexShrink: 0,
             }} />
           </div>
           <div style={{

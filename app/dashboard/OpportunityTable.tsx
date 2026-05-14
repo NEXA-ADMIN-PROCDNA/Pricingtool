@@ -1,5 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import type { OpportunityRow } from '@/lib/db/opportunities'
 import { OpportunityStatus } from '@prisma/client'
@@ -16,6 +17,14 @@ const C = {
   accentSoft:'#DCE7F5',
   rule:      '#D6DCE8',
   ruleSoft:  '#E2E6EE',
+}
+
+const LOB_LABELS: Record<string, string> = {
+  TECH:      'Technology',
+  ANALYTICS: 'Analytics',
+  MS:        'Market Strategy',
+  DS:        'Data Science',
+  DESIGN:    'Design',
 }
 
 const MONO: React.CSSProperties = {
@@ -95,16 +104,98 @@ function ownerInitials(name: string) {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
+// Reusable styled select dropdown
+function FilterSelect({
+  value, onChange, placeholder, options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  options: { label: string; value: string }[]
+}) {
+  const active = value !== ''
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          fontFamily: "'Inter', system-ui, sans-serif",
+          fontSize: 12.5,
+          color: active ? C.ink : C.inkMuted,
+          fontWeight: active ? 600 : 500,
+          cursor: 'pointer',
+          paddingRight: 16,
+        }}
+      >
+        <option value="">{placeholder}</option>
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <svg
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+        strokeLinecap="round" strokeLinejoin="round"
+        style={{ width: 11, height: 11, position: 'absolute', right: 0, pointerEvents: 'none', color: active ? C.accent : C.inkMuted }}
+      >
+        <path d="M6 9l6 6 6-6"/>
+      </svg>
+      {active && (
+        <span
+          onClick={() => onChange('')}
+          style={{
+            position: 'absolute', right: -14, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 13, color: C.inkMuted, cursor: 'pointer', lineHeight: 1,
+          }}
+          title="Clear"
+        >×</span>
+      )}
+    </div>
+  )
+}
+
 export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const router = useRouter()
   const params = useSearchParams()
   const active = (params.get('status') ?? 'ALL') as 'ALL' | OpportunityStatus
 
-  function setFilter(value: string) {
-    router.push(value === 'ALL' ? '/dashboard' : `/dashboard?status=${value}`)
+  const [ownerFilter, setOwnerFilter] = useState('')
+  const [lobFilter,   setLobFilter]   = useState('')
+  const [yearFilter,  setYearFilter]  = useState('')
+
+  // Derive unique filter options from the full row set
+  const ownerOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.owner.name))].sort()
+      .map(n => ({ label: n, value: n })),
+    [rows])
+
+  const lobOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.primaryLob).filter(Boolean))].sort()
+      .map(v => ({ label: LOB_LABELS[v!] ?? v!, value: v! })),
+    [rows])
+
+  const yearOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.startDate ? new Date(r.startDate).getFullYear() : null).filter((y): y is number => y !== null))].sort()
+      .map(y => ({ label: `FY${String(y).slice(2)}`, value: String(y) })),
+    [rows])
+
+  function setStatusFilter(value: string) {
+    const cur = new URLSearchParams(window.location.search)
+    if (value === 'ALL') cur.delete('status')
+    else cur.set('status', value)
+    router.push(`/dashboard?${cur.toString()}`)
   }
 
-  const visible = active === 'ALL' ? rows : rows.filter(r => r.status === active)
+  const visible = rows
+    .filter(r => active === 'ALL' || r.status === active)
+    .filter(r => !ownerFilter || r.owner.name === ownerFilter)
+    .filter(r => !lobFilter   || r.primaryLob === lobFilter)
+    .filter(r => !yearFilter  || (r.startDate && new Date(r.startDate).getFullYear() === Number(yearFilter)))
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -121,7 +212,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
             return (
               <button
                 key={f.value}
-                onClick={() => setFilter(f.value)}
+                onClick={() => setStatusFilter(f.value)}
                 style={{
                   display: 'inline-flex', gap: 6, alignItems: 'baseline',
                   paddingBottom: 8, cursor: 'pointer', background: 'none', border: 'none',
@@ -132,11 +223,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                 }}
               >
                 {f.label}
-                <span style={{
-                  ...MONO,
-                  fontSize: 10.5,
-                  color: isActive ? C.accent : C.inkFaint,
-                }}>
+                <span style={{ ...MONO, fontSize: 10.5, color: isActive ? C.accent : C.inkFaint }}>
                   {String(count).padStart(2, '0')}
                 </span>
               </button>
@@ -144,19 +231,29 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
           })}
         </div>
 
-        {/* Right: filter dropdowns + export */}
+        {/* Right: Owner / Practice / Period dropdowns + export */}
         <div style={{
-          display: 'flex', gap: 18, alignItems: 'baseline',
+          display: 'flex', gap: 24, alignItems: 'center',
           fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12.5, color: C.inkMuted,
         }}>
-          {['Owner', 'Practice', 'Period'].map(label => (
-            <span key={label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'default' }}>
-              {label}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 11, height: 11 }}>
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </span>
-          ))}
+          <FilterSelect
+            value={ownerFilter}
+            onChange={setOwnerFilter}
+            placeholder="Owner"
+            options={ownerOptions}
+          />
+          <FilterSelect
+            value={lobFilter}
+            onChange={setLobFilter}
+            placeholder="Practice"
+            options={lobOptions}
+          />
+          <FilterSelect
+            value={yearFilter}
+            onChange={setYearFilter}
+            placeholder="Period"
+            options={yearOptions}
+          />
           <span style={{ color: C.accent, borderBottom: `1px dotted ${C.accent}`, cursor: 'pointer', paddingBottom: 1 }}>
             Export
           </span>
@@ -169,21 +266,22 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
           <thead>
             <tr style={{ borderBottom: `1.5px solid ${C.ink}` }}>
               {[
-                { label: '№',          w: 56  },
+                { label: 'BD ID',          w: 56  },
                 { label: 'Client',     w: 140 },
-                { label: 'Engagement', w: 220 },
-                { label: 'Partner',    w: 160 },
+                { label: 'Opportunity', w: 220 },
+                { label: 'Owner',    w: 160 },
                 { label: 'Revenue',    w: 110, right: true },
                 { label: 'Win %',      w: 72,  right: true },
-                { label: 'Window',     w: 180 },
+                { label: 'Time Window',     w: 180 },
                 { label: 'Status',     w: 100 },
-                { label: 'Next step',  w: undefined },
+                { label: 'Comments',   w: 80, right: true },
+                { label: 'Next Step',  w: 90 },
               ].map(col => (
                 <th
                   key={col.label}
                   style={{
-                    padding: '12px 12px 12px 0',
-                    textAlign: col.right ? 'right' : 'left',
+                    padding: '12px 42px 12px 0',
+                    textAlign: 'center',
                     fontFamily: "'Inter', system-ui, sans-serif",
                     fontSize: 11, fontWeight: 600,
                     letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -198,7 +296,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
+                <td colSpan={10} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
                   No opportunities found.
                 </td>
               </tr>
@@ -206,7 +304,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
             {visible.map(row => {
               const revStr = fmtRevenue(row)
               const isFinal = hasFinalPricing(row)
-              const prob = row.probability != null ? Math.round(Number(row.probability) * 100) : null
+              const prob = row.probability != null ? Number(row.probability) : null
               const start = fmtDate(row.startDate)
               const end   = fmtDate(row.endDate)
               const nextStep = STAGE_NEXT_STEPS[row.stage] ?? '—'
@@ -224,31 +322,31 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   {/* № */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
                       onClick={e => e.stopPropagation()}
                       style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, letterSpacing: '0.02em', textDecoration: 'none' }}
                     >
-                      {row.opportunityId.replace('BD-', '')}
+                      {row.opportunityId}
                     </Link>
                   </td>
 
                   {/* Client */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', fontWeight: 500, color: C.ink, fontSize: 14, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center', fontWeight: 500, color: C.ink, fontSize: 14, whiteSpace: 'nowrap' }}>
                     {row.client.name}
                   </td>
 
                   {/* Engagement */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.opportunityName}
                     </div>
                   </td>
 
                   {/* Partner */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
                       <Avatar initials={ownerInitials(row.owner.name)} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {row.owner.name}
@@ -257,7 +355,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Revenue */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <span style={{
                       ...SERIF,
                       fontSize: 19,
@@ -272,13 +370,13 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                         display: 'block',
                         fontSize: 9, fontWeight: 600, letterSpacing: '0.08em',
                         textTransform: 'uppercase',
-                        color: '#1F6B3C', textAlign: 'right',
+                        color: '#1F6B3C', textAlign: 'center',
                       }}>FINAL</span>
                     )}
                   </td>
 
                   {/* Win % */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', textAlign: 'right' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     {prob !== null ? (
                       <span style={{ ...MONO, fontSize: 12.5, color: C.inkSoft, fontVariantNumeric: 'tabular-nums' }}>
                         {prob}%
@@ -289,29 +387,33 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Window */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <span style={{ ...MONO, fontSize: 12, color: C.inkMuted, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                       {start} → {end}
                     </span>
                   </td>
 
                   {/* Status */}
-                  <td style={{ padding: '14px 12px 14px 0', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <StatusPill status={row.status} />
                   </td>
 
-                  {/* Next step */}
-                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {nextStep}
+                  {/* Comments */}
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                    {row._count.comments > 0 ? (
+                      <span style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, fontVariantNumeric: 'tabular-nums' }}>
+                        {row._count.comments}
                       </span>
-                      {row._count.comments > 0 && (
-                        <span style={{ ...MONO, fontSize: 11, color: C.inkFaint, flexShrink: 0 }}>
-                          {row._count.comments} ↩
-                        </span>
-                      )}
-                    </div>
+                    ) : (
+                      <span style={{ color: C.inkFaint, fontSize: 12 }}>—</span>
+                    )}
+                  </td>
+
+                  {/* Next step */}
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                    <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                      {nextStep}
+                    </span>
                   </td>
                 </tr>
               )

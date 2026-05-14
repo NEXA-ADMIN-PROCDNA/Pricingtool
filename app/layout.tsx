@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
-import { IBM_Plex_Mono, Instrument_Serif } from 'next/font/google'
+import { IBM_Plex_Mono, Instrument_Serif, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { Providers } from './Providers'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,12 @@ const instrumentSerif = Instrument_Serif({
   variable: '--font-instrument-serif',
 })
 
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['700', '800', '900'],
+  variable: '--font-playfair',
+})
+
 export const metadata: Metadata = {
   title: 'NEXA · Business Development',
   description: 'Business Development & Pricing Tool',
@@ -32,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       GeistMono.variable,
       ibmPlexMono.variable,
       instrumentSerif.variable,
+      playfairDisplay.variable,
     )}>
       <body className="h-full antialiased">
         <Providers>{children}</Providers>
