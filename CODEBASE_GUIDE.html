@@ -29,6 +29,7 @@
   .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
   .callout-warn { background: #fffbeb; border-color: #fde68a; }
   .callout-green { background: #f0fdf4; border-color: #bbf7d0; }
+  .callout-red { background: #fff1f2; border-color: #fecdd3; }
   ul { padding-left: 20px; margin: 6px 0 10px; }
   li { line-height: 1.8; color: #374151; }
   .section { margin-bottom: 8px; }
@@ -37,13 +38,16 @@
   .flow-text { color: #374151; line-height: 1.6; }
   .badge { display: inline-block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1px 8px; font-size: 10.5px; font-weight: 600; }
   .badge-amber { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .badge-red { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+  .auth-ok  { color: #166534; font-weight: 600; }
+  .auth-no  { color: #92400e; font-weight: 600; }
   @media print { body { padding: 20px; } }
 </style>
 </head>
 <body>
 
 <h1>ProcDNA BD Tracker — Codebase Guide</h1>
-<p class="subtitle">Updated May 2026 &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL (PgBouncer port 6543)</p>
+<p class="subtitle">Updated May 2026 &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL + Storage &nbsp;·&nbsp; PgBouncer port 6543</p>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>1. High-Level Architecture</h2>
@@ -52,7 +56,7 @@
   <strong>One app, three layers:</strong><br/>
   <strong>Frontend (React/Next.js)</strong> — pages and components served from <code>app/</code><br/>
   <strong>Backend (Route Handlers)</strong> — REST API endpoints at <code>app/api/</code>, each a <code>route.ts</code> file<br/>
-  <strong>Database (Supabase)</strong> — PostgreSQL hosted on Supabase, accessed via Prisma ORM through PgBouncer connection pool (port 6543)
+  <strong>Database + Storage (Supabase)</strong> — PostgreSQL for structured data (via Prisma/PgBouncer), and private Storage buckets for file uploads (SoW, PO documents)
 </div>
 
 <p>There is <strong>no separate backend server</strong>. Next.js runs everything — it serves the React pages and also handles the API calls. When the browser (or a React component) calls <code>fetch("/api/something")</code>, that request goes to the matching <code>route.ts</code> file in the same project, which talks to the database via Prisma.</p>
@@ -64,6 +68,7 @@
   <tr><td>Auth</td><td>NextAuth v4 (email/password)</td><td><code>lib/auth.js</code>, <code>app/api/auth/[...nextauth]/</code></td></tr>
   <tr><td>Database Client</td><td>Prisma 7 + pg Pool via PgBouncer</td><td><code>lib/prisma.ts</code></td></tr>
   <tr><td>Database Queries (helpers)</td><td>Typed Prisma queries</td><td><code>lib/db/*.ts</code></td></tr>
+  <tr><td>File Storage</td><td>Supabase Storage (private buckets)</td><td><code>lib/supabase.ts</code>, buckets: <code>SoW_bucket</code>, <code>PO_busket</code></td></tr>
   <tr><td>Database Host</td><td>Supabase (PostgreSQL)</td><td>Schema: <code>procdna_database</code>, AWS Mumbai (ap-south-1)</td></tr>
   <tr><td>Deployment</td><td>Vercel (auto-deploy from GitHub)</td><td>Connected to <code>main</code> branch; each commit triggers a new build</td></tr>
 </table>
@@ -75,25 +80,29 @@
   <tr><th>Folder / File</th><th>What it does</th></tr>
   <tr><td><code>app/</code></td><td>Everything Next.js renders or serves. Pages, API routes, layout, global CSS.</td></tr>
   <tr><td><code>app/layout.tsx</code></td><td>Root HTML shell. Sets the Geist font, page title ("ProcDNA BD Tracker"), and wraps all pages in <code>&lt;Providers&gt;</code> (NextAuth session).</td></tr>
-  <tr><td><code>app/Providers.tsx</code></td><td>Client component that wraps the app in <code>SessionProvider</code> so any component can call <code>useSession()</code> to know who is logged in.</td></tr>
+  <tr><td><code>app/Providers.tsx</code></td><td>Client component that wraps the app in <code>SessionProvider</code> so any component can call <code>useSession()</code>.</td></tr>
   <tr><td><code>app/page.tsx</code></td><td>Root route (<code>/</code>). Immediately redirects to <code>/dashboard</code>.</td></tr>
   <tr><td><code>app/login/</code></td><td>Login page. Collects email and password, calls NextAuth's <code>signIn()</code>.</td></tr>
-  <tr><td><code>app/dashboard/</code></td><td>Main landing after login. Shows KPI cards (pipeline revenue, win rate, etc.) and the opportunity table. Data fetched server-side via <code>lib/db/opportunities.ts</code>.</td></tr>
-  <tr><td><code>app/opportunities/[id]/</code></td><td>Opportunity detail page. Loads full opportunity data server-side, then renders the tabbed layout: Basic Details, Comments, Pricing, Documents, Approvals.</td></tr>
+  <tr><td><code>app/dashboard/</code></td><td>Main landing after login. Shows KPI cards and the opportunity table with Excel-style per-column filters. Data fetched server-side via <code>lib/db/opportunities.ts</code> with RBAC filtering applied.</td></tr>
+  <tr><td><code>app/dashboard/OpportunityTable.tsx</code></td><td>Client component. Renders the opportunity table with multi-column filter popovers. Filters are OR-within-column, AND-across-columns. Popovers use <code>position:fixed</code> + <code>getBoundingClientRect()</code> to escape overflow containers.</td></tr>
+  <tr><td><code>app/opportunities/[id]/</code></td><td>Opportunity detail page. Loads full opportunity data server-side, then renders the tabbed layout: Details, Pricing, Approvals, SoW, Comments.</td></tr>
+  <tr><td><code>app/opportunities/[id]/TabSoW.tsx</code></td><td>Client component. SoW tab with two independent <code>DocUploadSection</code> sub-components — one for SoW (<code>/api/…/sow</code>) and one for PO (<code>/api/…/po</code>). Supports drag-and-drop and pre-contract agreement checkbox.</td></tr>
   <tr><td><code>app/opportunities/new/</code></td><td>Form to create a new opportunity. Submits to <code>POST /api/opportunities</code>.</td></tr>
-  <tr><td><code>app/clients/</code></td><td>Clients list page. Shows all clients, a button to request a new client (modal), and an admin panel to approve/reject client requests.</td></tr>
+  <tr><td><code>app/clients/</code></td><td>Clients list page. Client cards are clickable <code>&lt;Link&gt;</code> elements navigating to <code>/clients/[id]</code>. Also has Add Client modal and admin requests panel.</td></tr>
+  <tr><td><code>app/clients/[id]/page.tsx</code></td><td>Client detail page. Shows header (avatar, name, ID badge, industry, BU/region), 4 KPI tiles (total deals, open, won, pipeline revenue), opportunity table with links, and POC list.</td></tr>
+  <tr><td><code>app/approvals/</code></td><td>Approvals page for approvers. Lists pending requests, approve/reject actions.</td></tr>
   <tr><td><code>app/api/</code></td><td>All REST API endpoints. Each subfolder = one resource. Each <code>route.ts</code> = one or more HTTP verbs.</td></tr>
-  <tr><td><code>lib/</code></td><td>Shared server-side utilities: Prisma client, auth config, DB query helpers.</td></tr>
-  <tr><td><code>lib/prisma.ts</code></td><td>Singleton Prisma client. Connects to Supabase via a <code>pg.Pool</code> (max 5 connections) through PgBouncer on port 6543. All <code>route.ts</code> files import <code>prisma</code> from here.</td></tr>
-  <tr><td><code>lib/auth.js</code></td><td>NextAuth config. Email-based login; auto-creates user in DB on first sign-in. Puts user id + role into the JWT session token.</td></tr>
-  <tr><td><code>lib/db/opportunities.ts</code></td><td>Heavy-lifting query functions for opportunities: list, detail, dashboard stats. Called directly from server-side page components (not from API routes).</td></tr>
-  <tr><td><code>lib/db/clients.ts</code></td><td>Query helpers for clients list and the select dropdown.</td></tr>
-  <tr><td><code>lib/db/users.ts</code></td><td>Query helper for the user select dropdown (owner, co-owner fields).</td></tr>
-  <tr><td><code>prisma/schema.prisma</code></td><td>The source of truth for the database schema. Defines all tables (models), columns, types, and relations.</td></tr>
-  <tr><td><code>prisma/seed.ts</code></td><td>Seeds the database with rate cards (all 24 rows with domain assigned), sample users, clients, opportunities, pricing versions, and Azure AD users. Run with <code>npx tsx prisma/seed.ts</code>.</td></tr>
-  <tr><td><code>prisma.config.ts</code></td><td>Prisma CLI config. Points CLI commands (<code>db push</code>, migrations) at the correct DB URL from environment variables.</td></tr>
-  <tr><td><code>components/</code> (root)</td><td>Shared React components referenced as <code>@/components/</code>. Includes <code>MainLayout.tsx</code> (sidebar + header shell used on all authenticated pages).</td></tr>
-  <tr><td><code>CODEBASE_GUIDE.html</code></td><td>This file. Living documentation of the entire codebase — open in browser, print to PDF via File → Print → Save as PDF.</td></tr>
+  <tr><td><code>lib/prisma.ts</code></td><td>Singleton Prisma client. Connects to Supabase via a <code>pg.Pool</code> (max 5 connections) through PgBouncer on port 6543.</td></tr>
+  <tr><td><code>lib/auth.js</code></td><td>NextAuth config. Email-based login. Puts <code>user.id</code> and <code>user.role</code> into the JWT. Tokens are HMAC-SHA256 signed with <code>NEXTAUTH_SECRET</code> — cannot be forged by clients.</td></tr>
+  <tr><td><code>lib/supabase.ts</code></td><td>Lazy Supabase client factory. Exports <code>getSupabase()</code> (throws at call time if env vars missing, not at module load), <code>SOW_BUCKET = 'SoW_bucket'</code>, <code>PO_BUCKET = 'PO_busket'</code>. Always use service role key server-side.</td></tr>
+  <tr><td><code>lib/db/opportunities.ts</code></td><td>Heavy-lifting query functions: <code>getOpportunities</code>, <code>getOpportunityDetail</code>, <code>getDashboardStats</code>. All accept optional <code>auth?: AuthCtx</code>. RBAC is enforced here via <code>resolveOwnerFilter(auth)</code>.</td></tr>
+  <tr><td><code>lib/db/clients.ts</code></td><td>Query helpers for clients list, dropdown, and <code>getClientDetail(clientId)</code> with full opportunity and POC data.</td></tr>
+  <tr><td><code>lib/db/users.ts</code></td><td>Query helper for the user select dropdown.</td></tr>
+  <tr><td><code>prisma/schema.prisma</code></td><td>Source of truth for the DB schema. Defines all models. <strong>Note:</strong> in Prisma 7, <code>url</code>/<code>directUrl</code> are NOT set here — they live in <code>prisma.config.ts</code>.</td></tr>
+  <tr><td><code>prisma.config.ts</code></td><td>Prisma CLI config. Sets <code>datasource.url = DIRECT_URL</code> (port 5432, direct connection) so <code>prisma db push</code> and migrations work. Application runtime still uses <code>DATABASE_URL</code> (port 6543) via <code>lib/prisma.ts</code>.</td></tr>
+  <tr><td><code>prisma/seed.ts</code></td><td>Seeds rate cards, sample users, clients, opportunities, pricing versions, and Azure AD users.</td></tr>
+  <tr><td><code>components/layout/Sidebar.tsx</code></td><td>Sidebar navigation. Near-black color palette (<code>#111111</code> background, <code>#1E5BB8</code> accent). User avatar, nav links, role badge.</td></tr>
+  <tr><td><code>CODEBASE_GUIDE.html</code></td><td>This file. Open in browser, print to PDF via File → Print → Save as PDF.</td></tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -103,145 +112,213 @@
 
 <h3>Pattern A — Server-Side Fetch (pages, initial load)</h3>
 <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User navigates to <code>/dashboard</code>. Next.js runs <code>app/dashboard/page.tsx</code> on the server.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The page calls <code>getDashboardStats()</code> from <code>lib/db/opportunities.ts</code> directly — no HTTP, just Prisma querying Supabase.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Prisma sends a SQL query to Supabase PostgreSQL (schema <code>procdna_database</code>) via the PgBouncer pool in <code>lib/prisma.ts</code>.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Data comes back, the page renders HTML with the data pre-filled, and sends it to the browser.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The page calls <code>getServerSession(authOptions)</code> to get <code>userId</code> and <code>role</code>, then calls <code>getDashboardStats(auth)</code> and <code>getOpportunities(status, q, auth)</code> from <code>lib/db/opportunities.ts</code> directly — no HTTP, just Prisma.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Prisma applies the RBAC where-filter (<code>resolveOwnerFilter</code>) and sends a SQL query to Supabase via PgBouncer.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Data comes back filtered by role. The page renders HTML with pre-filled data and sends it to the browser.</div></div>
 
 <h3>Pattern B — Client-Side Fetch (interactive components)</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks a button (e.g. "Add staffing resource" in <code>PricingDrawer.tsx</code>).</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The React component calls <code>fetch("/api/pricing-versions/[pvId]/staffing", { method: "POST", body: ... })</code>.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Next.js routes that request to <code>app/api/pricing-versions/[pvId]/staffing/route.ts</code> — the <code>POST</code> function there runs on the server.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">The route handler imports <code>prisma</code> from <code>lib/prisma.ts</code> and calls Prisma methods which send SQL to Supabase.</div></div>
-<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">The handler returns a JSON response. The React component updates its local state with the response and re-renders. Many updates use <strong>optimistic state</strong> — the UI updates immediately and the API call fires in the background.</div></div>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User drops a file onto the SoW upload zone in <code>TabSoW.tsx</code>.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The component calls <code>fetch("/api/opportunities/[id]/sow", { method: "POST", body: formData })</code>.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Next.js routes the request to <code>app/api/opportunities/[id]/sow/route.ts</code>. The handler validates the NextAuth JWT, then uploads the file to Supabase Storage using the service role key.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">The handler creates a <code>SOWDocument</code> DB record via Prisma and returns a signed URL (1-hour TTL). The UI appends the new doc to state.</div></div>
 
 <div class="callout callout-warn">
-  <strong>Where does the data actually live?</strong> All application data is stored in <strong>Supabase PostgreSQL</strong>, schema <code>procdna_database</code>, hosted on AWS Mumbai (ap-south-1). The connection string is in the <code>DATABASE_URL</code> environment variable. Prisma is the only thing that reads/writes the database — there is no direct SQL anywhere else in the codebase.
+  <strong>Where does data actually live?</strong> Structured data is in <strong>Supabase PostgreSQL</strong>, schema <code>procdna_database</code>. Files (SoW, PO) are in <strong>Supabase Storage</strong> in private buckets (<code>SoW_bucket</code>, <code>PO_busket</code>). Files are accessed via temporary signed URLs generated server-side (1-hour TTL). Prisma is the only thing that reads/writes the database.
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>4. API Endpoints Reference</h2>
 
-<p>All endpoints live under <code>/api/</code>. They are JSON REST APIs called with <code>fetch()</code> from React components.</p>
+<p>All endpoints live under <code>/api/</code>. <span class="auth-ok">✅ Auth</span> = requires valid NextAuth JWT (returns 401 if missing). <span class="auth-no">⚠️ No auth</span> = currently unguarded — do not add new routes without auth.</p>
 
 <h3>Opportunities</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
   <tr>
     <td><code>/api/opportunities</code></td>
     <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td>GET: list all opportunities (with client, owner). POST: create new opportunity.</td>
-    <td><code>app/opportunities/new/NewOpportunityForm.tsx</code></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td><strong>GET:</strong> list opportunities filtered by RBAC role (ADMIN/PARTNER = all; DIRECTOR = own + SEL-owned; SEL = own only). <strong>POST:</strong> create new opportunity (auto-generates <code>BD-NNN</code> ID), optionally creates POCs.</td>
+    <td><code>NewOpportunityForm.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/opportunities/[id]/pricing-versions</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Create a new (empty) pricing version for an opportunity. Auto-increments version number. Returns full version with staffing.</td>
-    <td><code>OpportunityTabs.tsx</code> (Create First Version / New Version button)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Create a new pricing version. Auto-increments versionNumber.</td>
+    <td><code>OpportunityTabs.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/opportunities/[id]/comments</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Post a new comment on an opportunity. Gets author from session.</td>
-    <td><code>OpportunityTabs.tsx</code> (Comments tab compose box)</td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>Post a new comment. Gets <code>authorId</code> from JWT. Supports threaded replies via <code>parentId</code>.</td>
+    <td><code>OpportunityTabs.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/opportunities/[id]/approvals</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Submit an approval request. Sets status to PENDING.</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Submit an approval request (links approverId + requestedById). Sets status to PENDING.</td>
     <td>Approvals tab</td>
   </tr>
   <tr>
     <td><code>/api/opportunities/[id]/other-costs</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Add a new other-cost line to an opportunity. Body: <code>{ description, amount, markupPct? }</code>. New rows default <code>isBillable: true</code>.</td>
-    <td><code>PricingDrawer.tsx</code> (Other Cost tab Add button)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Add other-cost line. Body: <code>{ description, amount, markupPct? }</code>. Defaults <code>isBillable: true</code>.</td>
+    <td><code>PricingDrawer.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/opportunities/[id]/other-costs/[costId]</code></td>
     <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td>PATCH: update <code>isBillable</code> (boolean) or <code>markupPct</code> (number) on a cost row. DELETE: remove the row permanently.</td>
-    <td><code>PricingDrawer.tsx</code> (Other Cost tab checkbox / markup edit / delete)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>PATCH: update <code>isBillable</code> or <code>markupPct</code>. DELETE: remove the row permanently.</td>
+    <td><code>PricingDrawer.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/sow</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span><span class="tag tag-delete">DELETE</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td><strong>GET:</strong> list SoW docs with fresh 1-hr signed URLs. <strong>POST:</strong> upload to <code>SoW_bucket</code> (multipart, max 20 MB, PDF/Word/Excel/PNG/JPEG). Storage path: <code>{opportunityId}/v{n}_{timestamp}.{ext}</code>. <strong>DELETE:</strong> soft-delete (<code>isActive: false</code>). Body: <code>{ docId }</code>.</td>
+    <td><code>TabSoW.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/opportunities/[id]/po</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span><span class="tag tag-delete">DELETE</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>Identical to SoW route but uses <code>PO_busket</code> and <code>prisma.pODocument</code>. Same validation, same signed URL pattern.</td>
+    <td><code>TabSoW.tsx</code></td>
   </tr>
 </table>
 
 <h3>Pricing Versions</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
   <tr>
     <td><code>/api/pricing-versions/[pvId]</code></td>
     <td><span class="tag tag-get">GET</span><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td>
-      <strong>GET:</strong> fetch full version data (staffing + weeklyHours, SoP, snapshots).<br/>
-      <strong>PATCH:</strong> save computed metrics (<code>totalHours, totalCost, grossMarginPct, offshorePct, effectiveRatePerHour, proposedBillings</code>) after Efforts tab changes. Also handles <code>isFinal: true</code> — automatically unsets <code>isFinal</code> on all sibling versions before setting the target.<br/>
-      <strong>DELETE:</strong> hard-delete the pricing version. Cascade deletes all child records (staffing resources, week entries, SoP rows, financial snapshots).
-    </td>
-    <td><code>PricingDrawer.tsx</code> (on open, after every edit, Save &amp; Close); <code>OpportunityTabs.tsx</code> (Mark as Final, Delete)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td><strong>GET:</strong> fetch full version (staffing + weeklyHours, SoP, snapshots). <strong>PATCH:</strong> save computed metrics; <code>isFinal: true</code> atomically unsets siblings. <strong>DELETE:</strong> hard-delete (cascades all child records).</td>
+    <td><code>PricingDrawer.tsx</code>, <code>OpportunityTabs.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/pricing-versions/[pvId]/duplicate</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Deep-copy an existing pricing version into a new version (auto-incremented number, <code>isFinal: false</code>). Copies all staffing resources + their weekly hour entries, all schedule-of-payment rows, and all financial snapshot rows. Runs in a single Prisma <code>$transaction</code>. Returns the new full version.</td>
-    <td><code>OpportunityTabs.tsx</code> (Duplicate button on version card)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Deep-copy version including staffing + weekly hours + schedule + snapshots. Runs in a single Prisma <code>$transaction</code>.</td>
+    <td><code>OpportunityTabs.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/pricing-versions/[pvId]/staffing</code></td>
     <td><span class="tag tag-post">POST</span></td>
-    <td>Add a staffing resource row. Looks up the rate card by <code>rateCardId</code>, copies role/location/domain/rates. Returns new row with empty weekly hours.</td>
-    <td><code>PricingDrawer.tsx</code> (Efforts tab role dropdown)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Add staffing resource from rate card. Body: <code>{ rateCardId }</code>. Copies role/location/domain/rates from the rate card row.</td>
+    <td><code>PricingDrawer.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/pricing-versions/[pvId]/staffing/[srId]</code></td>
     <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td>
-      <strong>PATCH:</strong> update any of <code>utilization, weekEntries, effectiveBillRate, isActive, isBillable</code> on a staffing row. <code>weekEntries</code> is an array of <code>{ weekStartDate, hours }</code> upserted via a unique constraint.<br/>
-      <strong>DELETE:</strong> remove the staffing row (and its week entries via cascade).
-    </td>
-    <td><code>PricingDrawer.tsx</code> (every edit: hours, eff rate, D/P%, util%, Active checkbox, Billable checkbox, delete)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>PATCH: update utilization/billRate/active/billable; upsert <code>weekEntries: [{ weekStartDate, hours }]</code>. DELETE: remove row (cascades week entries).</td>
+    <td><code>PricingDrawer.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/pricing-versions/[pvId]/staffing/[srId]/hours</code></td>
-    <td><span class="tag tag-patch">PATCH</span></td>
-    <td>Bulk-update weekly hours for a staffing row. Used for utilization auto-fill.</td>
-    <td><code>PricingDrawer.tsx</code> (Util% input on blur)</td>
+    <td><span class="tag tag-put">PUT</span></td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Upsert a single week entry. Body: <code>{ weekStartDate, hours }</code>.</td>
+    <td><code>PricingDrawer.tsx</code></td>
+  </tr>
+</table>
+
+<h3>Approvals</h3>
+<table>
+  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
+  <tr>
+    <td><code>/api/approvals</code></td>
+    <td><span class="tag tag-get">GET</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>List approval requests for the signed-in user as approver. <code>?pending=true</code> filters to PENDING only. Returns nested opportunity and final pricingVersion data.</td>
+    <td><code>app/approvals/page.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/approvals/[id]/approve</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>Approve a PENDING request. Validates the JWT user is the designated approver. Sets APPROVED + <code>decidedAt</code>.</td>
+    <td>Approvals page</td>
+  </tr>
+  <tr>
+    <td><code>/api/approvals/[id]/reject</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>Reject a PENDING request. Body: <code>{ reason? }</code>. Sets REJECTED + <code>decidedAt</code> + optional <code>rejectionReason</code>.</td>
+    <td>Approvals page</td>
+  </tr>
+</table>
+
+<h3>Client Requests</h3>
+<table>
+  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
+  <tr>
+    <td><code>/api/client-requests</code></td>
+    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>GET: list PENDING client requests. POST: create request (<code>name</code>, <code>requestedById</code>, optional metadata).</td>
+    <td><code>AddClientModal.tsx</code>, <code>AdminRequestsPanel.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/client-requests/[reqId]/approve</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Approve request: creates a <code>Client</code> record (auto-generates <code>CL-NNN</code> ID), marks request APPROVED. Body: <code>{ reviewerId }</code>.</td>
+    <td><code>AdminRequestsPanel.tsx</code></td>
+  </tr>
+  <tr>
+    <td><code>/api/client-requests/[reqId]/reject</code></td>
+    <td><span class="tag tag-post">POST</span></td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Mark request REJECTED. Body: <code>{ reviewerId }</code>.</td>
+    <td><code>AdminRequestsPanel.tsx</code></td>
   </tr>
 </table>
 
 <h3>Other Resources</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>What it does</th><th>Called from</th></tr>
+  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
   <tr>
     <td><code>/api/rate-cards</code></td>
     <td><span class="tag tag-get">GET</span></td>
-    <td>Returns all active rate cards (role, location, domain, cost rate, bill rate). Used to populate the Add Resource dropdown. The same rate card can be added multiple times to a version — there is no deduplication filter.</td>
-    <td><code>PricingDrawer.tsx</code> (Efforts tab, on first open)</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>List all active rate cards (role, location, domain, cost rate, bill rate). Used to populate the Add Resource dropdown.</td>
+    <td><code>PricingDrawer.tsx</code></td>
   </tr>
   <tr>
     <td><code>/api/users</code></td>
     <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td>GET: list users. POST: create user (used during Azure AD sync in seed).</td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>GET: list all users. POST: create user (<code>name</code>, <code>email</code>, <code>role</code> — defaults to <code>'BD'</code>).</td>
     <td>Admin / seed script</td>
   </tr>
   <tr>
-    <td><code>/api/client-requests</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td>GET: list all client requests (admin). POST: submit a new client request from the Clients page.</td>
-    <td><code>app/clients/AddClientModal.tsx</code>, <code>AdminRequestsPanel.tsx</code></td>
+    <td><code>/api/client-pocs/[id]</code></td>
+    <td><span class="tag tag-delete">DELETE</span></td>
+    <td><span class="auth-ok">✅</span></td>
+    <td>Delete a client point-of-contact. Returns 404 if not found.</td>
+    <td>Client detail page</td>
   </tr>
   <tr>
-    <td><code>/api/client-requests/[reqId]/approve</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td>Approve a client request — creates the Client record and marks request APPROVED.</td>
-    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/client-requests/[reqId]/reject</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td>Mark a client request as REJECTED.</td>
-    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
+    <td><code>/api/pipeline-revenue</code></td>
+    <td><span class="tag tag-get">GET</span></td>
+    <td><span class="auth-no">⚠️</span></td>
+    <td>Sum estimatedRevenue (or final pricingVersion proposedBillings) across active opportunities. Returns <code>{ total: number }</code>.</td>
+    <td>Dashboard KPI card</td>
   </tr>
   <tr>
     <td><code>/api/auth/[...nextauth]</code></td>
     <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
+    <td>N/A</td>
     <td>NextAuth magic route. Handles sign-in, sign-out, session tokens. Configured in <code>lib/auth.js</code>.</td>
     <td>Browser automatically (login page, session refresh)</td>
   </tr>
@@ -250,42 +327,52 @@
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>5. Database Schema — Key Models</h2>
 
-<p>The database lives in Supabase under schema <code>procdna_database</code>. Every table below is a Prisma model defined in <code>prisma/schema.prisma</code>. After any schema change, run <code>npx prisma db push</code> then <code>npx prisma generate</code>.</p>
+<p>All tables are in Supabase under schema <code>procdna_database</code>, defined as Prisma models in <code>prisma/schema.prisma</code>. <strong>Prisma 7 breaking change:</strong> <code>url</code>/<code>directUrl</code> are no longer valid in <code>schema.prisma</code> — they live in <code>prisma.config.ts</code>.</p>
+<p><strong>Prisma accessor naming:</strong> PascalCase models get camelCase accessors. Examples: <code>SOWDocument</code> → <code>prisma.sOWDocument</code>, <code>PODocument</code> → <code>prisma.pODocument</code>.</p>
 
 <table>
   <tr><th>Model / Table</th><th>What it stores</th><th>Key fields</th></tr>
-  <tr><td><code>User</code></td><td>App users (BD, Directors, Partners, Admins)</td><td>email, name, role (enum), managerId (self-ref), isActive</td></tr>
+  <tr><td><code>User</code></td><td>App users</td><td>email, name, role (ADMIN | PARTNER | ED | DIRECTOR | SEL | BD), isActive</td></tr>
   <tr><td><code>Client</code></td><td>Client companies</td><td>clientId (CL-001), name, businessUnit, industry, region, isActive</td></tr>
   <tr><td><code>ClientPOC</code></td><td>Points of contact at each client</td><td>clientId (FK), name, email, phone, jobTitle</td></tr>
-  <tr><td><code>ClientRequest</code></td><td>Requests to add a new client (PENDING → APPROVED/REJECTED)</td><td>name, status (enum), requestedById, reviewedById</td></tr>
+  <tr><td><code>ClientRequest</code></td><td>Requests to add a new client (PENDING → APPROVED/REJECTED)</td><td>name, status, requestedById, reviewedById</td></tr>
   <tr><td><code>Opportunity</code></td><td>BD deals/pursuits</td><td>opportunityId (BD-001), clientId, primaryLob (LoB enum), status, stage, ownerId, startDate, endDate, estimatedRevenue, probability</td></tr>
   <tr>
     <td><code>RateCard</code></td>
-    <td>Standard billing and cost rates per role/location. Seeded with 24 rows covering all job roles × locations.</td>
-    <td>jobRole (enum), location (enum), <strong>domain</strong> (ANALYTICS / TECH / MS / DS — see Section 11), costRatePerHour, billRatePerHour, effectiveFrom, isActive</td>
+    <td>Standard billing and cost rates per role/location. 24 rows seeded.</td>
+    <td>jobRole (enum), location (enum), domain (ANALYTICS | TECH | MS | DS), costRatePerHour, billRatePerHour, isActive</td>
   </tr>
   <tr>
     <td><code>PricingVersion</code></td>
-    <td>A pricing scenario for an opportunity (v1, v2…). An opportunity can have many versions; at most one has <code>isFinal = true</code>.</td>
-    <td>opportunityId (FK), versionNumber, <strong>isFinal</strong> (Boolean), label, totalHours, totalCost, proposedBillings, grossMarginPct, offshorePct, effectiveRatePerHour, revenueSharePct, discountPremiumPct, businessJustification</td>
+    <td>A pricing scenario for an opportunity. At most one has <code>isFinal = true</code>.</td>
+    <td>opportunityId (FK), versionNumber, isFinal, label, totalHours, totalCost, proposedBillings, grossMarginPct, offshorePct, effectiveRatePerHour, revenueSharePct, discountPremiumPct, businessJustification</td>
   </tr>
   <tr>
     <td><code>StaffingResource</code></td>
-    <td>One person/role in a pricing version's Efforts tab. Many resources per version.</td>
-    <td>pricingVersionId (FK), rateCardId (FK), resourceDesignation, location, domain, costRatePerHour, systemBillRatePerHour, manualBillRatePerHour, effectiveBillRate, discountPremiumPct, utilization (0–100), <strong>isActive</strong> (Boolean, default true), <strong>isBillable</strong> (Boolean, default true)</td>
+    <td>One person/role in a pricing version's Efforts tab.</td>
+    <td>pricingVersionId (FK), rateCardId (FK), resourceDesignation, location, domain, costRatePerHour, systemBillRatePerHour, effectiveBillRate, utilization (0–100), isActive, isBillable</td>
   </tr>
   <tr><td><code>StaffingWeekEntry</code></td><td>Hours for a staffing resource in one specific week. Unique per (resource, week).</td><td>staffingResourceId (FK), weekStartDate (DateTime), hours (Decimal)</td></tr>
   <tr>
     <td><code>OtherCost</code></td>
-    <td>Non-staffing costs (travel, software, training, etc.) linked to an opportunity (not a version).</td>
-    <td>opportunityId (FK), description, amount (Decimal), <strong>markupPct</strong> (Decimal?, 8,4), <strong>isBillable</strong> (Boolean, default true)</td>
+    <td>Non-staffing costs linked at the opportunity level (shared across versions).</td>
+    <td>opportunityId (FK), description, amount (Decimal), markupPct (Decimal?, 8,4), isBillable (default true)</td>
   </tr>
-  <tr><td><code>ScheduleOfPayment</code></td><td>Monthly billing schedule for a pricing version</td><td>pricingVersionId (FK), month, recommendedBillings, proposedBillings, recommendedOtherCost, proposedOtherCost, proposedIsManual, discountPct, premiumPct</td></tr>
-  <tr><td><code>FinancialSnapshot</code></td><td>Computed P&amp;L per month (and overall) for a pricing version</td><td>pricingVersionId (FK), month (null = project total), totalRevenue (A), employeeCost (B), otherCost (C), grossMargin (D), grossMarginPct, totalHours, offshoreRatio, billedRatePerHour, effectiveRatePerHour, indiaRate, usRate</td></tr>
-  <tr><td><code>ApprovalRequest</code></td><td>Approval workflow entries for an opportunity</td><td>opportunityId (FK), requestedById, approverId, status (PENDING/APPROVED/REJECTED), rejectionReason</td></tr>
-  <tr><td><code>Comment</code></td><td>Comments on an opportunity (threaded)</td><td>opportunityId (FK), authorId (FK), content, parentId (nullable for replies)</td></tr>
-  <tr><td><code>ActivityLog</code></td><td>Audit trail of changes</td><td>opportunityId (FK), userId, action, oldValue (JSON), newValue (JSON)</td></tr>
-  <tr><td><code>SOWDocument</code></td><td>Statement of Work file attachments</td><td>opportunityId (FK), fileName, fileUrl, storagePath, version</td></tr>
+  <tr><td><code>ScheduleOfPayment</code></td><td>Monthly billing schedule for a pricing version.</td><td>pricingVersionId (FK), month, recommendedBillings, proposedBillings, recommendedOtherCost, proposedOtherCost, proposedIsManual, discountPct, premiumPct</td></tr>
+  <tr><td><code>FinancialSnapshot</code></td><td>Computed P&amp;L per month (and overall) for a pricing version.</td><td>pricingVersionId (FK), month (null = project total), totalRevenue, employeeCost, otherCost, grossMargin, grossMarginPct, totalHours, offshoreRatio, billedRatePerHour, effectiveRatePerHour</td></tr>
+  <tr><td><code>ApprovalRequest</code></td><td>Approval workflow entries.</td><td>opportunityId (FK), requestedById, approverId, status (PENDING/APPROVED/REJECTED), rejectionReason</td></tr>
+  <tr><td><code>Comment</code></td><td>Comments on an opportunity (threaded).</td><td>opportunityId (FK), authorId (FK), content, parentId (nullable for replies)</td></tr>
+  <tr><td><code>ActivityLog</code></td><td>Audit trail of changes.</td><td>opportunityId (FK), userId, action, oldValue (JSON), newValue (JSON)</td></tr>
+  <tr>
+    <td><code>SOWDocument</code><br/><small>accessor: <code>prisma.sOWDocument</code></small></td>
+    <td>Statement of Work file records. Physical file stored in <code>SoW_bucket</code> on Supabase Storage.</td>
+    <td>opportunityId (FK), clientId (FK), fileName, storagePath, fileUrl, fileSizeBytes, mimeType, version, uploadedAt, isActive (soft-delete)</td>
+  </tr>
+  <tr>
+    <td><code>PODocument</code><br/><small>accessor: <code>prisma.pODocument</code></small><br/><small>table: <code>po_documents</code></small></td>
+    <td>Purchase Order file records. Physical file stored in <code>PO_busket</code> on Supabase Storage.</td>
+    <td>opportunityId (FK), clientId (FK), fileName, storagePath, fileUrl, fileSizeBytes, mimeType, version, uploadedAt, isActive (soft-delete)</td>
+  </tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -294,45 +381,42 @@
 <table>
   <tr><th>File</th><th>What it does &amp; which APIs it calls</th></tr>
   <tr>
-    <td><code>app/dashboard/page.tsx</code><br/><code>app/dashboard/OpportunityTable.tsx</code></td>
-    <td>Server component. Calls <code>getDashboardStats()</code> and <code>getOpportunities()</code> directly (no HTTP). Renders KPI cards and the opportunity table with stage, owner, revenue columns.</td>
+    <td><code>app/dashboard/page.tsx</code></td>
+    <td>Server component. Extracts <code>userId</code> and <code>role</code> from session, passes as <code>auth</code> to <code>getOpportunities()</code> and <code>getDashboardStats()</code> — RBAC filtering applied server-side. Header shows "Your one stop solution for tracking Opportunities". New Opportunity button styled blue (<code>#2563EB</code>).</td>
+  </tr>
+  <tr>
+    <td><code>app/dashboard/OpportunityTable.tsx</code></td>
+    <td>Client component. Renders opportunity table with Excel-style per-column filter popovers. State: <code>columnFilters: Record&lt;string, string[]&gt;</code>. Popovers use <code>position: fixed</code> + <code>getBoundingClientRect()</code> to escape any overflow-hidden ancestor. Filters are AND-across-columns, OR-within-column. Footer shows <code>N of M&nbsp;&nbsp;SHOWN</code>.</td>
   </tr>
   <tr>
     <td><code>app/opportunities/[id]/page.tsx</code></td>
-    <td>Server component. Calls <code>getOpportunityDetail(id)</code> directly. Passes the result to <code>OpportunityTabs</code>.</td>
+    <td>Server component. Calls <code>getOpportunityDetail(id, auth)</code> with RBAC auth extracted from session. Passes result to <code>OpportunityTabs</code>.</td>
   </tr>
   <tr>
     <td><code>app/opportunities/[id]/OpportunityTabs.tsx</code></td>
-    <td>Client component. Manages the tab strip (Basic Details, Comments, Pricing, Documents, Approvals). Also owns the pricing version list in the Pricing tab. Calls:<br/>
-      &bull; <code>POST /api/opportunities/[id]/pricing-versions</code> — create new pricing version<br/>
-      &bull; <code>POST /api/pricing-versions/[pvId]/duplicate</code> — deep-copy a version (Duplicate button)<br/>
-      &bull; <code>PATCH /api/pricing-versions/[pvId]</code> with <code>{ isFinal: true }</code> — mark a version as final (unsets siblings server-side)<br/>
-      &bull; <code>DELETE /api/pricing-versions/[pvId]</code> — hard-delete a version after inline confirmation<br/>
-      &bull; <code>GET /api/pricing-versions/[pvId]</code> — re-fetch version after drawer closes<br/>
-      &bull; <code>POST /api/opportunities/[id]/comments</code> — submit comment<br/>
-      Version cards show: version number/label, metrics summary, <span class="badge">Selected for approval</span> badge if <code>isFinal</code>, Mark as Final button, Duplicate button, Delete (with inline confirmation).
+    <td>Client component. Tab strip: <strong>Details, Pricing, Approvals, SoW, Comments</strong>. Manages pricing version list and all version actions. Renders <code>&lt;TabSoW opportunityId={opp.opportunityId} /&gt;</code> for the SoW tab.<br/>
+      Calls: <code>POST /api/.../pricing-versions</code> · <code>POST /api/.../duplicate</code> · <code>PATCH /api/pricing-versions/[pvId]</code> · <code>DELETE /api/pricing-versions/[pvId]</code> · <code>GET /api/pricing-versions/[pvId]</code> · <code>POST /api/.../comments</code>
+    </td>
+  </tr>
+  <tr>
+    <td><code>app/opportunities/[id]/TabSoW.tsx</code></td>
+    <td>Client component. Contains a pre-contract agreement checkbox (local state) and two independent <code>DocUploadSection</code> instances separated by a horizontal rule:<br/>
+      &bull; <strong>Statement of Work</strong> → <code>/api/opportunities/[id]/sow</code><br/>
+      &bull; <strong>Purchase Order</strong> → <code>/api/opportunities/[id]/po</code><br/>
+      Each section handles drag-and-drop upload, file list with version/size/date, Download link (signed URL), and soft-delete. Files load on mount via <code>useEffect</code>.
     </td>
   </tr>
   <tr>
     <td><code>app/opportunities/[id]/PricingDrawer.tsx</code></td>
-    <td>Client component. The pricing modal/drawer. Opened from a version card. Header has a <strong>Save &amp; Close</strong> button (saves computed metrics then closes). All Efforts tab and Other Cost tab logic lives here. Calls:<br/>
-      &bull; <code>GET /api/rate-cards</code> — load role dropdown (fetched once on mount)<br/>
-      &bull; <code>POST /api/pricing-versions/[pvId]/staffing</code> — add resource row<br/>
-      &bull; <code>PATCH /api/pricing-versions/[pvId]/staffing/[srId]</code> — save hours, eff rate, isActive, isBillable, utilization<br/>
-      &bull; <code>DELETE /api/pricing-versions/[pvId]/staffing/[srId]</code> — remove resource row<br/>
-      &bull; <code>PATCH /api/pricing-versions/[pvId]</code> — save computed metrics (called after every edit via <code>patchVersion()</code>)<br/>
-      &bull; <code>POST /api/opportunities/[id]/other-costs</code> — add other cost row<br/>
-      &bull; <code>PATCH /api/opportunities/[id]/other-costs/[costId]</code> — update isBillable or markupPct<br/>
-      &bull; <code>DELETE /api/opportunities/[id]/other-costs/[costId]</code> — remove other cost row
-    </td>
-  </tr>
-  <tr>
-    <td><code>app/opportunities/new/NewOpportunityForm.tsx</code></td>
-    <td>Client component. The new opportunity form. Calls <code>POST /api/opportunities</code>.</td>
+    <td>Client component (~1,300 lines). Full-screen pricing modal. See Section 9 for deep reference.</td>
   </tr>
   <tr>
     <td><code>app/clients/page.tsx</code></td>
-    <td>Server component. Calls <code>getClients()</code> directly. Renders client cards, the Add Client modal, and the Admin Requests panel.</td>
+    <td>Server component. Client cards are wrapped in <code>&lt;Link href="/clients/{clientId}"&gt;</code> — clicking navigates to the detail page. Also renders AddClientModal and AdminRequestsPanel.</td>
+  </tr>
+  <tr>
+    <td><code>app/clients/[id]/page.tsx</code></td>
+    <td>Server component. Client detail page. Calls <code>getClientDetail(clientId)</code>. Sections: header (avatar circle, name, ID badge, industry chip, region/BU), 4 KPI tiles (total deals, open, won, pipeline revenue), opportunities table with status badges and links to detail pages, POC contact list.</td>
   </tr>
   <tr>
     <td><code>app/clients/AddClientModal.tsx</code></td>
@@ -340,56 +424,92 @@
   </tr>
   <tr>
     <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
-    <td>Client component. Admin view of pending client requests. Calls <code>POST /api/client-requests/[reqId]/approve</code> and <code>/reject</code>.</td>
+    <td>Client component. Admin view of pending client requests. Calls approve/reject endpoints.</td>
   </tr>
   <tr>
-    <td><code>app/components/layout/MainLayout.tsx</code></td>
-    <td>The sidebar + top header shell. Rendered on every authenticated page. Uses <code>useSession()</code> to show the logged-in user's name.</td>
+    <td><code>components/layout/Sidebar.tsx</code></td>
+    <td>Near-black sidebar (<code>#111111</code> background). Active nav items highlighted with <code>#1E5BB8</code> accent. Role badge shown on user avatar. Uses <code>useSession()</code> for user display.</td>
   </tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
-<h2>7. Authentication Flow</h2>
+<h2>7. Authentication &amp; RBAC</h2>
 
 <div class="callout">
-  <strong>Library:</strong> NextAuth v4 &nbsp;&bull;&nbsp; <strong>Provider:</strong> Credentials (email + password) &nbsp;&bull;&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
+  <strong>Library:</strong> NextAuth v4 &nbsp;·&nbsp; <strong>Provider:</strong> Credentials (email + password) &nbsp;·&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
 </div>
 
+<h3>Auth Flow</h3>
 <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User submits email + password on <code>/login</code>.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">NextAuth's <code>CredentialsProvider.authorize()</code> checks if the user exists in the <code>User</code> table by email.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">If not found, it <strong>auto-creates</strong> a new User record with role <code>BD</code> — so any email can log in for the first time.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">A JWT is issued containing <code>user.id</code> and <code>user.role</code>. Stored in a cookie.</div></div>
-<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">On subsequent requests, <code>getServerSession(authOptions)</code> (in API routes) or <code>useSession()</code> (in client components) reads the JWT to know who is logged in.</div></div>
-<div class="flow-step"><div class="flow-num">6</div><div class="flow-text">Comments use <code>getServerSession</code> to set the <code>authorId</code> server-side — the client cannot fake who posted a comment.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>CredentialsProvider.authorize()</code> looks up the user by email. If not found, auto-creates with role <code>BD</code>.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">A JWT is issued containing <code>user.id</code> and <code>user.role</code>. Stored in a cookie. Signed with HMAC-SHA256 using <code>NEXTAUTH_SECRET</code> — clients <strong>cannot forge or modify</strong> the token.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">In API routes: <code>getToken({ req })</code> reads and verifies the JWT. Returns <code>null</code> if invalid/missing → route returns 401.</div></div>
+<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">In server components (pages): <code>getServerSession(authOptions)</code> returns the session object with <code>user.id</code> and <code>user.role</code>.</div></div>
+
+<h3>Role Hierarchy &amp; RBAC</h3>
+
+<p>Role hierarchy (highest to lowest): <code>ADMIN</code> → <code>PARTNER</code> → <code>ED</code> → <code>DIRECTOR</code> → <code>SEL</code> → <code>BD</code>.</p>
+
+<p>RBAC is enforced in <code>lib/db/opportunities.ts</code> by <code>resolveOwnerFilter(auth: AuthCtx)</code> — a synchronous pure function that returns a Prisma <code>where</code> fragment. No managerId traversal, no recursive DB calls — just a single query with a role-based filter:</p>
+
+<table>
+  <tr><th>Role</th><th>What they see</th><th>Prisma where fragment</th></tr>
+  <tr><td>ADMIN, PARTNER</td><td>All opportunities</td><td><code>{}</code> (no filter)</td></tr>
+  <tr><td>ED</td><td>Own + DIRECTOR-owned + SEL-owned</td><td><code>OR: [{ ownerId }, { owner: { role: { in: ['DIRECTOR','SEL'] } } }]</code></td></tr>
+  <tr><td>DIRECTOR</td><td>Own + SEL-owned</td><td><code>OR: [{ ownerId }, { owner: { role: 'SEL' } }]</code></td></tr>
+  <tr><td>SEL</td><td>Own only</td><td><code>{ ownerId }</code></td></tr>
+  <tr><td>BD (default)</td><td>Own only (fallback)</td><td><code>{ ownerId }</code></td></tr>
+</table>
+
+<div class="callout callout-green">
+  <strong>Security model:</strong> The JWT is signed server-side — a user cannot inspect or modify the <code>role</code> field in the token. RBAC filtering happens entirely in server-side Prisma queries; the browser never receives data it isn't supposed to see. Opportunities are the primary restricted resource.
+</div>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>8. Supabase Connection &amp; PgBouncer</h2>
 
 <div class="callout callout-warn">
-  <strong>Important — port matters:</strong> Supabase exposes two ports. Port <code>5432</code> is direct (session mode) and holds one dedicated DB connection per app connection — this causes the <code>EMAXCONNSESSION</code> error ("max clients reached") under Vercel's serverless model where many parallel invocations open many connections simultaneously. Port <code>6543</code> goes through <strong>PgBouncer</strong> in transaction mode, which multiplexes many app connections through a small pool of real DB connections. Always use port <code>6543</code> in <code>DATABASE_URL</code>.
+  <strong>Important — port matters:</strong> Port <code>6543</code> goes through <strong>PgBouncer</strong> (transaction mode — use this for the app, <code>DATABASE_URL</code>). Port <code>5432</code> is direct (use only for schema migrations, <code>DIRECT_URL</code> in <code>prisma.config.ts</code>). Many corporate firewalls block port 5432 — if <code>prisma db push</code> hangs, create tables via the Supabase SQL Editor instead.
 </div>
 
 <table>
   <tr><th>Step</th><th>Detail</th></tr>
-  <tr><td>Connection string</td><td>Stored in <code>DATABASE_URL</code> env var. Format: <code>postgresql://postgres.[project]:[password]@aws-1-ap-south-1.pooler.supabase.com:<strong>6543</strong>/postgres</code></td></tr>
-  <tr><td>Connection pool</td><td><code>lib/prisma.ts</code> creates a <code>pg.Pool</code> with <code>max: 5</code> connections. Redundant safety net alongside PgBouncer.</td></tr>
-  <tr><td>PgBouncer (port 6543)</td><td>Supabase's built-in connection multiplexer. Transaction mode: each query borrows a real DB connection for the duration of the transaction, then returns it. Many serverless function invocations share a small pool without hitting session limits.</td></tr>
+  <tr><td>App connection string</td><td><code>DATABASE_URL</code> env var. Port <strong>6543</strong>. Used by <code>lib/prisma.ts</code> at runtime.</td></tr>
+  <tr><td>CLI connection string</td><td><code>DIRECT_URL</code> env var. Port <strong>5432</strong>. Used by <code>prisma.config.ts</code> for <code>prisma db push</code> / migrations.</td></tr>
+  <tr><td>Connection pool</td><td><code>lib/prisma.ts</code> creates a <code>pg.Pool</code> with <code>max: 5</code>. Additional safety net alongside PgBouncer.</td></tr>
   <tr><td>Prisma adapter</td><td><code>PrismaPg</code> from <code>@prisma/adapter-pg</code> bridges Prisma 7 to the pg pool.</td></tr>
-  <tr><td>Schema namespace</td><td>All tables are under <code>procdna_database</code> schema (not the default <code>public</code>). Set via the adapter's <code>schema</code> option.</td></tr>
-  <tr><td>Schema changes</td><td>Run <code>npx prisma db push</code> to sync schema changes. Run <code>npx prisma generate</code> to regenerate the TypeScript client after any model change. If a column removal causes data loss, the CLI requires <code>--accept-data-loss</code>.</td></tr>
-  <tr><td>Seeding</td><td>Run <code>npx tsx prisma/seed.ts</code>. Also syncs BD users from Azure Active Directory via Microsoft Graph API. Rate cards are upserted — re-running is safe and will backfill any new fields (e.g. domain).</td></tr>
+  <tr><td>Schema namespace</td><td>All tables under <code>procdna_database</code> schema (not default <code>public</code>).</td></tr>
+  <tr><td>Schema changes</td><td>Run <code>npx prisma db push</code> (needs direct port 5432). If blocked by firewall, create/alter tables via Supabase SQL Editor. Then run <code>npx prisma generate</code> to regenerate the TypeScript client.</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>8b. Supabase Storage (File Uploads)</h2>
+
+<div class="callout">
+  <strong>Why service role key?</strong> NextAuth (not Supabase Auth) is used for authentication, so <code>auth.uid()</code> is always null in Supabase RLS policies. The service role key bypasses RLS entirely — this is safe because uploads only go through server-side API routes that verify the NextAuth JWT first.
+</div>
+
+<table>
+  <tr><th>Item</th><th>Detail</th></tr>
+  <tr><td>Client factory</td><td><code>getSupabase()</code> in <code>lib/supabase.ts</code>. Lazy — reads env vars at call time (not module load), so the module imports cleanly even if env vars are missing in some build contexts.</td></tr>
+  <tr><td>Credentials</td><td><code>SUPABASE_URL</code> = <code>https://&lt;project-id&gt;.supabase.co</code> (NOT the dashboard URL). <code>SUPABASE_SERVICE_ROLE_KEY</code> = starts with <code>eyJhb…</code> (JWT), found under Project Settings → API → Service Role Key.</td></tr>
+  <tr><td>Buckets</td><td><code>SoW_bucket</code> (Statement of Work) · <code>PO_busket</code> (Purchase Orders). Both are private — no public access.</td></tr>
+  <tr><td>Storage path pattern</td><td><code>{opportunityId}/v{version}_{timestamp}.{ext}</code> — e.g. <code>BD-001/v2_1715000000000.pdf</code>.</td></tr>
+  <tr><td>Allowed MIME types</td><td>PDF, Word (.doc/.docx), Excel (.xls/.xlsx), PNG, JPEG. Max 20 MB per file.</td></tr>
+  <tr><td>Download access</td><td>Signed URLs generated server-side with 1-hour TTL via <code>supabase.storage.from(bucket).createSignedUrl(path, 3600)</code>. Returned in API responses and used directly as <code>&lt;a href&gt;</code> download links.</td></tr>
+  <tr><td>Soft delete</td><td>Deleting a document sets <code>isActive: false</code> in the DB record. The physical file in Supabase Storage is <strong>not</strong> removed — preserves history. GET endpoints filter by <code>isActive: true</code>.</td></tr>
+  <tr><td>Versioning</td><td>Each upload increments <code>version</code>: <code>existing count + 1</code>. All versions are kept in storage, only the active ones are returned by the GET endpoint.</td></tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>9. PricingDrawer.tsx — Deep Reference</h2>
 
-<p><strong>File:</strong> <code>app/opportunities/[id]/PricingDrawer.tsx</code> &nbsp;·&nbsp; Client component (~1 300 lines) &nbsp;·&nbsp; The most complex file in the codebase.</p>
+<p><strong>File:</strong> <code>app/opportunities/[id]/PricingDrawer.tsx</code> &nbsp;·&nbsp; Client component (~1,300 lines) &nbsp;·&nbsp; The most complex file in the codebase.</p>
 
 <div class="callout">
-  <strong>What it is:</strong> A full-screen modal opened when a user clicks a pricing version card. Contains seven sub-tabs. All Efforts, Other Cost, and Financial logic lives here — no child components. Props: <code>version: PricingVersion</code>, <code>opp: OpportunityDetail</code>, <code>onClose: () =&gt; void</code>.
+  <strong>What it is:</strong> A full-screen modal opened when a user clicks a pricing version card. Contains seven sub-tabs. All Efforts, Other Cost, and Financial logic lives here. Props: <code>version: PricingVersion</code>, <code>opp: OpportunityDetail</code>, <code>onClose: () =&gt; void</code>.
 </div>
 
-<!-- ─── 9a. Type Definitions ─────────────────────────── -->
 <h3>9a. TypeScript Type Definitions</h3>
 <table>
   <tr><th>Type</th><th>Fields</th><th>Purpose</th></tr>
@@ -406,12 +526,12 @@
   <tr>
     <td><code>ComputedMetrics</code></td>
     <td><code>totalHours, billedHours, unbilledHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour</code></td>
-    <td>Output of <code>computeFromRows()</code>. Drives the metrics banner on the Efforts tab and is patched to the DB via <code>patchVersion()</code>.</td>
+    <td>Output of <code>computeFromRows()</code>. Drives the metrics banner and is patched to the DB via <code>patchVersion()</code>.</td>
   </tr>
   <tr>
     <td><code>MRow</code> (Financial tab, local)</td>
     <td><code>a1, a2, a, b, c, d, dPct, ePct, f1, f2, f, g, h, i, j, k, indiaRev, indiaHrs, usRev, usHrs, recRev</code></td>
-    <td>Per-month accumulator for all Financial tab rows A–K. Computed on every render of the Financial tab from <code>staffRows</code> and <code>otherCosts</code> — never persisted.</td>
+    <td>Per-month accumulator for all Financial tab rows A–K. Computed on every render — never persisted.</td>
   </tr>
   <tr>
     <td><code>RateCardItem</code></td>
@@ -420,304 +540,165 @@
   </tr>
 </table>
 
-<!-- ─── 9b. Sub-tabs ──────────────────────────────────── -->
 <h3>9b. Sub-Tabs</h3>
 <table>
   <tr><th>Tab</th><th>Status</th><th>Content</th></tr>
-  <tr><td>Basic Details</td><td>Active</td><td>Read-only fields from the opportunity (client, dates, LOB) + computed pricing metrics + schedule of payments table.</td></tr>
+  <tr><td>Basic Details</td><td>Active</td><td>Read-only opportunity fields + computed pricing metrics + schedule of payments table.</td></tr>
   <tr><td>Efforts</td><td>Active</td><td>Staffing resource table with Active/Bill checkboxes, rate columns, weekly hour cells, utilization auto-fill, add/remove resource. Live metrics banner.</td></tr>
   <tr><td>Other Cost</td><td>Active</td><td>Non-staffing cost table with Billable checkbox, Markup %, and bidirectional Billed amount.</td></tr>
-  <tr><td>Financial</td><td>Active</td><td>Live P&amp;L breakdown by month (rows A–K) + business justification field (L). Computed entirely client-side.</td></tr>
+  <tr><td>Financial</td><td>Active</td><td>Live P&amp;L breakdown by month (rows A–K) + business justification field (L). 100% client-side computed.</td></tr>
   <tr><td>Resource Mix</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
   <tr><td>Timeline</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
   <tr><td>Risk Assessment</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
 </table>
 
-<!-- ─── 9c. State ────────────────────────────────────── -->
 <h3>9c. State (useState)</h3>
 <table>
   <tr><th>State variable</th><th>Initial value</th><th>What it controls</th></tr>
   <tr><td><code>sub</code></td><td><code>'Basic Details'</code></td><td>Which sub-tab is active.</td></tr>
-  <tr><td><code>staffRows</code></td><td>Mapped from <code>version.staffingResources</code></td><td>All staffing rows. Every edit (hours, rates, checkboxes) updates this array and fires <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>staffRows</code></td><td>Mapped from <code>version.staffingResources</code></td><td>All staffing rows. Every edit updates this array and fires <code>patchVersion()</code>.</td></tr>
   <tr><td><code>versionMetrics</code></td><td><code>computeFromRows(staffRows)</code></td><td>Latest computed metrics. Updated every time <code>patchVersion()</code> runs.</td></tr>
-  <tr><td><code>allRateCards</code></td><td><code>[]</code></td><td>Fetched once from <code>GET /api/rate-cards</code> when the Efforts tab is first opened.</td></tr>
-  <tr><td><code>showAddRow</code></td><td><code>false</code></td><td>Shows/hides the Add Resource dropdown row at the bottom of the Efforts table.</td></tr>
-  <tr><td><code>editCell</code></td><td><code>null</code></td><td>Which week cell is in edit mode: <code>{ srId, wk }</code> or null.</td></tr>
+  <tr><td><code>allRateCards</code></td><td><code>[]</code></td><td>Fetched once from <code>GET /api/rate-cards</code> when Efforts tab first opens.</td></tr>
+  <tr><td><code>showAddRow</code></td><td><code>false</code></td><td>Shows/hides the Add Resource dropdown row.</td></tr>
+  <tr><td><code>editCell</code></td><td><code>null</code></td><td>Which week cell is in edit mode: <code>{ srId, wk }</code>.</td></tr>
   <tr><td><code>editVal</code></td><td><code>''</code></td><td>Current value in the active week cell input.</td></tr>
-  <tr><td><code>editRateCell</code></td><td><code>null</code></td><td>Which rate cell is in edit mode: <code>{ srId, field: 'eff' | 'dp' }</code> or null.</td></tr>
+  <tr><td><code>editRateCell</code></td><td><code>null</code></td><td>Which rate cell is in edit mode: <code>{ srId, field: 'eff' | 'dp' }</code>.</td></tr>
   <tr><td><code>editRateVal</code></td><td><code>''</code></td><td>Current value in the active rate/D%P input.</td></tr>
-  <tr><td><code>otherCosts</code></td><td>Mapped from <code>opp.otherCosts</code></td><td>All other cost rows. Updated optimistically on every edit.</td></tr>
+  <tr><td><code>otherCosts</code></td><td>Mapped from <code>opp.otherCosts</code></td><td>All other cost rows.</td></tr>
   <tr><td><code>showAddCost</code></td><td><code>false</code></td><td>Shows/hides the Add Cost inline form row.</td></tr>
   <tr><td><code>newDesc / newAmount</code></td><td><code>''</code></td><td>Controlled inputs for the new cost form.</td></tr>
   <tr><td><code>editCostCell</code></td><td><code>null</code></td><td>Which other-cost cell is in edit mode: <code>{ id, field: 'markup' | 'billed' }</code>.</td></tr>
   <tr><td><code>editCostVal</code></td><td><code>''</code></td><td>Current value in the active other-cost input.</td></tr>
 </table>
 
-<!-- ─── 9d. Key Functions ─────────────────────────────── -->
 <h3>9d. Key Functions &amp; Callbacks</h3>
 <table>
   <tr><th>Function</th><th>What it does</th></tr>
-  <tr>
-    <td><code>computeFromRows(rows)</code></td>
-    <td>Pure function. Iterates all active <code>StaffRow</code> items and their <code>weeklyHours</code>. Returns <code>ComputedMetrics</code>: billedHours (active+billable), unbilledHours (active+non-billable), totalCost (all active), proposedBillings (active+billable × effRate), grossMargin, grossMarginPct, offshorePct (India billed hrs / billed hrs), effectiveRatePerHour. Never touches the DB.</td>
-  </tr>
-  <tr>
-    <td><code>patchVersion(rows)</code></td>
-    <td>Runs <code>computeFromRows(rows)</code>, updates <code>versionMetrics</code> state, then sends <code>PATCH /api/pricing-versions/[pvId]</code> with all computed fields. Called automatically after every edit that changes hours, rates, or row toggles. Also called explicitly by the Save &amp; Close button.</td>
-  </tr>
-  <tr>
-    <td><code>toStaffRow(sr)</code></td>
-    <td>Maps a raw <code>staffingResource</code> DB record (with Decimal types, Date objects) into a typed <code>StaffRow</code>. Normalises: <code>Number()</code> for all Decimal fields, <code>toISOString().slice(0,10)</code> for weekStartDate.</td>
-  </tr>
-  <tr>
-    <td><code>addRow(rc)</code></td>
-    <td>Posts to <code>POST /api/pricing-versions/[pvId]/staffing</code> with <code>{ rateCardId }</code>. Appends the new row to <code>staffRows</code> state and calls <code>patchVersion()</code>. The same rate card can be added multiple times.</td>
-  </tr>
-  <tr>
-    <td><code>removeRow(srId)</code></td>
-    <td>Sends <code>DELETE /api/pricing-versions/[pvId]/staffing/[srId]</code>, removes row from state, calls <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>commitHours(srId, wk, val)</code></td>
-    <td>Sends <code>PUT /api/pricing-versions/[pvId]/staffing/[srId]/hours</code> with <code>{ weekStartDate, hours }</code>. Updates row's <code>weeklyHours</code> in state (upsert by weekStartDate). Calls <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>applyUtilization(srId, util)</code></td>
-    <td>Computes <code>hoursPerWeek = round(util/100 × 40)</code>. Sends PATCH with <code>{ utilization, weekEntries: allWeeks × hoursPerWeek }</code>. Updates all week cells and <code>utilization</code> on the row in state. Calls <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>commitEffectiveRate(srId, val)</code></td>
-    <td>Sends PATCH with <code>{ effectiveBillRate: eff }</code>. Updates <code>effectiveBillRate</code> in state. Calls <code>patchVersion()</code>. D/P% is derived from this on render: <code>((eff − sys) / sys) × 100</code>.</td>
-  </tr>
-  <tr>
-    <td><code>commitDP(srId, val)</code></td>
-    <td>Inverse of above. Converts D/P% input to eff rate: <code>eff = sysRate × (1 + dp/100)</code>. Sends PATCH with <code>{ effectiveBillRate: eff }</code>.</td>
-  </tr>
-  <tr>
-    <td><code>toggleRow(srId, isActive)</code></td>
-    <td>Sends PATCH with <code>{ isActive }</code>. Updates state. Calls <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>toggleStaffBillable(srId, isBillable)</code></td>
-    <td>Sends PATCH with <code>{ isBillable }</code>. Updates state. Calls <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>addOtherCost()</code></td>
-    <td>Posts to <code>POST /api/opportunities/[id]/other-costs</code>. Appends to <code>otherCosts</code> state.</td>
-  </tr>
-  <tr>
-    <td><code>toggleBillable(costId, billable)</code></td>
-    <td>Optimistic: updates state immediately, then sends PATCH <code>{ isBillable }</code> to <code>/other-costs/[costId]</code>.</td>
-  </tr>
-  <tr>
-    <td><code>commitMarkup(costId, val)</code></td>
-    <td>Sends PATCH <code>{ markupPct }</code>. Updates <code>markupPct</code> in state. Billed is derived: <code>amount × (1 + pct/100)</code>.</td>
-  </tr>
-  <tr>
-    <td><code>commitBilled(costId, val)</code></td>
-    <td>Back-calculates: <code>markupPct = (billed/amount − 1) × 100</code>. Sends PATCH <code>{ markupPct }</code>. Bidirectional link with Markup.</td>
-  </tr>
-  <tr>
-    <td><code>removeOtherCost(costId)</code></td>
-    <td>Sends DELETE to <code>/other-costs/[costId]</code>. Removes from state.</td>
-  </tr>
+  <tr><td><code>computeFromRows(rows)</code></td><td>Pure function. Returns <code>ComputedMetrics</code> from active staffing rows. Never touches the DB.</td></tr>
+  <tr><td><code>patchVersion(rows)</code></td><td>Runs <code>computeFromRows</code>, updates <code>versionMetrics</code> state, then sends <code>PATCH /api/pricing-versions/[pvId]</code> with all computed fields. Called after every edit and by the Save &amp; Close button.</td></tr>
+  <tr><td><code>toStaffRow(sr)</code></td><td>Maps a raw DB record to a typed <code>StaffRow</code>. Normalises Decimal → <code>Number()</code>, dates → <code>toISOString().slice(0,10)</code>.</td></tr>
+  <tr><td><code>addRow(rc)</code></td><td>Posts to staffing endpoint, appends to state, calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>removeRow(srId)</code></td><td>Sends DELETE, removes from state, calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>commitHours(srId, wk, val)</code></td><td>Sends PUT with <code>{ weekStartDate, hours }</code>. Upserts weekly hours in state. Calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>applyUtilization(srId, util)</code></td><td>Computes <code>hoursPerWeek = round(util/100 × 40)</code>. Sends PATCH with all <code>weekEntries</code>. Updates state. Calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>commitEffectiveRate(srId, val)</code></td><td>Sends PATCH with <code>{ effectiveBillRate }</code>. Updates state. Calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>commitDP(srId, val)</code></td><td>Converts D/P% to eff rate: <code>sys × (1 + dp/100)</code>. Sends PATCH.</td></tr>
+  <tr><td><code>toggleRow(srId, isActive)</code></td><td>Sends PATCH <code>{ isActive }</code>. Calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>toggleStaffBillable(srId, isBillable)</code></td><td>Sends PATCH <code>{ isBillable }</code>. Calls <code>patchVersion()</code>.</td></tr>
+  <tr><td><code>addOtherCost()</code></td><td>Posts to other-costs endpoint. Appends to state.</td></tr>
+  <tr><td><code>toggleBillable(costId, billable)</code></td><td>Optimistic: updates state, then sends PATCH <code>{ isBillable }</code>.</td></tr>
+  <tr><td><code>commitMarkup(costId, val)</code></td><td>Sends PATCH <code>{ markupPct }</code>. Billed is derived: <code>amount × (1 + pct/100)</code>.</td></tr>
+  <tr><td><code>commitBilled(costId, val)</code></td><td>Back-calculates: <code>markupPct = (billed/amount − 1) × 100</code>. Sends PATCH. Bidirectional with Markup.</td></tr>
+  <tr><td><code>removeOtherCost(costId)</code></td><td>Sends DELETE. Removes from state.</td></tr>
 </table>
 
-<!-- ─── 9e. Pure Helper Functions ────────────────────── -->
 <h3>9e. Pure Helper Functions (module-level)</h3>
 <table>
   <tr><th>Function</th><th>Signature</th><th>What it does</th></tr>
-  <tr>
-    <td><code>getWeekColumns</code></td>
-    <td><code>(start, end) → Date[]</code></td>
-    <td>Returns an array of Monday dates (as <code>Date</code> objects) covering the full opportunity date range. Max 52 weeks. Used to generate the W1…Wn header columns in the Efforts table.</td>
-  </tr>
-  <tr>
-    <td><code>weekKey</code></td>
-    <td><code>(d: Date) → string</code></td>
-    <td>Returns <code>'YYYY-MM-DD'</code> string for a Monday <code>Date</code>. Used as the key for the <code>hoursMap</code> lookup on each row.</td>
-  </tr>
-  <tr>
-    <td><code>getProjectMonths</code></td>
-    <td><code>(start, end) → string[]</code></td>
-    <td>Returns every <code>'YYYY-MM'</code> month key from the opportunity start month to end month inclusive. Used as the column list for the Financial tab.</td>
-  </tr>
-  <tr>
-    <td><code>distributeWeekToMonths</code></td>
-    <td><code>(weekStartDate: string, value: number) → [string, number][]</code></td>
-    <td>
-      <strong>The core Financial tab algorithm.</strong> Takes a Monday date string and a value (hours, cost, revenue, etc.). Iterates Mon through Fri (5 working days). For each day, determines the <code>'YYYY-MM'</code> month key. Distributes <code>value ÷ 5</code> per day, accumulating into months. Returns <code>[monthKey, portion]</code> pairs.<br/>
-      <em>Example:</em> A week starting Mon 2025-01-27 has Tue 28 Jan, Wed 29 Jan in January and Thu 30 Jan, Fri 31 Jan, Mon... wait — Mon 27, Tue 28, Wed 29, Thu 30, Fri 31 are all in Jan. A week starting Mon 2025-01-27 → 5/5 in Jan. A week starting Mon 2025-01-27 with last day Fri 2025-01-31 → all Jan. A week Mon 2025-02-03 with days Mon–Fri all in Feb. A split week: Mon 2025-01-27... if the month ends on Tue 28 Jan, then Mon+Tue = 2 days Jan, Wed+Thu+Fri = 3 days Feb → 40 % Jan, 60 % Feb.
-    </td>
-  </tr>
-  <tr>
-    <td><code>computeFromRows</code></td>
-    <td><code>(rows: StaffRow[]) → ComputedMetrics</code></td>
-    <td>Pure function. Filters to active rows. For each active row, iterates <code>weeklyHours</code>. Billable rows contribute to billedHours, proposedBillings, and indiaHours. Non-billable active rows contribute to unbilledHours only. All active rows contribute to totalCost. Derives grossMarginPct, offshorePct, effectiveRatePerHour.</td>
-  </tr>
-  <tr>
-    <td><code>fmtRole</code></td>
-    <td><code>(r: string) → string</code></td>
-    <td>Converts <code>BUSINESS_ANALYST_SENIOR</code> → <code>Business Analyst Senior</code>. Replaces underscores with spaces, title-cases each word.</td>
-  </tr>
-  <tr>
-    <td><code>fmt</code></td>
-    <td><code>(n: number) → string</code></td>
-    <td>Currency shortener: <code>≥1M → $X.XXM</code>, <code>≥1K → $XK</code>, else <code>$X</code>. Returns <code>'!'</code> for null/undefined.</td>
-  </tr>
+  <tr><td><code>getWeekColumns</code></td><td><code>(start, end) → Date[]</code></td><td>Returns Monday dates covering the full opportunity range (max 52 weeks). Generates W1…Wn columns.</td></tr>
+  <tr><td><code>weekKey</code></td><td><code>(d: Date) → string</code></td><td>Returns <code>'YYYY-MM-DD'</code> string for a Monday <code>Date</code>.</td></tr>
+  <tr><td><code>getProjectMonths</code></td><td><code>(start, end) → string[]</code></td><td>Returns every <code>'YYYY-MM'</code> month from start to end inclusive.</td></tr>
+  <tr><td><code>distributeWeekToMonths</code></td><td><code>(weekStartDate, value) → [string, number][]</code></td><td>Core Financial tab algorithm. Distributes a week's value across calendar months proportionally by working days (Mon–Fri). Uses local time to avoid UTC shift bugs.</td></tr>
+  <tr><td><code>computeFromRows</code></td><td><code>(rows: StaffRow[]) → ComputedMetrics</code></td><td>Pure function. Iterates active rows, computes billed/unbilled hours, cost, revenue, margins.</td></tr>
+  <tr><td><code>fmtRole</code></td><td><code>(r: string) → string</code></td><td><code>BUSINESS_ANALYST_SENIOR</code> → <code>Business Analyst Senior</code>.</td></tr>
+  <tr><td><code>fmt</code></td><td><code>(n: number) → string</code></td><td>Currency shortener: <code>≥1M → $X.XXM</code>, <code>≥1K → $XK</code>, else <code>$X</code>.</td></tr>
 </table>
 
-<!-- ─── 9f. Efforts Tab ──────────────────────────────── -->
 <h3>9f. Efforts Tab — Column Reference</h3>
 
 <div class="callout callout-green">
-  <strong>Two-checkbox priority system:</strong> Active (indigo) is the master switch — OFF excludes the row from everything. Billable (emerald) is secondary — OFF when Active is ON means cost is counted but no revenue is generated and hours go to Unbilled.
+  <strong>Two-checkbox priority:</strong> Active (indigo) = master switch — OFF excludes row from everything. Billable (emerald) = secondary — OFF when Active is ON means cost counted but no revenue; hours go to Unbilled.
 </div>
 
 <table>
   <tr><th>Column</th><th>Source / Formula</th><th>Editable?</th><th>Persisted to DB?</th></tr>
-  <tr><td><strong>Active ☑</strong></td><td><code>StaffingResource.isActive</code>. Indigo checkbox. OFF → row fully excluded.</td><td>Yes</td><td>PATCH /staffing/[srId] <code>{ isActive }</code></td></tr>
-  <tr><td><strong>Bill ☑</strong></td><td><code>StaffingResource.isBillable</code>. Emerald checkbox. OFF (with Active ON) → cost only, hours → unbilledHours, no revenue. Bill Rate gets a line-through; Eff. Rate and D/P% become greyed out (pointer-events-none).</td><td>Yes</td><td>PATCH /staffing/[srId] <code>{ isBillable }</code></td></tr>
-  <tr><td>Role</td><td><code>resourceDesignation</code>, copied from RateCard at add time. Formatted via <code>fmtRole()</code>.</td><td>No</td><td>—</td></tr>
+  <tr><td><strong>Active ☑</strong></td><td><code>StaffingResource.isActive</code>.</td><td>Yes</td><td>PATCH <code>{ isActive }</code></td></tr>
+  <tr><td><strong>Bill ☑</strong></td><td><code>StaffingResource.isBillable</code>. OFF (with Active ON) → cost only, no revenue.</td><td>Yes</td><td>PATCH <code>{ isBillable }</code></td></tr>
+  <tr><td>Role</td><td><code>resourceDesignation</code> from RateCard. Formatted via <code>fmtRole()</code>.</td><td>No</td><td>—</td></tr>
   <tr><td>Location</td><td><code>location</code> enum: INDIA or US.</td><td>No</td><td>—</td></tr>
-  <tr><td>Domain</td><td><code>domain</code> copied from RateCard (ANALYTICS, TECH, MS, DS).</td><td>No</td><td>—</td></tr>
-  <tr><td>Cost Rate</td><td><code>costRatePerHour</code> from RateCard. Internal cost per hour, shown as <code>$X</code>.</td><td>No</td><td>—</td></tr>
-  <tr><td>Bill Rate</td><td><code>systemBillRatePerHour</code> from RateCard. Standard rate without any discount/premium.</td><td>No</td><td>—</td></tr>
-  <tr><td><strong>Eff. Rate</strong></td><td><code>effectiveBillRate</code> — actual rate charged to client. Click to edit inline.</td><td>Yes (click)</td><td>PATCH /staffing/[srId] <code>{ effectiveBillRate }</code></td></tr>
-  <tr><td><strong>D/P %</strong></td><td><code>((effRate − sysRate) / sysRate) × 100</code>. <strong>Negative = discount</strong> (amber); positive = premium (green). Input pre-filled with '−'. Editing D/P% back-calculates eff rate: <code>sys × (1 + dp/100)</code>.</td><td>Yes (click)</td><td>Derived; only effectiveBillRate is persisted.</td></tr>
-  <tr><td><strong>Util %</strong></td><td><code>utilization</code> (0–100). Entering a value auto-fills every week cell: <code>round(util/100 × 40)</code> hours. One PATCH saves both <code>utilization</code> and all <code>weekEntries[]</code>.</td><td>Yes (type+blur)</td><td>PATCH /staffing/[srId] <code>{ utilization, weekEntries }</code></td></tr>
-  <tr><td><strong>W1…Wn</strong></td><td><code>StaffingWeekEntry.hours</code> per Monday. Click any cell to edit. Weeks are derived from <code>opp.startDate</code> → <code>opp.endDate</code> via <code>getWeekColumns()</code>.</td><td>Yes (click)</td><td>PUT /staffing/[srId]/hours <code>{ weekStartDate, hours }</code></td></tr>
-  <tr><td>Total Employee Cost</td><td><code>Σ(weekHours × costRatePerHour)</code> for this row, active-only. Shown per row and in the footer total.</td><td>No</td><td>Rolled up via patchVersion()</td></tr>
+  <tr><td>Domain</td><td><code>domain</code> from RateCard (ANALYTICS, TECH, MS, DS).</td><td>No</td><td>—</td></tr>
+  <tr><td>Cost Rate</td><td><code>costRatePerHour</code> from RateCard.</td><td>No</td><td>—</td></tr>
+  <tr><td>Bill Rate</td><td><code>systemBillRatePerHour</code> — standard rate without discount.</td><td>No</td><td>—</td></tr>
+  <tr><td><strong>Eff. Rate</strong></td><td><code>effectiveBillRate</code> — actual rate charged to client.</td><td>Yes (click)</td><td>PATCH <code>{ effectiveBillRate }</code></td></tr>
+  <tr><td><strong>D/P %</strong></td><td><code>((effRate − sysRate) / sysRate) × 100</code>. Negative = discount (amber); positive = premium (green). Editing back-calculates eff rate.</td><td>Yes (click)</td><td>Only effectiveBillRate is persisted.</td></tr>
+  <tr><td><strong>Util %</strong></td><td><code>utilization</code> (0–100). Auto-fills all week cells: <code>round(util/100 × 40)</code> hrs.</td><td>Yes (type+blur)</td><td>PATCH <code>{ utilization, weekEntries }</code></td></tr>
+  <tr><td><strong>W1…Wn</strong></td><td>Hours per Monday week. Weeks derived from opportunity date range.</td><td>Yes (click)</td><td>PUT <code>{ weekStartDate, hours }</code></td></tr>
 </table>
 
-<h3>Efforts Tab — Live Metrics Banner</h3>
-<table>
-  <tr><th>Card</th><th>Formula</th><th>Rows included</th></tr>
-  <tr><td>Billed Hours</td><td>Σ all weekly hours</td><td>isActive=true AND isBillable=true</td></tr>
-  <tr><td>Unbilled Hours</td><td>Σ all weekly hours</td><td>isActive=true AND isBillable=false</td></tr>
-  <tr><td>Employee Cost</td><td>Σ(hours × costRatePerHour)</td><td>isActive=true (regardless of isBillable)</td></tr>
-  <tr><td>Implied Revenue</td><td>Σ(hours × effectiveBillRate)</td><td>isActive=true AND isBillable=true</td></tr>
-  <tr><td>Gross Margin</td><td>(Implied Revenue − Employee Cost) / Implied Revenue × 100</td><td>—</td></tr>
-</table>
-
-<!-- ─── 9g. Other Cost Tab ───────────────────────────── -->
 <h3>9g. Other Cost Tab</h3>
-<p>Non-staffing costs (travel, software, training, etc.) linked at the opportunity level — shared across all pricing versions.</p>
 <table>
   <tr><th>Column</th><th>Behavior</th><th>DB field</th></tr>
-  <tr><td>Bill ☑</td><td>Unchecked = internal cost, not charged to client. Billed column renders $0. Greyed out row.</td><td><code>OtherCost.isBillable</code></td></tr>
+  <tr><td>Bill ☑</td><td>Unchecked = internal cost, not charged to client. Billed shows $0.</td><td><code>OtherCost.isBillable</code></td></tr>
   <tr><td>Nature of Expense</td><td>Free-text description. Read-only after creation.</td><td><code>OtherCost.description</code></td></tr>
   <tr><td>Cost</td><td>Raw cost amount. Read-only after creation.</td><td><code>OtherCost.amount</code></td></tr>
-  <tr><td><strong>Markup %</strong></td><td>Click to edit. Saved as <code>Decimal(8,4)</code>. When changed: Billed auto-updates to <code>amount × (1 + pct/100)</code>.</td><td><code>OtherCost.markupPct</code></td></tr>
-  <tr><td><strong>Billed</strong></td><td>Click to edit manually. Saved as back-calculated markup: <code>pct = (billed/amount − 1) × 100</code>. Bidirectional — changing either field updates the other.</td><td>Derived from <code>markupPct</code></td></tr>
+  <tr><td><strong>Markup %</strong></td><td>Click to edit. When changed: Billed auto-updates to <code>amount × (1 + pct/100)</code>.</td><td><code>OtherCost.markupPct</code></td></tr>
+  <tr><td><strong>Billed</strong></td><td>Click to edit. Back-calculates markup: <code>pct = (billed/amount − 1) × 100</code>. Bidirectional with Markup.</td><td>Derived from <code>markupPct</code></td></tr>
 </table>
 
-<!-- ─── 9h. Financial Tab ────────────────────────────── -->
 <h3>9h. Financial Tab — Architecture</h3>
 
 <div class="callout callout-green">
-  The Financial tab is <strong>100% client-side computed</strong> — no API calls, no saved snapshots. It reads <code>staffRows</code> and <code>otherCosts</code> state (already in memory) and recomputes on every render. Columns = one per project month + a Total column.
+  The Financial tab is <strong>100% client-side computed</strong> — no API calls, no saved snapshots. Reads <code>staffRows</code> and <code>otherCosts</code> state and recomputes on every render. Columns = one per project month + a Total column.
 </div>
-
-<h3>Week-to-Month Distribution Algorithm</h3>
-<p>Function: <code>distributeWeekToMonths(weekStartDate, value)</code></p>
-<ul>
-  <li>Each week entry's <code>weekStartDate</code> is a Monday (<code>'YYYY-MM-DD'</code>).</li>
-  <li>The week spans Mon through Fri — exactly 5 working days.</li>
-  <li>Each day contributes <code>value ÷ 5</code> to whichever calendar month it falls in.</li>
-  <li>If all 5 days are in one month → 100% to that month.</li>
-  <li>If Mon–Tue are in Month A and Wed–Fri in Month B → 40% to A, 60% to B.</li>
-  <li>Dates are parsed as local time using <code>new Date(y, mo-1, d+i)</code> (no UTC conversion) to avoid timezone-shift bugs.</li>
-</ul>
-<p>This same algorithm is applied to: hours (for F1, F2), revenue (A1), cost (B), and the India/US sub-totals (for J, K).</p>
-
-<h3>Other Cost Monthly Distribution</h3>
-<p>All other costs (raw <code>amount</code> → C; billed amount → A2) are divided equally across the total number of project months. E.g. a $12,000 travel cost over a 6-month project = $2,000/month for C and A2.</p>
 
 <h3>Financial Tab Row Reference (A–K, L)</h3>
 <table>
   <tr><th>Row</th><th>Label</th><th>Formula</th><th>Source rows</th></tr>
   <tr><td><strong>A</strong></td><td>Total Revenue</td><td>A = A1 + A2</td><td>—</td></tr>
   <tr><td>A1</td><td>Staffing Revenue</td><td>Σ(hours × effectiveBillRate) distributed by working-day ratio</td><td>isActive + isBillable</td></tr>
-  <tr><td>A2</td><td>Other Cost Revenue</td><td>Σ(amount × (1 + markupPct/100)) / numMonths per month</td><td>isBillable other costs</td></tr>
-  <tr><td><strong>B</strong></td><td>Employee Cost</td><td>Σ(hours × costRatePerHour) distributed by working-day ratio</td><td>isActive (all, including non-billable)</td></tr>
-  <tr><td>C</td><td>Other Cost (raw)</td><td>Σ(amount) / numMonths per month</td><td>All other cost rows</td></tr>
+  <tr><td>A2</td><td>Other Cost Revenue</td><td>Σ(amount × (1 + markupPct/100)) / numMonths</td><td>isBillable other costs</td></tr>
+  <tr><td><strong>B</strong></td><td>Employee Cost</td><td>Σ(hours × costRatePerHour) distributed by working-day ratio</td><td>isActive (all)</td></tr>
+  <tr><td>C</td><td>Other Cost (raw)</td><td>Σ(amount) / numMonths</td><td>All other costs</td></tr>
   <tr><td><strong>D</strong></td><td>Gross Margin</td><td>A − B − C</td><td>—</td></tr>
   <tr><td><strong>D%</strong></td><td>Gross Margin %</td><td>D / A × 100</td><td>—</td></tr>
-  <tr><td>E</td><td>Discount / Premium %</td><td>(A1 / recommendedRevenue − 1) × 100, where recommended = Σ(hours × systemBillRatePerHour). Negative = discount (amber), positive = premium (green).</td><td>isActive + isBillable</td></tr>
+  <tr><td>E</td><td>Discount / Premium %</td><td>(A1 / recommendedRevenue − 1) × 100</td><td>isActive + isBillable</td></tr>
   <tr><td>F</td><td>Total Hours</td><td>F1 + F2</td><td>—</td></tr>
-  <tr><td>F1</td><td>Billed Hours</td><td>Σ hours distributed by working-day ratio</td><td>isActive + isBillable</td></tr>
-  <tr><td>F2</td><td>Unbilled Hours</td><td>Σ hours distributed by working-day ratio</td><td>isActive + NOT isBillable</td></tr>
-  <tr><td>G</td><td>Offshore Ratio</td><td>India hours / F × 100</td><td>isActive (India location)</td></tr>
-  <tr><td>H</td><td>Blended Rate / Hr</td><td>A1 / F (all active hours, billed + unbilled). Finance calls this the "blended rate".</td><td>—</td></tr>
-  <tr><td>I</td><td>Effective Rate / Hr</td><td>A1 / F1 (billable hours only). The true rate the client is actually paying per hour.</td><td>—</td></tr>
-  <tr><td>J</td><td>India Rate</td><td>India billed revenue / India hours</td><td>isActive + isBillable + location=INDIA</td></tr>
-  <tr><td>K</td><td>US Rate</td><td>US billed revenue / US hours</td><td>isActive + isBillable + location=US</td></tr>
-  <tr><td>L</td><td>Business Justification</td><td>Free text, shown separately above the table. Read from <code>version.businessJustification</code>. Used in the approval email template.</td><td>—</td></tr>
+  <tr><td>F1</td><td>Billed Hours</td><td>Σ hours by working-day ratio</td><td>isActive + isBillable</td></tr>
+  <tr><td>F2</td><td>Unbilled Hours</td><td>Σ hours by working-day ratio</td><td>isActive + NOT isBillable</td></tr>
+  <tr><td>G</td><td>Offshore Ratio</td><td>India hours / F × 100</td><td>isActive (India)</td></tr>
+  <tr><td>H</td><td>Blended Rate / Hr</td><td>A1 / F</td><td>—</td></tr>
+  <tr><td>I</td><td>Effective Rate / Hr</td><td>A1 / F1</td><td>—</td></tr>
+  <tr><td>J</td><td>India Rate</td><td>India billed revenue / India hours</td><td>isActive + isBillable + INDIA</td></tr>
+  <tr><td>K</td><td>US Rate</td><td>US billed revenue / US hours</td><td>isActive + isBillable + US</td></tr>
+  <tr><td>L</td><td>Business Justification</td><td>Free text. Read from <code>version.businessJustification</code>.</td><td>—</td></tr>
 </table>
-
-<h3>Total Column</h3>
-<p>The Total column sums the raw accumulatable fields (a1, a2, b, c, f1, f2, indiaRev, indiaHrs, usRev, usHrs, recRev) across all months first, then re-derives all computed rates (d, dPct, ePct, g, h, i, j, k) from those sums. This ensures rate calculations are correct for the project total rather than averaging monthly rates (which would be wrong).</p>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>10. Pricing Version Management</h2>
 
-<p>Each opportunity can have multiple pricing versions (v1, v2, etc.). The Pricing tab in <code>OpportunityTabs.tsx</code> shows a card for each version with the following actions:</p>
-
-<h3>Save &amp; Close</h3>
-<p>The drawer header contains a "Save &amp; Close" button. Clicking it calls <code>patchVersion(staffRows)</code> (which saves computed metrics to the DB) and then <code>onClose()</code>. This lets users explicitly save before leaving the drawer without relying on the auto-save that triggers on each edit.</p>
-
 <h3>Mark as Final</h3>
-<p>Each version card has a "Mark as Final" button. Clicking it sends <code>PATCH /api/pricing-versions/[pvId]</code> with <code>{ isFinal: true }</code>. The server atomically:</p>
-<ol style="padding-left:20px; margin: 6px 0 10px; line-height:1.8; color:#374151;">
-  <li>Runs <code>updateMany</code> to set <code>isFinal = false</code> on all sibling versions for the same opportunity</li>
-  <li>Runs <code>update</code> to set <code>isFinal = true</code> on the selected version</li>
-</ol>
-<p>The selected version card shows a <span class="badge">Selected for approval</span> badge and an emerald border ring. There can only be one final version per opportunity at a time. The Mark as Final button is replaced by the badge on the final version's card.</p>
+<p>Sends <code>PATCH /api/pricing-versions/[pvId]</code> with <code>{ isFinal: true }</code>. Server atomically sets all siblings to <code>isFinal: false</code> then sets target to <code>true</code>. Only one final version per opportunity at any time. Final version shows <span class="badge">Selected for approval</span> badge.</p>
 
 <h3>Duplicate</h3>
-<p>Each version card has a "Duplicate" button. Clicking it sends <code>POST /api/pricing-versions/[pvId]/duplicate</code>. The server creates a full deep copy inside a single Prisma <code>$transaction</code>:</p>
-<ul>
-  <li>New <code>PricingVersion</code> with <code>versionNumber = max + 1</code>, <code>isFinal = false</code>, all other fields copied</li>
-  <li>All <code>StaffingResource</code> rows copied (same rates, designation, flags)</li>
-  <li>All <code>StaffingWeekEntry</code> rows for each resource copied</li>
-  <li>All <code>ScheduleOfPayment</code> rows copied</li>
-  <li>All <code>FinancialSnapshot</code> rows copied</li>
-</ul>
-<p>The new version is appended to the state list immediately. It is independent — editing it does not affect the source version.</p>
+<p>Sends <code>POST /api/pricing-versions/[pvId]/duplicate</code>. Server deep-copies in a single <code>$transaction</code>: new version + all staffing resources + all weekly hour entries + all SoP rows + all financial snapshots. Fully independent from source.</p>
 
 <h3>Delete</h3>
-<p>Each version card has a "Delete" button. Clicking it enters an inline confirmation state (only that specific card shows the confirmation — other cards are unaffected). The user sees "Delete? / Yes, delete / Cancel". Confirming sends <code>DELETE /api/pricing-versions/[pvId]</code>. The server hard-deletes the record; Prisma cascade deletes all child records (staffing resources, week entries, schedule-of-payment rows, financial snapshots). The version is removed from the UI state immediately. There is no soft-delete / recycle bin — deletion is permanent. Use Duplicate as a backup before deleting.</p>
+<p>Inline confirmation required per card. Sends <code>DELETE /api/pricing-versions/[pvId]</code>. Hard-delete with cascade — permanent, no recycle bin. Use Duplicate before deleting to preserve a backup.</p>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>11. Rate Card Domain Mapping</h2>
 
-<p>Each <code>RateCard</code> row has a <code>domain</code> field (LoB enum value) that is carried onto <code>StaffingResource.domain</code> when the resource is added. The domain is visible in the Efforts tab Domain column. Mapping used in <code>prisma/seed.ts</code>:</p>
-
 <table>
-  <tr><th>Job Role(s)</th><th>Domain</th><th>Reasoning</th></tr>
-  <tr><td>Business Analyst (Analyst), Senior Business Analyst, Lead Business Analyst, Principal Business Analyst</td><td>ANALYTICS</td><td>BA roles belong to the Analytics LoB</td></tr>
-  <tr><td>Technology Analyst, Senior Technology Analyst, Lead Technology Analyst, Principal Technology Analyst</td><td>TECH</td><td>Technology roles belong to the Tech LoB</td></tr>
-  <tr><td>Consultant, Senior Consultant, Lead Consultant, Associate Director, Director, Senior Director, Partner, Senior Partner, Managing Partner</td><td>MS</td><td>Management / Strategy roles (Managed Services / MS LoB)</td></tr>
-  <tr><td>Data Scientist, Senior Data Scientist, Lead Data Scientist</td><td>DS</td><td>Data Science roles (separate LoB)</td></tr>
+  <tr><th>Job Role(s)</th><th>Domain</th></tr>
+  <tr><td>Business Analyst, Senior BA, Lead BA, Principal BA</td><td>ANALYTICS</td></tr>
+  <tr><td>Technology Analyst, Senior TA, Lead TA, Principal TA</td><td>TECH</td></tr>
+  <tr><td>Consultant, Senior Consultant, Lead Consultant, Associate Director, Director, Senior Director, Partner, Senior Partner, Managing Partner</td><td>MS</td></tr>
+  <tr><td>Data Scientist, Senior DS, Lead DS</td><td>DS</td></tr>
 </table>
-
-<p>To backfill domain on existing StaffingResource rows that were created before the domain field was added: run a migration script that queries all resources, joins to their rate card, and patches the domain. This was done once via a temporary <code>prisma/backfill-domain.ts</code> script (now deleted).</p>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>12. Vercel Deployment</h2>
 
 <div class="callout">
-  <strong>Auto-deploy is always on.</strong> Every push to the branch connected to Vercel triggers a new build automatically — there is no toggle to enable it. The connected branch is typically <code>main</code>.
+  <strong>Auto-deploy is always on.</strong> Every push to the connected branch (<code>main</code>) triggers a new production build automatically.
 </div>
 
 <table>
   <tr><th>Concept</th><th>Detail</th></tr>
-  <tr><td>Production URL</td><td>The stable URL shown on the Vercel dashboard (e.g. <code>pricingtool.vercel.app</code>). Always points to the latest successful build of the connected branch.</td></tr>
-  <tr><td>Preview / Deployment URL</td><td>Each build also gets a unique URL (e.g. <code>pricingtool-abc123.vercel.app</code>). These are immutable snapshots of that exact build — useful for testing a specific deploy.</td></tr>
-  <tr><td>Branch requirement</td><td>Changes on feature branches (e.g. <code>efforts-refinement</code>) only deploy if Vercel is configured to deploy that branch, or after the branch is merged into the connected production branch (<code>main</code>).</td></tr>
-  <tr><td>Prisma on deploy</td><td><code>package.json</code> has <code>"postinstall": "prisma generate"</code> — this ensures the Prisma TypeScript client is regenerated during every Vercel build, so the deployed app always has the current schema types.</td></tr>
-  <tr><td>Environment variables</td><td>Set in Vercel project settings. Must include <code>DATABASE_URL</code> (port 6543), <code>NEXTAUTH_SECRET</code>, <code>NEXTAUTH_URL</code>, and Azure AD credentials for seed sync.</td></tr>
+  <tr><td>Production URL</td><td>Stable URL on the Vercel dashboard. Always the latest successful build of <code>main</code>.</td></tr>
+  <tr><td>Preview URL</td><td>Each build also gets a unique immutable URL — useful for testing a specific deploy.</td></tr>
+  <tr><td>Prisma on deploy</td><td><code>"postinstall": "prisma generate"</code> in <code>package.json</code> — regenerates the TypeScript client on every Vercel build.</td></tr>
+  <tr><td>Environment variables</td><td>Set in Vercel project settings. Must include: <code>DATABASE_URL</code> (port 6543), <code>DIRECT_URL</code> (port 5432), <code>NEXTAUTH_SECRET</code>, <code>NEXTAUTH_URL</code>, <code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, Azure AD credentials.</td></tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -725,9 +706,10 @@
 
 <table>
   <tr><th>Service</th><th>Used for</th><th>Where</th></tr>
-  <tr><td>Supabase</td><td>PostgreSQL database hosting. All application data stored here. Connection via PgBouncer port 6543 to avoid session-mode connection limits.</td><td><code>DATABASE_URL</code> env var → <code>lib/prisma.ts</code></td></tr>
-  <tr><td>Azure Active Directory (AAD)</td><td>Syncing BD users from the company directory. Runs during <code>seed.ts</code> only.</td><td><code>prisma/seed.ts</code> via <code>@azure/identity</code> + <code>@microsoft/microsoft-graph-client</code></td></tr>
-  <tr><td>Vercel</td><td>Hosting + auto-deployment from GitHub. <code>postinstall: prisma generate</code> in <code>package.json</code> ensures Prisma client is built on every deploy.</td><td>GitHub → Vercel CI (connected to <code>main</code> branch)</td></tr>
+  <tr><td>Supabase (PostgreSQL)</td><td>All structured application data. Connection via PgBouncer port 6543.</td><td><code>DATABASE_URL</code> → <code>lib/prisma.ts</code></td></tr>
+  <tr><td>Supabase Storage</td><td>Private file buckets for SoW (<code>SoW_bucket</code>) and PO (<code>PO_busket</code>) documents. Server-side only, service role key.</td><td><code>SUPABASE_URL</code> + <code>SUPABASE_SERVICE_ROLE_KEY</code> → <code>lib/supabase.ts</code></td></tr>
+  <tr><td>Azure Active Directory</td><td>Syncing BD users from company directory. Runs during <code>seed.ts</code> only.</td><td><code>prisma/seed.ts</code> via <code>@azure/identity</code> + <code>@microsoft/microsoft-graph-client</code></td></tr>
+  <tr><td>Vercel</td><td>Hosting + auto-deploy from GitHub. <code>postinstall: prisma generate</code> ensures Prisma client is built on every deploy.</td><td>GitHub → Vercel CI (<code>main</code> branch)</td></tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -735,11 +717,11 @@
 
 <table>
   <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><code>npm run dev</code></td><td>Start local dev server at <code>http://localhost:3000</code></td></tr>
-  <tr><td><code>npx prisma db push</code></td><td>Push schema changes to Supabase (no migration files). Use <code>--accept-data-loss</code> when removing columns that have data.</td></tr>
-  <tr><td><code>npx prisma generate</code></td><td>Regenerate Prisma TypeScript client after any schema model change. Required before TypeScript will compile.</td></tr>
-  <tr><td><code>npx tsx prisma/seed.ts</code></td><td>Seed/reseed the database with rate cards, sample users, clients, and Azure AD users. Safe to re-run (upsert logic).</td></tr>
-  <tr><td><code>npx prisma studio</code></td><td>Open Prisma Studio — a web UI to browse and edit the database directly.</td></tr>
+  <tr><td><code>npm run dev</code></td><td>Start local dev server at <code>http://localhost:3000</code>. Ctrl+C to stop, then re-run to restart.</td></tr>
+  <tr><td><code>npx prisma db push</code></td><td>Push schema changes to Supabase (no migration files). Requires direct port 5432 via <code>DIRECT_URL</code>. If firewall blocks 5432, use Supabase SQL Editor.</td></tr>
+  <tr><td><code>npx prisma generate</code></td><td>Regenerate Prisma TypeScript client after any model change. Required before TypeScript compiles.</td></tr>
+  <tr><td><code>npx tsx prisma/seed.ts</code></td><td>Seed/reseed rate cards, sample data, and Azure AD users. Upsert logic — safe to re-run.</td></tr>
+  <tr><td><code>npx prisma studio</code></td><td>Open Prisma Studio — web UI to browse and edit the database directly.</td></tr>
   <tr><td><code>git push origin main</code></td><td>Push to main → triggers Vercel auto-deploy to production.</td></tr>
 </table>
 

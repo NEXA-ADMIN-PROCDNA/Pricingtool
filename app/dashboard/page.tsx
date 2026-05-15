@@ -29,19 +29,13 @@ function fmt(n: number) {
 // Maps DB role enum → banner display label + restriction copy
 const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
   ADMIN:    { label: 'Admin View',              restriction: 'Full platform access · All data visible' },
-  PARTNER:  { label: 'Partner View',            restriction: 'Restricted to Senior Partners & Engagement Managers' },
+  PARTNER:  { label: 'Partner View',            restriction: 'All Opportunities Visible' },
   ED:       { label: 'Executive Director View', restriction: 'Restricted to Executive Directors & above' },
   DIRECTOR: { label: 'Director View',           restriction: 'Restricted to Directors & above' },
-  SEL:      { label: 'SEL View',                restriction: 'Standard Engagement Leader access' },
+  SEL:      { label: 'SEL View',                restriction: 'Senior Engagement Lead access' },
 }
 
 // Calendar-year fiscal quarter (Jan–Mar = Q1 … Oct–Dec = Q4)
-function fyLabel(now: Date) {
-  const fy  = String(now.getFullYear()).slice(2)
-  const q   = Math.floor(now.getMonth() / 3) + 1
-  return `FY${fy} · Q${q}`
-}
-
 function NexaWordmark() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -146,13 +140,17 @@ export default async function DashboardPage({
     ? (rawStatus as OpportunityStatus)
     : undefined
 
-  const [session, rows, stats] = await Promise.all([
-    getServerSession(authOptions),
-    getOpportunities(status ?? 'ALL', q),
-    getDashboardStats(),
+  const session = await getServerSession(authOptions)
+  const sessionUser = session?.user as { id?: string; role?: string } | undefined
+  const userId  = sessionUser?.id   ?? ''
+  const role    = sessionUser?.role ?? ''
+  const auth    = userId && role ? { userId, role } : undefined
+
+  const [rows, stats] = await Promise.all([
+    getOpportunities(status ?? 'ALL', q, auth),
+    getDashboardStats(auth),
   ])
 
-  const role    = (session?.user as { role?: string } | undefined)?.role ?? ''
   const banner  = ROLE_BANNER[role] ?? { label: 'BD Tracker', restriction: '' }
 
   const now     = new Date()
@@ -171,20 +169,14 @@ export default async function DashboardPage({
           <div style={{ width: 1, height: 32, background: C.rule, flexShrink: 0 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{
-              fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              color: C.inkMuted,
-            }}>Business Development · Pipeline</div>
-            <div style={{
               fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 400,
               color: C.ink,
               letterSpacing: '-0.01em',
-              lineHeight: 1,
-            }}>FY 2026 Tracker</div>
+              lineHeight: 1.2,
+              maxWidth: 340,
+            }}>Your one stop solution for tracking Opportunities</div>
           </div>
         </div>
 
@@ -208,15 +200,16 @@ export default async function DashboardPage({
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 16px', borderRadius: 4,
-              border: `1px solid ${C.ink}`,
-              background: C.ink, color: '#F4F6FB',
+              border: '1px solid #1A4FA0',
+              background: '#2563EB', color: '#F4F6FB',
               fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 13, fontWeight: 500,
               textDecoration: 'none', whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(37,99,235,0.35)',
             }}
           >
             <span style={{ fontSize: 16, lineHeight: 0.9 }}>+</span>
-            New opportunity
+            New Opportunity
           </Link>
         </div>
       </header>
@@ -242,7 +235,6 @@ export default async function DashboardPage({
           )}
         </div>
         <div style={{ display: 'flex', gap: 22, color: '#8B95B0', letterSpacing: '0.08em' }}>
-          <span>{fyLabel(now)}</span>
           <span>UPDATED {dateStr} · {timeStr}</span>
         </div>
       </div>

@@ -19,14 +19,6 @@ const C = {
   ruleSoft:  '#E2E6EE',
 }
 
-const LOB_LABELS: Record<string, string> = {
-  TECH:      'Technology',
-  ANALYTICS: 'Analytics',
-  MS:        'Market Strategy',
-  DS:        'Data Science',
-  DESIGN:    'Design',
-}
-
 const MONO: React.CSSProperties = {
   fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
 }
@@ -86,7 +78,6 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
-// Tiny initials avatar
 function Avatar({ initials }: { initials: string }) {
   return (
     <div style={{
@@ -104,58 +95,129 @@ function ownerInitials(name: string) {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-// Reusable styled select dropdown
-function FilterSelect({
-  value, onChange, placeholder, options,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-  options: { label: string; value: string }[]
-}) {
-  const active = value !== ''
+function FunnelIcon({ active }: { active: boolean }) {
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
+    <svg
+      viewBox="0 0 24 24"
+      fill={active ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={2.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ width: 10, height: 10 }}
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  )
+}
+
+function FilterPopover({
+  options,
+  selected,
+  onToggle,
+  onClear,
+  onClose,
+  pos,
+}: {
+  options: { label: string; value: string }[]
+  selected: string[]
+  onToggle: (v: string) => void
+  onClear: () => void
+  onClose: () => void
+  pos: { top: number; left: number }
+}) {
+  return (
+    <>
+      {/* Backdrop — closes popover on outside click */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100 }} onClick={onClose} />
+
+      {/* Popover panel */}
+      <div
+        onClick={e => e.stopPropagation()}
         style={{
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          fontFamily: "'Inter', system-ui, sans-serif",
-          fontSize: 12.5,
-          color: active ? C.ink : C.inkMuted,
-          fontWeight: active ? 600 : 500,
-          cursor: 'pointer',
-          paddingRight: 16,
+          position: 'fixed',
+          top: pos.top,
+          left: pos.left,
+          zIndex: 101,
+          background: '#ffffff',
+          border: `1px solid ${C.rule}`,
+          borderRadius: 8,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.13)',
+          minWidth: 180,
+          maxHeight: 260,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <option value="">{placeholder}</option>
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      <svg
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
-        strokeLinecap="round" strokeLinejoin="round"
-        style={{ width: 11, height: 11, position: 'absolute', right: 0, pointerEvents: 'none', color: active ? C.accent : C.inkMuted }}
-      >
-        <path d="M6 9l6 6 6-6"/>
-      </svg>
-      {active && (
-        <span
-          onClick={() => onChange('')}
-          style={{
-            position: 'absolute', right: -14, top: '50%', transform: 'translateY(-50%)',
-            fontSize: 13, color: C.inkMuted, cursor: 'pointer', lineHeight: 1,
-          }}
-          title="Clear"
-        >×</span>
-      )}
-    </div>
+        {/* Header row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '7px 12px',
+          borderBottom: `1px solid ${C.ruleSoft}`,
+          flexShrink: 0,
+        }}>
+          <span style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: C.inkMuted,
+            fontFamily: "'Inter', system-ui, sans-serif",
+          }}>
+            Filter
+          </span>
+          {selected.length > 0 && (
+            <button
+              onClick={onClear}
+              style={{
+                fontSize: 11, color: C.accent, background: 'none', border: 'none',
+                cursor: 'pointer', padding: 0, fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Option list */}
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {options.map(opt => {
+            const checked = selected.includes(opt.value)
+            return (
+              <div
+                key={opt.value}
+                onClick={() => onToggle(opt.value)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontSize: 12.5,
+                  color: checked ? C.ink : C.inkSoft,
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontWeight: checked ? 500 : 400,
+                  background: checked ? `${C.accentSoft}66` : 'transparent',
+                  userSelect: 'none',
+                }}
+              >
+                {/* Custom checkbox */}
+                <span style={{
+                  width: 13, height: 13, borderRadius: 3,
+                  border: `1.5px solid ${checked ? C.accent : C.rule}`,
+                  background: checked ? C.accent : 'transparent',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, transition: 'all 100ms',
+                }}>
+                  {checked && (
+                    <svg viewBox="0 0 10 10" fill="none" style={{ width: 8, height: 8 }}>
+                      <path d="M2 5l2.5 2.5L8 2.5" stroke="white" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                {opt.label}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -164,25 +226,87 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
   const params = useSearchParams()
   const active = (params.get('status') ?? 'ALL') as 'ALL' | OpportunityStatus
 
-  const [ownerFilter, setOwnerFilter] = useState('')
-  const [lobFilter,   setLobFilter]   = useState('')
-  const [yearFilter,  setYearFilter]  = useState('')
+  const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({})
+  const [openFilter, setOpenFilter]       = useState<string | null>(null)
+  const [popoverPos, setPopoverPos]       = useState({ top: 0, left: 0 })
 
-  // Derive unique filter options from the full row set
+  function openColFilter(key: string, e: React.MouseEvent<HTMLButtonElement>) {
+    if (openFilter === key) { setOpenFilter(null); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPopoverPos({
+      top:  rect.bottom + 6,
+      left: Math.min(rect.left - 40, window.innerWidth - 210),
+    })
+    setOpenFilter(key)
+  }
+
+  function toggleFilter(key: string, value: string) {
+    setColumnFilters(prev => {
+      const cur  = prev[key] ?? []
+      const next = cur.includes(value) ? cur.filter(v => v !== value) : [...cur, value]
+      if (next.length === 0) { const n = { ...prev }; delete n[key]; return n }
+      return { ...prev, [key]: next }
+    })
+  }
+
+  function clearFilter(key: string) {
+    setColumnFilters(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
+
+  // ── Derived filter options ─────────────────────────────────────────────────
+  const clientOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.client.name))].sort().map(n => ({ label: n, value: n })),
+    [rows])
+
   const ownerOptions = useMemo(() =>
-    [...new Set(rows.map(r => r.owner.name))].sort()
-      .map(n => ({ label: n, value: n })),
+    [...new Set(rows.map(r => r.owner.name))].sort().map(n => ({ label: n, value: n })),
     [rows])
 
-  const lobOptions = useMemo(() =>
-    [...new Set(rows.map(r => r.primaryLob).filter(Boolean))].sort()
-      .map(v => ({ label: LOB_LABELS[v!] ?? v!, value: v! })),
+  const statusOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.status))].sort()
+      .map(s => ({ label: s.charAt(0) + s.slice(1).toLowerCase(), value: s })),
     [rows])
 
-  const yearOptions = useMemo(() =>
-    [...new Set(rows.map(r => r.startDate ? new Date(r.startDate).getFullYear() : null).filter((y): y is number => y !== null))].sort()
-      .map(y => ({ label: `FY${String(y).slice(2)}`, value: String(y) })),
+  const winOptions = [
+    { label: '≤ 25%',  value: '0-25'   },
+    { label: '26–50%', value: '26-50'  },
+    { label: '51–75%', value: '51-75'  },
+    { label: '> 75%',  value: '76-100' },
+  ]
+
+  const windowOptions = useMemo(() =>
+    [...new Set(
+      rows.map(r => r.startDate ? new Date(r.startDate).getFullYear() : null)
+          .filter((y): y is number => y !== null)
+    )].sort().map(y => ({ label: String(y), value: String(y) })),
     [rows])
+
+  const revenueOptions = [
+    { label: 'Final pricing',  value: 'FINAL'     },
+    { label: 'Estimated only', value: 'ESTIMATED' },
+    { label: 'No revenue set', value: 'NONE'      },
+  ]
+
+  const commentsOptions = [
+    { label: 'Has comments', value: 'has' },
+    { label: 'No comments',  value: 'no'  },
+  ]
+
+  const nextstepOptions = useMemo(() => {
+    const vals = [...new Set(rows.map(r => STAGE_NEXT_STEPS[r.stage] ?? '—'))].sort()
+    return vals.map(v => ({ label: v, value: v }))
+  }, [rows])
+
+  const colFilterOptions: Record<string, { label: string; value: string }[]> = {
+    client:   clientOptions,
+    owner:    ownerOptions,
+    status:   statusOptions,
+    winpct:   winOptions,
+    window:   windowOptions,
+    revenue:  revenueOptions,
+    comments: commentsOptions,
+    nextstep: nextstepOptions,
+  }
 
   function setStatusFilter(value: string) {
     const cur = new URLSearchParams(window.location.search)
@@ -191,23 +315,91 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
     router.push(`/dashboard?${cur.toString()}`)
   }
 
-  const visible = rows
-    .filter(r => active === 'ALL' || r.status === active)
-    .filter(r => !ownerFilter || r.owner.name === ownerFilter)
-    .filter(r => !lobFilter   || r.primaryLob === lobFilter)
-    .filter(r => !yearFilter  || (r.startDate && new Date(r.startDate).getFullYear() === Number(yearFilter)))
+  // ── Multi-column filter logic ──────────────────────────────────────────────
+  const visible = useMemo(() => rows.filter(r => {
+    if (active !== 'ALL' && r.status !== active) return false
+
+    const cf = columnFilters['client']
+    if (cf?.length && !cf.includes(r.client.name)) return false
+
+    const of2 = columnFilters['owner']
+    if (of2?.length && !of2.includes(r.owner.name)) return false
+
+    const sf = columnFilters['status']
+    if (sf?.length && !sf.includes(r.status)) return false
+
+    const rf = columnFilters['revenue']
+    if (rf?.length) {
+      const fin = hasFinalPricing(r)
+      const est = Number(r.estimatedRevenue ?? 0) > 0
+      const match = rf.some(v =>
+        (v === 'FINAL' && fin) || (v === 'ESTIMATED' && !fin && est) || (v === 'NONE' && !fin && !est)
+      )
+      if (!match) return false
+    }
+
+    const wf = columnFilters['winpct']
+    if (wf?.length) {
+      const prob = r.probability != null ? Number(r.probability) : null
+      if (prob === null) return false
+      const match = wf.some(range => {
+        if (range === '0-25')   return prob <= 25
+        if (range === '26-50')  return prob > 25 && prob <= 50
+        if (range === '51-75')  return prob > 50 && prob <= 75
+        if (range === '76-100') return prob > 75
+        return false
+      })
+      if (!match) return false
+    }
+
+    const yf = columnFilters['window']
+    if (yf?.length) {
+      const yr = r.startDate ? String(new Date(r.startDate).getFullYear()) : null
+      if (!yr || !yf.includes(yr)) return false
+    }
+
+    const cmf = columnFilters['comments']
+    if (cmf?.length) {
+      const has = r._count.comments > 0
+      const match = cmf.some(v => (v === 'has' && has) || (v === 'no' && !has))
+      if (!match) return false
+    }
+
+    const nsf = columnFilters['nextstep']
+    if (nsf?.length) {
+      const ns = STAGE_NEXT_STEPS[r.stage] ?? '—'
+      if (!nsf.includes(ns)) return false
+    }
+
+    return true
+  }), [rows, active, columnFilters])
+
+  const hasActiveFilters = Object.values(columnFilters).some(v => v?.length > 0)
+
+  // ── Column definitions ─────────────────────────────────────────────────────
+  const COLS = [
+    { key: 'bdid',     label: 'BD ID',       w: 56,  filterable: false },
+    { key: 'client',   label: 'Client',      w: 140, filterable: true  },
+    { key: 'opp',      label: 'Opportunity', w: 220, filterable: false },
+    { key: 'owner',    label: 'Owner',       w: 160, filterable: true  },
+    { key: 'revenue',  label: 'Revenue',     w: 110, filterable: true  },
+    { key: 'winpct',   label: 'Win %',       w: 72,  filterable: true  },
+    { key: 'window',   label: 'Time Window', w: 180, filterable: true  },
+    { key: 'status',   label: 'Status',      w: 100, filterable: true  },
+    { key: 'comments', label: 'Comments',    w: 80,  filterable: true  },
+    { key: 'nextstep', label: 'Next Step',   w: 90,  filterable: true  },
+  ]
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      {/* ─── Filter row ─── */}
+      {/* ─── Status tabs + clear ─── */}
       <div style={{
         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
         padding: '20px 0 14px', flexShrink: 0,
       }}>
-        {/* Tab filters */}
         <div style={{ display: 'flex', gap: 28, alignItems: 'baseline' }}>
           {STATUS_FILTERS.map(f => {
-            const count = f.value === 'ALL' ? rows.length : rows.filter(r => r.status === f.value).length
+            const count    = f.value === 'ALL' ? rows.length : rows.filter(r => r.status === f.value).length
             const isActive = active === f.value
             return (
               <button
@@ -231,30 +423,22 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
           })}
         </div>
 
-        {/* Right: Owner / Practice / Period dropdowns + export */}
-        <div style={{
-          display: 'flex', gap: 24, alignItems: 'center',
-          fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12.5, color: C.inkMuted,
-        }}>
-          <FilterSelect
-            value={ownerFilter}
-            onChange={setOwnerFilter}
-            placeholder="Owner"
-            options={ownerOptions}
-          />
-          <FilterSelect
-            value={lobFilter}
-            onChange={setLobFilter}
-            placeholder="Practice"
-            options={lobOptions}
-          />
-          <FilterSelect
-            value={yearFilter}
-            onChange={setYearFilter}
-            placeholder="Period"
-            options={yearOptions}
-          />
-          <span style={{ color: C.accent, borderBottom: `1px dotted ${C.accent}`, cursor: 'pointer', paddingBottom: 1 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}>
+          {hasActiveFilters && (
+            <button
+              onClick={() => setColumnFilters({})}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: 'none', border: `1px solid ${C.rule}`, borderRadius: 4,
+                padding: '4px 10px', cursor: 'pointer',
+                fontSize: 11.5, color: C.inkMuted,
+                fontFamily: "'Inter', system-ui, sans-serif",
+              }}
+            >
+              ✕ Clear all filters
+            </button>
+          )}
+          <span style={{ color: C.accent, borderBottom: `1px dotted ${C.accent}`, cursor: 'pointer', paddingBottom: 1, fontSize: 12.5 }}>
             Export
           </span>
         </div>
@@ -265,32 +449,44 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: "'Inter', system-ui, sans-serif" }}>
           <thead>
             <tr style={{ borderBottom: `1.5px solid ${C.ink}` }}>
-              {[
-                { label: 'BD ID',          w: 56  },
-                { label: 'Client',     w: 140 },
-                { label: 'Opportunity', w: 220 },
-                { label: 'Owner',    w: 160 },
-                { label: 'Revenue',    w: 110, right: true },
-                { label: 'Win %',      w: 72,  right: true },
-                { label: 'Time Window',     w: 180 },
-                { label: 'Status',     w: 100 },
-                { label: 'Comments',   w: 80, right: true },
-                { label: 'Next Step',  w: 90 },
-              ].map(col => (
-                <th
-                  key={col.label}
-                  style={{
-                    padding: '12px 42px 12px 0',
-                    textAlign: 'center',
-                    fontFamily: "'Inter', system-ui, sans-serif",
-                    fontSize: 11, fontWeight: 600,
-                    letterSpacing: '0.14em', textTransform: 'uppercase',
-                    color: C.inkMuted,
-                    width: col.w,
-                    whiteSpace: 'nowrap',
-                  }}
-                >{col.label}</th>
-              ))}
+              {COLS.map(col => {
+                const colActive = (columnFilters[col.key]?.length ?? 0) > 0
+                return (
+                  <th
+                    key={col.key}
+                    style={{
+                      padding: '12px 42px 12px 0',
+                      textAlign: 'center',
+                      fontFamily: "'Inter', system-ui, sans-serif",
+                      fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.14em', textTransform: 'uppercase',
+                      color: colActive ? C.accent : C.inkMuted,
+                      width: col.w,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                      <span>{col.label}</span>
+                      {col.filterable && (
+                        <button
+                          onClick={e => { e.stopPropagation(); openColFilter(col.key, e) }}
+                          title={`Filter by ${col.label}`}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '1px 3px', borderRadius: 3,
+                            color: colActive ? C.accent : C.inkFaint,
+                            display: 'inline-flex', alignItems: 'center',
+                            outline: openFilter === col.key ? `1.5px solid ${C.accent}` : 'none',
+                            transition: 'color 100ms',
+                          }}
+                        >
+                          <FunnelIcon active={colActive} />
+                        </button>
+                      )}
+                    </div>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -302,26 +498,22 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
               </tr>
             )}
             {visible.map(row => {
-              const revStr = fmtRevenue(row)
-              const isFinal = hasFinalPricing(row)
-              const prob = row.probability != null ? Number(row.probability) : null
-              const start = fmtDate(row.startDate)
-              const end   = fmtDate(row.endDate)
+              const revStr   = fmtRevenue(row)
+              const isFinal  = hasFinalPricing(row)
+              const prob     = row.probability != null ? Number(row.probability) : null
+              const start    = fmtDate(row.startDate)
+              const end      = fmtDate(row.endDate)
               const nextStep = STAGE_NEXT_STEPS[row.stage] ?? '—'
 
               return (
                 <tr
                   key={row.id}
                   onClick={() => router.push(`/opportunities/${row.opportunityId}`)}
-                  style={{
-                    borderBottom: `1px solid ${C.ruleSoft}`,
-                    cursor: 'pointer',
-                    transition: 'background 120ms',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = C.accentSoft + '55')}
+                  style={{ borderBottom: `1px solid ${C.ruleSoft}`, cursor: 'pointer', transition: 'background 120ms' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = `${C.accentSoft}55`)}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  {/* № */}
+                  {/* BD ID */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
@@ -337,14 +529,14 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     {row.client.name}
                   </td>
 
-                  {/* Engagement */}
+                  {/* Opportunity */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.opportunityName}
                     </div>
                   </td>
 
-                  {/* Partner */}
+                  {/* Owner */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
                       <Avatar initials={ownerInitials(row.owner.name)} />
@@ -357,20 +549,15 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   {/* Revenue */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <span style={{
-                      ...SERIF,
-                      fontSize: 19,
-                      fontWeight: 400,
-                      letterSpacing: '-0.01em',
-                      fontVariantNumeric: 'tabular-nums',
+                      ...SERIF, fontSize: 19, fontWeight: 400,
+                      letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums',
                       color: revStr === '—' ? C.inkFaint : isFinal ? '#1F6B3C' : C.ink,
                     }}>{revStr}</span>
                     {isFinal && revStr !== '—' && (
                       <span style={{
-                        ...MONO,
-                        display: 'block',
+                        ...MONO, display: 'block',
                         fontSize: 9, fontWeight: 600, letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        color: '#1F6B3C', textAlign: 'center',
+                        textTransform: 'uppercase', color: '#1F6B3C', textAlign: 'center',
                       }}>FINAL</span>
                     )}
                   </td>
@@ -386,7 +573,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     )}
                   </td>
 
-                  {/* Window */}
+                  {/* Time Window */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <span style={{ ...MONO, fontSize: 12, color: C.inkMuted, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                       {start} → {end}
@@ -409,7 +596,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     )}
                   </td>
 
-                  {/* Next step */}
+                  {/* Next Step */}
                   <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                       {nextStep}
@@ -422,6 +609,18 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
         </table>
       </div>
 
+      {/* ─── Column filter popover ─── */}
+      {openFilter && colFilterOptions[openFilter] && (
+        <FilterPopover
+          options={colFilterOptions[openFilter]}
+          selected={columnFilters[openFilter] ?? []}
+          onToggle={v => toggleFilter(openFilter, v)}
+          onClear={() => clearFilter(openFilter)}
+          onClose={() => setOpenFilter(null)}
+          pos={popoverPos}
+        />
+      )}
+
       {/* ─── Footer ─── */}
       <div style={{
         padding: '12px 0',
@@ -431,7 +630,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
         background: '#F4F6FB',
       }}>
         <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
-          {visible.length} OF {rows.length} SHOWN · CONFIDENTIAL · NEXA · PARTNERS&apos; VIEW
+          {visible.length} of {rows.length}&nbsp;&nbsp;SHOWN · CONFIDENTIAL · NEXA · PARTNERS&apos; VIEW
         </span>
         <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
           {active !== 'ALL' && `FILTERED BY ${active}`}

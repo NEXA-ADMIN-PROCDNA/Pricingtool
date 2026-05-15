@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { getOpportunities } from '@/lib/db/opportunities'
 import { LineOfBusiness, OpportunityStage, OpportunityType } from '@prisma/client'
 
 async function nextOpportunityId(): Promise<string> {
@@ -13,20 +14,15 @@ async function nextOpportunityId(): Promise<string> {
   return `BD-${String(n + 1).padStart(3, '0')}`
 }
 
-export async function GET() {
-  const opps = await prisma.opportunity.findMany({
-    include: {
-      client:  { select: { name: true, clientId: true } },
-      owner:   { select: { name: true } },
-      pricingVersions: {
-        where: { isFinal: true },
-        select: { proposedBillings: true, grossMarginPct: true },
-        take: 1,
-      },
-      _count: { select: { comments: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const userId = token.id as string | undefined
+  const role   = token.role as string | undefined
+  const auth   = userId && role ? { userId, role } : undefined
+
+  const opps = await getOpportunities(undefined, undefined, auth)
   return NextResponse.json(opps)
 }
 

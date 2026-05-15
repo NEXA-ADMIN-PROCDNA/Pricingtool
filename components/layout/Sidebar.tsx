@@ -4,16 +4,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 
-// V8 NEXA Blue palette tokens
 const C = {
-  ink:       '#0A1F44',
+  ink:       '#111111',
   accent:    '#1E5BB8',
-  accentDeep:'#143E80',
-  iconMuted: '#7B86A4',
+  accentDeep:'#333333',
+  iconMuted: '#888888',
   iconActive: '#F4F6FB',
-  avatarBg:  '#1A2A4D',
+  avatarBg:  '#222222',
   rule:      'rgba(255,255,255,0.08)',
-  popoverBg: '#0D2550',
+  popoverBg: '#1a1a1a',
 }
 
 const NAV = [

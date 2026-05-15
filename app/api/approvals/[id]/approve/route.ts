@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { setOpportunityWon } from '@/lib/db/opportunities'
 
 export async function POST(
   req: NextRequest,
@@ -21,6 +22,10 @@ export async function POST(
     where: { id },
     data: { status: 'APPROVED', decidedAt: new Date() },
   })
+
+  if (approval.approvalType === 'SOW_VERIFICATION') {
+    await setOpportunityWon(approval.opportunityId)
+  }
 
   return NextResponse.json(updated)
 }

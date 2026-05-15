@@ -164,7 +164,8 @@ model Client {
 
   pocs          ClientPOC[]
   opportunities Opportunity[]
-  sowDocuments  SOWDocument[]   // [Q2] client-level SOW access
+  sowDocuments  SOWDocument[]
+  poDocuments   PODocument[]
 
   @@map("clients")
 }
@@ -226,21 +227,23 @@ model Opportunity {
   endDate           DateTime
   status            OpportunityStatus @default(OPEN)
   stage             OpportunityStage  @default(LEAD)
-  starConnect       Boolean           @default(false)
-  estimatedRevenue  Int?                              // user-entered pre-pricing revenue estimate
-  probability       Int?                              // win probability 1–100
-  ownerId           String
-  owner             User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
-  notes             String?           @db.Text
-  isActive          Boolean           @default(true)
- createdAt DateTime @default(now()) @db.Timestamptz(3)
- updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  starConnect          Boolean           @default(false)
+  preContractAgreed    Boolean           @default(false)
+  estimatedRevenue     Int?                              // user-entered pre-pricing revenue estimate
+  probability          Int?                              // win probability 1–100
+  ownerId              String
+  owner                User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
+  notes                String?           @db.Text
+  isActive             Boolean           @default(true)
+  createdAt            DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(3)
 
   pricingVersions   PricingVersion[]
   approvalRequests  ApprovalRequest[]
   comments          Comment[]
   activityLogs      ActivityLog[]
   sowDocuments      SOWDocument[]
+  poDocuments       PODocument[]
   otherCosts        OtherCost[]
 
   @@map("opportunities")
@@ -455,6 +458,7 @@ model ApprovalRequest {
   requestedBy     User           @relation("Requester", fields: [requestedById], references: [id])
   approverId      String
   approver        User           @relation("Approver", fields: [approverId], references: [id])
+  approvalType    String         @default("PRICING")   // "PRICING" | "SOW_VERIFICATION"
   status          ApprovalStatus @default(PENDING)
   rejectionReason String?        @db.Text
   requestedAt     DateTime       @default(now())
@@ -495,6 +499,24 @@ model SOWDocument {
   isActive       Boolean     @default(true)
 
   @@map("sow_documents")
+}
+
+model PODocument {
+  id             String      @id @default(cuid())
+  opportunityId  String
+  opportunity    Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  clientId       String
+  client         Client      @relation(fields: [clientId], references: [id])
+  fileName       String
+  storagePath    String?
+  fileUrl        String?
+  fileSizeBytes  Int?
+  mimeType       String?     @default("application/pdf")
+  version        Int         @default(1)
+  uploadedAt     DateTime    @default(now()) @db.Timestamptz(3)
+  isActive       Boolean     @default(true)
+
+  @@map("po_documents")
 }
 
 

@@ -1,8 +1,16 @@
 import { prisma } from '@/lib/prisma'
 import { OpportunityStatus } from '@prisma/client'
 
-export type OpportunityRow = Awaited<ReturnType<typeof getOpportunities>>[number]
+// Called when a SOW_VERIFICATION approval is approved.
+export async function setOpportunityWon(internalId: string) {
+  await prisma.opportunity.update({ where: { id: internalId }, data: { status: 'WON' } })
+}
+
+export type OpportunityRow    = Awaited<ReturnType<typeof getOpportunities>>[number]
 export type OpportunityDetail = NonNullable<Awaited<ReturnType<typeof getOpportunityDetail>>>
+
+// Auth context passed in from server components
+export type AuthCtx = { userId: string; role: string }
 
 // Decimal → number serializer; preserves all other types
 function serialize<T>(data: T): T {
@@ -13,11 +21,49 @@ function serialize<T>(data: T): T {
   ) as T
 }
 
+// Returns a Prisma `where` fragment that scopes opportunities by role hierarchy:
+//   SEL      → own only
+//   DIRECTOR → own + any SEL-owned
+//   ED       → own + any DIRECTOR or SEL-owned
+//   PARTNER  → all
+//   ADMIN    → all
+function resolveOwnerFilter(auth: AuthCtx): object {
+  const { userId, role } = auth
+
+  if (role === 'ADMIN' || role === 'PARTNER') return {}
+
+  if (role === 'SEL') return { ownerId: userId }
+
+  if (role === 'DIRECTOR') return {
+    OR: [
+      { ownerId: userId },
+      { owner: { role: 'SEL' } },
+    ],
+  }
+
+  if (role === 'ED') return {
+    OR: [
+      { ownerId: userId },
+      { owner: { role: { in: ['DIRECTOR', 'SEL'] } } },
+    ],
+  }
+
+  // Unknown role — fail closed
+  return { ownerId: userId }
+}
+
 // ✅ LIST VIEW
-export async function getOpportunities(status?: OpportunityStatus | 'ALL', q?: string) {
-  const search = q?.trim()
+export async function getOpportunities(
+  status?: OpportunityStatus | 'ALL',
+  q?: string,
+  auth?: AuthCtx,
+) {
+  const search      = q?.trim()
+  const ownerFilter = auth ? resolveOwnerFilter(auth) : {}
+
   const data = await prisma.opportunity.findMany({
     where: {
+      ...ownerFilter,
       ...(status && status !== 'ALL' ? { status } : {}),
       ...(search ? {
         OR: [
@@ -54,9 +100,11 @@ export async function getOpportunities(status?: OpportunityStatus | 'ALL', q?: s
 }
 
 // ✅ DETAIL VIEW
-export async function getOpportunityDetail(opportunityId: string) {
-  const data = await prisma.opportunity.findUnique({
-    where: { opportunityId },
+export async function getOpportunityDetail(opportunityId: string, auth?: AuthCtx) {
+  const ownerFilter = auth ? resolveOwnerFilter(auth) : {}
+
+  const data = await prisma.opportunity.findFirst({
+    where: { opportunityId, ...ownerFilter },
     include: {
       client: { include: { pocs: true } },
       owner: true,
@@ -70,7 +118,9 @@ export async function getOpportunityDetail(opportunityId: string) {
         },
         orderBy: { versionNumber: 'asc' },
       },
-      otherCosts: { orderBy: [{ month: 'asc' }, { createdAt: 'asc' }] },
+      otherCosts:    { orderBy: [{ month: 'asc' }, { createdAt: 'asc' }] },
+      sowDocuments:  { where: { isActive: true }, orderBy: { uploadedAt: 'desc' } },
+      poDocuments:   { where: { isActive: true }, orderBy: { uploadedAt: 'desc' } },
       approvalRequests: {
         include: { requestedBy: true, approver: true },
         orderBy: { requestedAt: 'desc' },
@@ -90,20 +140,22 @@ export async function getOpportunityDetail(opportunityId: string) {
 }
 
 // ✅ DASHBOARD STATS
-export async function getDashboardStats() {
+export async function getDashboardStats(auth?: AuthCtx) {
+  const ownerFilter = auth ? resolveOwnerFilter(auth) : {}
+
   const [counts, oppsForPipeline] = await Promise.all([
     prisma.opportunity.groupBy({
       by: ['status'],
+      where: ownerFilter,
       _count: { _all: true },
     }),
-    // Fetch all active opportunities with their final pricing to compute weighted revenue
     prisma.opportunity.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...ownerFilter },
       select: {
         estimatedRevenue: true,
         probability:      true,
         pricingVersions: {
-          where: { isFinal: true },
+          where:  { isFinal: true },
           select: { proposedBillings: true },
           take: 1,
         },
@@ -111,8 +163,6 @@ export async function getDashboardStats() {
     }),
   ])
 
-  // estimatedRevenue = raw sum (if final pricing → proposedBillings, else estimatedRevenue field)
-  // weightedRevenue  = same base per-opp, multiplied by probability/100
   let estimatedRevenue = 0
   let weightedRevenue  = 0
   for (const opp of oppsForPipeline) {
