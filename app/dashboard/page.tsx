@@ -40,7 +40,7 @@ function NexaWordmark() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span style={{
-        fontFamily: "var(--font-playfair), 'Georgia', serif",
+        fontFamily: "'Playfair Display', 'Georgia', serif",
         fontWeight: 800,
         fontSize: 28,
         letterSpacing: '0.18em',

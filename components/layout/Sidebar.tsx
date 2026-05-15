@@ -110,7 +110,7 @@ export function Sidebar() {
         <div className={`transition-all duration-150 overflow-hidden whitespace-nowrap ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1 }}>
             <span style={{
-              fontFamily: "var(--font-playfair), 'Georgia', serif",
+              fontFamily: "'Playfair Display', 'Georgia', serif",
               fontWeight: 800,
               fontSize: 18,
               letterSpacing: '0.18em',

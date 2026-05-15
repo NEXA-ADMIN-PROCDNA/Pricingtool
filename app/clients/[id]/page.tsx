@@ -12,7 +12,7 @@ const INDUSTRY_COLORS: Record<string, { gradient: string; badge: string; text: s
 }
 
 function getColors(industry?: string | null) {
-  return (industry && INDUSTRY_COLORS[industry]) ?? { gradient: 'from-indigo-400 to-indigo-600', badge: 'bg-indigo-50', text: 'text-indigo-700' }
+  return (industry && INDUSTRY_COLORS[industry]) || { gradient: 'from-indigo-400 to-indigo-600', badge: 'bg-indigo-50', text: 'text-indigo-700' }
 }
 
 function initials(name: string) {
