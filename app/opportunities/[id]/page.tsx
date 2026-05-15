@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getOpportunityDetail } from '@/lib/db/opportunities'
 import { getUsersForSelect } from '@/lib/db/users'
@@ -14,8 +16,14 @@ export default async function OpportunityDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const session     = await getServerSession(authOptions)
+  const sessionUser = session?.user as { id?: string; role?: string } | undefined
+  const auth        = sessionUser?.id && sessionUser?.role
+    ? { userId: sessionUser.id, role: sessionUser.role }
+    : undefined
+
   const [opp, users] = await Promise.all([
-    getOpportunityDetail(id),
+    getOpportunityDetail(id, auth),
     getUsersForSelect(),
   ])
   if (!opp) notFound()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { getSupabase, SOW_BUCKET, PO_BUCKET } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
@@ -19,10 +20,12 @@ export async function GET(req: NextRequest) {
       requestedBy: { select: { id: true, name: true, role: true } },
       opportunity: {
         select: {
+          id: true,
           opportunityId: true,
           opportunityName: true,
           startDate: true,
           endDate: true,
+          preContractAgreed: true,
           client: { select: { name: true } },
           pricingVersions: {
             where: { isFinal: true },
@@ -36,11 +39,53 @@ export async function GET(req: NextRequest) {
             },
             take: 1,
           },
+          sowDocuments: {
+            where: { isActive: true },
+            select: { id: true, fileName: true, storagePath: true, fileSizeBytes: true, mimeType: true, version: true, uploadedAt: true },
+            orderBy: { uploadedAt: 'desc' },
+          },
+          poDocuments: {
+            where: { isActive: true },
+            select: { id: true, fileName: true, storagePath: true, fileSizeBytes: true, mimeType: true, version: true, uploadedAt: true },
+            orderBy: { uploadedAt: 'desc' },
+          },
         },
       },
     },
     orderBy: { requestedAt: 'desc' },
   })
 
-  return NextResponse.json(approvals)
+  // Generate signed URLs for SOW_VERIFICATION approvals
+  const supabase = getSupabase()
+  const withUrls = await Promise.all(
+    approvals.map(async approval => {
+      if (approval.approvalType !== 'SOW_VERIFICATION') return approval
+
+      const sowWithUrls = await Promise.all(
+        approval.opportunity.sowDocuments.map(async doc => {
+          if (!doc.storagePath) return { ...doc, signedUrl: null }
+          const { data } = await supabase.storage.from(SOW_BUCKET).createSignedUrl(doc.storagePath, 3600)
+          return { ...doc, signedUrl: data?.signedUrl ?? null }
+        })
+      )
+      const poWithUrls = await Promise.all(
+        approval.opportunity.poDocuments.map(async doc => {
+          if (!doc.storagePath) return { ...doc, signedUrl: null }
+          const { data } = await supabase.storage.from(PO_BUCKET).createSignedUrl(doc.storagePath, 3600)
+          return { ...doc, signedUrl: data?.signedUrl ?? null }
+        })
+      )
+
+      return {
+        ...approval,
+        opportunity: {
+          ...approval.opportunity,
+          sowDocuments: sowWithUrls,
+          poDocuments:  poWithUrls,
+        },
+      }
+    })
+  )
+
+  return NextResponse.json(withUrls)
 }

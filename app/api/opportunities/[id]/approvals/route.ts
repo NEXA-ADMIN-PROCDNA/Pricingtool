@@ -7,7 +7,7 @@ export async function POST(
 ) {
   try {
     const { id: opportunityId } = await params
-    const { approverId, requestedById } = await req.json()
+    const { approverId, requestedById, approvalType = 'PRICING' } = await req.json()
 
     if (!approverId || !requestedById) {
       return NextResponse.json({ error: 'Missing approverId or requestedById' }, { status: 400 })
@@ -24,6 +24,7 @@ export async function POST(
         opportunityId: opp.id,
         requestedById,
         approverId,
+        approvalType,
         status: 'PENDING',
         requestedAt: new Date(),
       },

@@ -8,17 +8,25 @@ const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
 const prisma  = new PrismaClient({ adapter })
 
 async function main() {
-  const user = await prisma.user.create({
-    data: {
-      email:    'piyusha.sahni@procdna.com',
-      name:     'Piyusha Sahni',
-      role:     'ADMIN',
-      location: 'INDIA',
-      isActive: true,
-    },
+  const user = await prisma.user.update({
+    where: { email: 'shreeraj.deshmukh@procdna.com' },
+    data:  { role: 'SEL' },
   })
-  console.log('Created:', user.id, user.email, user.role)
+  console.log('Updated:', user.id, user.email, user.role)
 }
+
+// async function main() {
+//   const user = await prisma.user.create({
+//     data: {
+//       email:    'piyusha.sahni@procdna.com',
+//       name:     'Piyusha Sahni',
+//       role:     'ADMIN',
+//       location: 'INDIA',
+//       isActive: true,
+//     },
+//   })
+//   console.log('Created:', user.id, user.email, user.role)
+// }for creation of new
 
 main()
   .catch(e => { console.error(e); process.exit(1) })

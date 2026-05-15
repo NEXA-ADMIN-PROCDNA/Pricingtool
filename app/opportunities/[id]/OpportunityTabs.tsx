@@ -8,6 +8,7 @@ import { StageBadge } from '@/components/ui/StageBadge'
 import { LOBBadge } from '@/components/ui/LOBBadge'
 import { PricingDrawer } from './PricingDrawer'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { TabSoW } from './TabSoW'
 
 type User = { id: string; name: string; role: string }
 
@@ -32,7 +33,7 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
-const TABS = ['Details', 'Pricing', 'Approvals', 'Comments'] as const
+const TABS = ['Details', 'Pricing', 'Approvals', 'SoW', 'Comments'] as const
 type Tab = typeof TABS[number]
 
 export function OpportunityTabs({
@@ -529,6 +530,19 @@ export function OpportunityTabs({
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Tab: SoW ─────────────────────────────────────────── */}
+      {tab === 'SoW' && (
+        <TabSoW
+          opportunityId={opp.opportunityId}
+          initialPreContractAgreed={(opp as any).preContractAgreed ?? false}
+          existingVerification={
+            (opp.approvalRequests as any[]).find(
+              (a: any) => a.approvalType === 'SOW_VERIFICATION'
+            ) ?? null
+          }
+        />
       )}
 
       {/* ── Tab: Comments ────────────────────────────────────── */}

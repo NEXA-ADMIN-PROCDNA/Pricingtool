@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 
-export type ClientRow = Awaited<ReturnType<typeof getClients>>[number]
+export type ClientRow    = Awaited<ReturnType<typeof getClients>>[number]
+export type ClientDetail = NonNullable<Awaited<ReturnType<typeof getClientDetail>>>
 
 export async function getClients() {
   return prisma.client.findMany({
@@ -9,6 +10,27 @@ export async function getClients() {
       _count: { select: { opportunities: true } },
     },
     orderBy: { createdAt: 'desc' },
+  })
+}
+
+export async function getClientDetail(clientId: string) {
+  return prisma.client.findUnique({
+    where: { clientId },
+    include: {
+      pocs: true,
+      opportunities: {
+        include: {
+          owner: { select: { name: true } },
+          pricingVersions: {
+            where:  { isFinal: true },
+            select: { proposedBillings: true },
+            take: 1,
+          },
+          _count: { select: { comments: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
   })
 }
 

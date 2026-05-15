@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getClients } from '@/lib/db/clients'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AddClientModal } from './AddClientModal'
@@ -83,9 +84,10 @@ export default async function ClientsPage() {
           {/* Client cards grid */}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {clients.map(client => (
-              <div
+              <Link
                 key={client.id}
-                className="group relative rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden"
+                href={`/clients/${client.clientId}`}
+                className="group relative rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden block"
               >
                 <div className={`h-1.5 w-full bg-gradient-to-r ${getGradient(client.industry)}`} />
                 <div className="p-5">
@@ -137,7 +139,7 @@ export default async function ClientsPage() {
                     {client.businessUnit && <span>· {client.businessUnit}</span>}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
 
             {clients.length === 0 && (

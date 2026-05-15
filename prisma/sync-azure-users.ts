@@ -30,11 +30,16 @@ const prisma = new PrismaClient({ adapter })
 // Adjust these to match exactly how your company titles appear in Azure AD.
 const TITLE_TO_ROLE: Array<{ match: string; role: UserRole }> = [
   { match: 'partner',           role: UserRole.PARTNER   },
+  { match: 'Co Founder',          role: UserRole.PARTNER  },
   { match: 'engagement director', role: UserRole.ED      },
   { match: ' ed ',              role: UserRole.ED        },
   { match: 'executive director', role: UserRole.ED       },
   { match: 'director',          role: UserRole.DIRECTOR  },
+  { match: 'D',          role: UserRole.DIRECTOR  },
+  { match: 'Senior Engagement Lead',          role: UserRole.SEL },
   { match: 'sel',               role: UserRole.SEL       },
+  { match: 'Senior Engagement Leader',          role: UserRole.SEL  },
+  { match: 'director',          role: UserRole.DIRECTOR  },
   { match: 'senior engagement', role: UserRole.SEL       },
 ]
 

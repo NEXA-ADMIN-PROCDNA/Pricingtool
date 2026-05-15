@@ -1,125 +1,258 @@
+'use server'
 import { Suspense } from 'react'
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getOpportunities, getDashboardStats } from '@/lib/db/opportunities'
 import { OpportunityTable } from './OpportunityTable'
+import { SearchBar } from './SearchBar'
 import { OpportunityStatus } from '@prisma/client'
 
-function KPICard({
-  label, value, sub, gradient, icon,
-}: {
-  label: string
-  value: string
-  sub?: string
-  gradient: string
-  icon: React.ReactNode
-}) {
+// V8 palette
+const C = {
+  bg:       '#F4F6FB',
+  bgSoft:   '#EAEEF6',
+  rule:     '#D6DCE8',
+  ink:      '#0A1F44',
+  inkMuted: '#6B7591',
+  inkFaint: '#9AA3B8',
+  accent:   '#1E5BB8',
+}
+
+function fmt(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n}`
+}
+
+// Maps DB role enum → banner display label + restriction copy
+const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
+  ADMIN:    { label: 'Admin View',              restriction: 'Full platform access · All data visible' },
+  PARTNER:  { label: 'Partner View',            restriction: 'All Opportunities Visible' },
+  ED:       { label: 'Executive Director View', restriction: 'Restricted to Executive Directors & above' },
+  DIRECTOR: { label: 'Director View',           restriction: 'Restricted to Directors & above' },
+  SEL:      { label: 'SEL View',                restriction: 'Senior Engagement Lead access' },
+}
+
+// Calendar-year fiscal quarter (Jan–Mar = Q1 … Oct–Dec = Q4)
+function NexaWordmark() {
   return (
-    <div className={`relative overflow-hidden rounded-2xl p-5 text-white shadow-lg ${gradient}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-white/70">{label}</p>
-          <p className="mt-1.5 text-3xl font-bold tracking-tight">{value}</p>
-          {sub && <p className="mt-0.5 text-xs text-white/60">{sub}</p>}
-        </div>
-        <div className="rounded-xl bg-white/15 p-2.5">{icon}</div>
-      </div>
-      {/* decorative circle */}
-      <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-white/10" />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{
+        fontFamily: "var(--font-playfair), 'Georgia', serif",
+        fontWeight: 800,
+        fontSize: 28,
+        letterSpacing: '0.18em',
+        color: C.ink,
+        lineHeight: 1,
+        textTransform: 'uppercase',
+      }}>
+        NEXA
+      </span>
+      <span style={{
+        display: 'inline-block', width: 7, height: 7,
+        background: C.accent, transform: 'rotate(45deg)', marginTop: -2, flexShrink: 0,
+      }} />
     </div>
   )
 }
 
-const VALID_STATUS = new Set<string>(['OPEN','WON','LOST','ABANDONED','ARCHIVED'])
+function KPIStrip({ stats }: { stats: Awaited<ReturnType<typeof getDashboardStats>> }) {
+  const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0
+
+  const items = [
+    {
+      label: 'Pipeline Revenue',
+      value: fmt(stats.estimatedRevenue),
+      sub: 'Final pricing + estimate',
+    },
+    {
+      label: 'Weighted Revenue',
+      value: fmt(stats.weightedRevenue),
+      sub: 'Revenue × win probability',
+    },
+    {
+      label: 'Active Engagements',
+      value: String(stats.open),
+      sub: `of ${stats.total} total in cycle`,
+    },
+    {
+      label: 'Won · YTD',
+      value: String(stats.won),
+      sub: `${winRate}% win rate · ${stats.lost} lost`,
+    },
+  ]
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      borderTop: `1px solid ${C.rule}`,
+      borderBottom: `1px solid ${C.rule}`,
+      padding: '24px 0',
+    }}>
+      {items.map((it, i) => (
+        <div key={i} style={{
+          padding: '0 36px',
+          borderRight: i < 3 ? `1px solid ${C.rule}` : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          <div style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: C.inkMuted,
+            fontWeight: 500,
+          }}>{it.label}</div>
+
+          <div style={{
+            fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
+            fontSize: 44,
+            fontWeight: 400,
+            letterSpacing: '-0.02em',
+            color: C.ink,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>{it.value}</div>
+
+          <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, color: C.inkMuted }}>
+            {it.sub}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const VALID_STATUS = new Set<string>(['OPEN', 'WON', 'LOST', 'ABANDONED', 'ARCHIVED'])
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; q?: string }>
 }) {
-  const { status: rawStatus } = await searchParams
+  const { status: rawStatus, q } = await searchParams
   const status = rawStatus && VALID_STATUS.has(rawStatus)
     ? (rawStatus as OpportunityStatus)
     : undefined
 
+  const session = await getServerSession(authOptions)
+  const sessionUser = session?.user as { id?: string; role?: string } | undefined
+  const userId  = sessionUser?.id   ?? ''
+  const role    = sessionUser?.role ?? ''
+  const auth    = userId && role ? { userId, role } : undefined
+
   const [rows, stats] = await Promise.all([
-    getOpportunities(status ?? 'ALL'),
-    getDashboardStats(),
+    getOpportunities(status ?? 'ALL', q, auth),
+    getDashboardStats(auth),
   ])
 
-  function fmt(n: number) {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-    if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
-    return `$${n}`
-  }
+  const banner  = ROLE_BANNER[role] ?? { label: 'BD Tracker', restriction: '' }
+
+  const now     = new Date()
+  const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).toUpperCase()
+  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' IST'
 
   return (
-    <MainLayout
-      title="BD Tracker"
-      action={
-        <Link
-          href="/opportunities/new"
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 transition-colors"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          New Opportunity
-        </Link>
-      }
-    >
-      {/* KPI row */}
-      <div className="grid shrink-0 grid-cols-2 gap-4 lg:grid-cols-4 mb-6">
-        <KPICard
-          label="Estimated Revenue"
-          value={fmt(stats.estimatedRevenue)}
-          sub="final pricing or est. revenue (raw)"
-          gradient="bg-gradient-to-br from-indigo-500 to-indigo-700"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1.8} className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    <MainLayout noPadding>
+      {/* ─── Nexa Header ─── */}
+      <header
+        style={{ background: C.bg, borderBottom: `1px solid ${C.rule}`, padding: '22px 44px 18px', flexShrink: 0 }}
+        className="flex items-center justify-between gap-6"
+      >
+        <div className="flex items-center gap-7">
+          <NexaWordmark />
+          <div style={{ width: 1, height: 32, background: C.rule, flexShrink: 0 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{
+              fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
+              fontSize: 20,
+              fontWeight: 400,
+              color: C.ink,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.2,
+              maxWidth: 340,
+            }}>Your one stop solution for tracking Opportunities</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Search bar */}
+          <Suspense fallback={null}>
+            <SearchBar />
+          </Suspense>
+
+          {/* Bell */}
+          <div style={{ color: C.inkMuted, padding: 6, position: 'relative', display: 'grid', placeItems: 'center' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+              <path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 20a2 2 0 01-3.4 0"/>
             </svg>
-          }
-        />
-        <KPICard
-          label="Weighted Revenue"
-          value={fmt(stats.weightedRevenue)}
-          sub="est. revenue × win probability"
-          gradient="bg-gradient-to-br from-violet-500 to-violet-700"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1.8} className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-            </svg>
-          }
-        />
-        <KPICard
-          label="Open"
-          value={String(stats.open)}
-          sub={`of ${stats.total} total opportunities`}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-700"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1.8} className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-            </svg>
-          }
-        />
-        <KPICard
-          label="Won"
-          value={String(stats.won)}
-          sub={`${stats.lost} lost this period`}
-          gradient="bg-gradient-to-br from-emerald-500 to-emerald-700"
-          icon={
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={1.8} className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-          }
-        />
+            <div style={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: C.accent }} />
+          </div>
+
+          {/* New opportunity */}
+          <Link
+            href="/opportunities/new"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 16px', borderRadius: 4,
+              border: '1px solid #1A4FA0',
+              background: '#2563EB', color: '#F4F6FB',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 13, fontWeight: 500,
+              textDecoration: 'none', whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(37,99,235,0.35)',
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 0.9 }}>+</span>
+            New Opportunity
+          </Link>
+        </div>
+      </header>
+
+      {/* ─── Role Banner ─── */}
+      <div style={{
+        padding: '9px 44px', background: C.ink, color: '#C4CCE0',
+        fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+        fontSize: 10.5, letterSpacing: '0.02em',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        borderBottom: '1px solid #143E80', flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            letterSpacing: '0.16em', textTransform: 'uppercase', color: '#7DA6E3',
+          }}>
+            <span style={{ width: 5, height: 5, background: C.accent, display: 'inline-block', transform: 'rotate(45deg)', flexShrink: 0 }} />
+            {banner.label}
+          </span>
+          {banner.restriction && (
+            <span style={{ color: '#8B95B0' }}>{banner.restriction}</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 22, color: '#8B95B0', letterSpacing: '0.08em' }}>
+          <span>UPDATED {dateStr} · {timeStr}</span>
+        </div>
       </div>
 
-      {/* Table — grows to fill remaining height */}
-      <Suspense fallback={<div className="flex-1 animate-pulse rounded-2xl bg-slate-100" />}>
-        <OpportunityTable rows={rows} />
-      </Suspense>
+      {/* ─── Body ─── */}
+      <div className="flex flex-1 flex-col overflow-hidden min-h-0">
+        {/* KPI Strip */}
+        <div style={{ background: C.bg, flexShrink: 0, padding: '0 44px' }}>
+          <KPIStrip stats={stats} />
+        </div>
+
+        {/* Filter tabs + Table */}
+        <div style={{ padding: '0 44px' }} className="flex flex-1 flex-col min-h-0">
+          <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
+            <OpportunityTable rows={rows} />
+          </Suspense>
+        </div>
+      </div>
     </MainLayout>
   )
 }
