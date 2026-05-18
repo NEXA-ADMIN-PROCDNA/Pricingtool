@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
-import { getSupabase, SOW_BUCKET } from '@/lib/supabase'
+import { getSupabase, getSignedUrl, SOW_BUCKET } from '@/lib/supabase'
 
 const ALLOWED_MIME = new Set([
   'application/pdf',
@@ -32,10 +32,7 @@ export async function GET(
   const withUrls = await Promise.all(
     docs.map(async doc => {
       if (!doc.storagePath) return { ...doc, signedUrl: doc.fileUrl }
-      const { data } = await supabase.storage
-        .from(SOW_BUCKET)
-        .createSignedUrl(doc.storagePath, 3600)
-      return { ...doc, signedUrl: data?.signedUrl ?? null }
+      return { ...doc, signedUrl: await getSignedUrl(SOW_BUCKET, doc.storagePath) }
     })
   )
 
@@ -98,11 +95,7 @@ export async function POST(
     },
   })
 
-  const { data: signed } = await supabase.storage
-    .from(SOW_BUCKET)
-    .createSignedUrl(storagePath, 3600)
-
-  return NextResponse.json({ ...doc, signedUrl: signed?.signedUrl ?? null }, { status: 201 })
+  return NextResponse.json({ ...doc, signedUrl: await getSignedUrl(SOW_BUCKET, storagePath) }, { status: 201 })
 }
 
 // DELETE — soft-delete a SOW document

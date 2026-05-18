@@ -14,11 +14,12 @@ const prisma  = new PrismaClient({ adapter })
 //   })
 //   console.log('Updated:', user.id, user.email, user.role)
 // }
+//  For updating the existing
 
 async function main() {
   const user = await prisma.user.create({
     data: {
-      email:    'admin@procdna.com',
+      email:    'prasanna.welhal@procdna.com',
       name:     'admin',
       role:     'ADMIN',
       location: 'INDIA',

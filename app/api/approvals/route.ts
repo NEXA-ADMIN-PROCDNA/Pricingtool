@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
-import { getSupabase, SOW_BUCKET, PO_BUCKET } from '@/lib/supabase'
+import { getSignedUrl, SOW_BUCKET, PO_BUCKET } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
@@ -55,8 +55,7 @@ export async function GET(req: NextRequest) {
     orderBy: { requestedAt: 'desc' },
   })
 
-  // Generate signed URLs for SOW_VERIFICATION approvals
-  const supabase = getSupabase()
+  // Generate signed URLs for SOW_VERIFICATION approvals (cached 55 min)
   const withUrls = await Promise.all(
     approvals.map(async approval => {
       if (approval.approvalType !== 'SOW_VERIFICATION') return approval
@@ -64,15 +63,13 @@ export async function GET(req: NextRequest) {
       const sowWithUrls = await Promise.all(
         approval.opportunity.sowDocuments.map(async doc => {
           if (!doc.storagePath) return { ...doc, signedUrl: null }
-          const { data } = await supabase.storage.from(SOW_BUCKET).createSignedUrl(doc.storagePath, 3600)
-          return { ...doc, signedUrl: data?.signedUrl ?? null }
+          return { ...doc, signedUrl: await getSignedUrl(SOW_BUCKET, doc.storagePath) }
         })
       )
       const poWithUrls = await Promise.all(
         approval.opportunity.poDocuments.map(async doc => {
           if (!doc.storagePath) return { ...doc, signedUrl: null }
-          const { data } = await supabase.storage.from(PO_BUCKET).createSignedUrl(doc.storagePath, 3600)
-          return { ...doc, signedUrl: data?.signedUrl ?? null }
+          return { ...doc, signedUrl: await getSignedUrl(PO_BUCKET, doc.storagePath) }
         })
       )
 
