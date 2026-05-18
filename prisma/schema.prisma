@@ -67,22 +67,6 @@ enum Location {
   US
 }
 
-// [Q1] 11 fixed job roles — enum prevents typos, gives autocomplete
-// Update this list if new roles are added to the org
-enum JobRole {
-  BUSINESS_ANALYST_TRAINEE
-  BUSINESS_ANALYST
-  SENIOR_BUSINESS_ANALYST
-  TECHNOLOGY_ANALYST_TRAINEE
-  TECHNOLOGY_ANALYST
-  SENIOR_TECHNOLOGY_ANALYST
-  CONSULTANT
-  SENIOR_CONSULTANT
-  ASSOCIATE_ENGAGEMENT_LEAD
-  ENGAGEMENT_LEAD
-  ENGAGEMENT_DIRECTOR
-  PARTNER
-}
 
 enum ApprovalStatus {
   PENDING
@@ -252,15 +236,14 @@ model Opportunity {
 
 // ───────────────────────────────────────────────────────────────
 // RATE CARD
-// [Q1] jobRole now uses JobRole enum — not free text
-// Periodically ingested from a CSV/Excel sheet via admin upload
+// jobRole is free text — matches exact position names from the Excel
 // Old rows never deleted — effectiveTo set when superseded
 // ───────────────────────────────────────────────────────────────
 
 model RateCard {
   id                String    @id @default(cuid())
-  jobRole           JobRole               // [Q1] enum
-  location          Location              // [Q1] enum
+  jobRole           String                // exact position name from Excel
+  location          Location              // INDIA | US
   domain            String?               // e.g. Analytics, Tech, Data Science, MS
   costRatePerHour   Decimal   @db.Decimal(10, 2)
   billRatePerHour   Decimal   @db.Decimal(10, 2)
@@ -274,7 +257,7 @@ model RateCard {
 
   staffingResources StaffingResource[]
 
-  @@unique([jobRole, location, effectiveFrom])
+  @@unique([jobRole, location, domain, effectiveFrom])
   @@map("rate_cards")
 }
 
@@ -317,7 +300,7 @@ model PricingVersion {
 
 // ───────────────────────────────────────────────────────────────
 // STAFFING TAB
-// [Q1] resourceDesignation uses JobRole enum
+// resourceDesignation matches exact position name from rate card
 // Weekly hours stored as StaffingWeekEntry children — one per week
 // ───────────────────────────────────────────────────────────────
 
@@ -328,7 +311,7 @@ model StaffingResource {
   rateCardId             String?
   rateCard               RateCard?      @relation(fields: [rateCardId], references: [id])
 
-  resourceDesignation    JobRole                    // [Q1] enum
+  resourceDesignation    String                     // exact position name from rate card
   location               Location       @default(INDIA)
   domain                 String?                            // copied from rate card
   isBillable             Boolean        @default(true)

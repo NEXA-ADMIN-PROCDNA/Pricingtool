@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "other_costs" ALTER COLUMN "month" DROP NOT NULL,
-ALTER COLUMN "month" SET DATA TYPE TIMESTAMPTZ(3);

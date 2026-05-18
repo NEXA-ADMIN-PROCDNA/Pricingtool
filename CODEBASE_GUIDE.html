@@ -47,7 +47,7 @@
 <body>
 
 <h1>ProcDNA BD Tracker — Codebase Guide</h1>
-<p class="subtitle">Updated May 2026 &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL + Storage &nbsp;·&nbsp; PgBouncer port 6543</p>
+<p class="subtitle">Updated May 2026 (commits 87755ee · c679942 · 0f7c41a) &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL + Storage &nbsp;·&nbsp; PgBouncer port 6543</p>
 
 <!-- ═══════════════════════════════════════════════════════ -->
 <h2>1. High-Level Architecture</h2>
@@ -65,7 +65,7 @@
   <tr><th>Layer</th><th>Technology</th><th>Where</th></tr>
   <tr><td>UI / Pages</td><td>React 19 + Tailwind CSS 4</td><td><code>app/**/page.tsx</code>, <code>app/**/*.tsx</code> components</td></tr>
   <tr><td>API Endpoints</td><td>Next.js Route Handlers</td><td><code>app/api/**/route.ts</code></td></tr>
-  <tr><td>Auth</td><td>NextAuth v4 (email/password)</td><td><code>lib/auth.js</code>, <code>app/api/auth/[...nextauth]/</code></td></tr>
+  <tr><td>Auth</td><td>NextAuth v4 — Azure AD SSO + Credentials fallback</td><td><code>lib/auth.js</code>, <code>app/api/auth/[...nextauth]/</code></td></tr>
   <tr><td>Database Client</td><td>Prisma 7 + pg Pool via PgBouncer</td><td><code>lib/prisma.ts</code></td></tr>
   <tr><td>Database Queries (helpers)</td><td>Typed Prisma queries</td><td><code>lib/db/*.ts</code></td></tr>
   <tr><td>File Storage</td><td>Supabase Storage (private buckets)</td><td><code>lib/supabase.ts</code>, buckets: <code>SoW_bucket</code>, <code>PO_busket</code></td></tr>
@@ -79,10 +79,10 @@
 <table>
   <tr><th>Folder / File</th><th>What it does</th></tr>
   <tr><td><code>app/</code></td><td>Everything Next.js renders or serves. Pages, API routes, layout, global CSS.</td></tr>
-  <tr><td><code>app/layout.tsx</code></td><td>Root HTML shell. Sets the Geist font, page title ("ProcDNA BD Tracker"), and wraps all pages in <code>&lt;Providers&gt;</code> (NextAuth session).</td></tr>
+  <tr><td><code>app/layout.tsx</code></td><td>Root HTML shell. Sets Geist font, page title ("ProcDNA BD Tracker"), wraps all pages in <code>&lt;Providers&gt;</code> (NextAuth session). Google Fonts (Playfair Display, IBM Plex Mono, Instrument Serif) loaded via CSS <code>@import</code> in <code>globals.css</code> — <strong>not</strong> via <code>next/font/google</code> (Turbopack production build incompatibility).</td></tr>
   <tr><td><code>app/Providers.tsx</code></td><td>Client component that wraps the app in <code>SessionProvider</code> so any component can call <code>useSession()</code>.</td></tr>
   <tr><td><code>app/page.tsx</code></td><td>Root route (<code>/</code>). Immediately redirects to <code>/dashboard</code>.</td></tr>
-  <tr><td><code>app/login/</code></td><td>Login page. Collects email and password, calls NextAuth's <code>signIn()</code>.</td></tr>
+  <tr><td><code>app/login/</code></td><td>Login page. Two auth paths: (1) <strong>Sign in with Microsoft</strong> — Azure AD SSO via <code>signIn('azure-ad')</code>; (2) <strong>Sign in with email &amp; password</strong> — toggle reveals email + password form, calls <code>signIn('credentials')</code>. The credentials path uses a shared <code>CREDENTIALS_SECRET</code> env var as the password — any DB-provisioned user can log in with their email + this secret.</td></tr>
   <tr><td><code>app/dashboard/</code></td><td>Main landing after login. Shows KPI cards and the opportunity table with Excel-style per-column filters. Data fetched server-side via <code>lib/db/opportunities.ts</code> with RBAC filtering applied.</td></tr>
   <tr><td><code>app/dashboard/OpportunityTable.tsx</code></td><td>Client component. Renders the opportunity table with multi-column filter popovers. Filters are OR-within-column, AND-across-columns. Popovers use <code>position:fixed</code> + <code>getBoundingClientRect()</code> to escape overflow containers.</td></tr>
   <tr><td><code>app/opportunities/[id]/</code></td><td>Opportunity detail page. Loads full opportunity data server-side, then renders the tabbed layout: Details, Pricing, Approvals, SoW, Comments.</td></tr>
@@ -94,7 +94,7 @@
   <tr><td><code>app/api/</code></td><td>All REST API endpoints. Each subfolder = one resource. Each <code>route.ts</code> = one or more HTTP verbs.</td></tr>
   <tr><td><code>lib/prisma.ts</code></td><td>Singleton Prisma client. Connects to Supabase via a <code>pg.Pool</code> (max 5 connections) through PgBouncer on port 6543.</td></tr>
   <tr><td><code>lib/auth.js</code></td><td>NextAuth config. Email-based login. Puts <code>user.id</code> and <code>user.role</code> into the JWT. Tokens are HMAC-SHA256 signed with <code>NEXTAUTH_SECRET</code> — cannot be forged by clients.</td></tr>
-  <tr><td><code>lib/supabase.ts</code></td><td>Lazy Supabase client factory. Exports <code>getSupabase()</code> (throws at call time if env vars missing, not at module load), <code>SOW_BUCKET = 'SoW_bucket'</code>, <code>PO_BUCKET = 'PO_busket'</code>. Always use service role key server-side.</td></tr>
+  <tr><td><code>lib/supabase.ts</code></td><td>Singleton Supabase client + signed URL cache. <code>getSupabase()</code> returns the same <code>SupabaseClient</code> instance on every call (globalThis pattern, same as Prisma). <code>getSignedUrl(bucket, path)</code> checks an in-memory <code>Map</code> keyed by <code>{bucket}::{path}</code> before calling Supabase — cache TTL is 55 min (URLs are valid 60 min). Cache miss calls Supabase and stores the result. All SoW/PO routes use <code>getSignedUrl()</code> instead of calling <code>createSignedUrl()</code> directly. Also exports <code>SOW_BUCKET = 'SoW_bucket'</code>, <code>PO_BUCKET = 'PO_busket'</code>.</td></tr>
   <tr><td><code>lib/db/opportunities.ts</code></td><td>Heavy-lifting query functions: <code>getOpportunities</code>, <code>getOpportunityDetail</code>, <code>getDashboardStats</code>. All accept optional <code>auth?: AuthCtx</code>. RBAC is enforced here via <code>resolveOwnerFilter(auth)</code>.</td></tr>
   <tr><td><code>lib/db/clients.ts</code></td><td>Query helpers for clients list, dropdown, and <code>getClientDetail(clientId)</code> with full opportunity and POC data.</td></tr>
   <tr><td><code>lib/db/users.ts</code></td><td>Query helper for the user select dropdown.</td></tr>
@@ -436,15 +436,24 @@
 <h2>7. Authentication &amp; RBAC</h2>
 
 <div class="callout">
-  <strong>Library:</strong> NextAuth v4 &nbsp;·&nbsp; <strong>Provider:</strong> Credentials (email + password) &nbsp;·&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
+  <strong>Library:</strong> NextAuth v4 &nbsp;·&nbsp; <strong>Providers:</strong> Azure AD SSO + Credentials fallback &nbsp;·&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
 </div>
 
-<h3>Auth Flow</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User submits email + password on <code>/login</code>.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>CredentialsProvider.authorize()</code> looks up the user by email. If not found, auto-creates with role <code>BD</code>.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">A JWT is issued containing <code>user.id</code> and <code>user.role</code>. Stored in a cookie. Signed with HMAC-SHA256 using <code>NEXTAUTH_SECRET</code> — clients <strong>cannot forge or modify</strong> the token.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">In API routes: <code>getToken({ req })</code> reads and verifies the JWT. Returns <code>null</code> if invalid/missing → route returns 401.</div></div>
-<div class="flow-step"><div class="flow-num">5</div><div class="flow-text">In server components (pages): <code>getServerSession(authOptions)</code> returns the session object with <code>user.id</code> and <code>user.role</code>.</div></div>
+<h3>Auth Flow — Azure AD SSO (primary)</h3>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks "Sign in with Microsoft" on <code>/login</code>. Redirects to Microsoft login.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>signIn</code> callback validates the returned Azure AD profile: user must exist in the DB (<code>prisma.user.findUnique</code>) and have <code>isActive: true</code>. Unknown emails are rejected with <code>/login?error=not_provisioned</code>.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text"><code>jwt</code> callback enriches the token: fetches <code>id</code>, <code>role</code>, <code>location</code> from DB on every sign-in.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">A JWT is issued. Stored in a cookie. Signed with HMAC-SHA256 using <code>NEXTAUTH_SECRET</code> — clients <strong>cannot forge or modify</strong> the token.</div></div>
+
+<h3>Auth Flow — Credentials fallback (admin/service accounts)</h3>
+<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks "Sign in with email &amp; password" toggle, enters email + password.</div></div>
+<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>CredentialsProvider.authorize()</code>: password must exactly match <code>CREDENTIALS_SECRET</code> env var. Email must exist in DB with <code>isActive: true</code>. Both must pass or login is rejected.</div></div>
+<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Same <code>jwt</code> callback fires — role/location loaded from DB. Identical token issued.</div></div>
+<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">If <code>CREDENTIALS_SECRET</code> is not set in env, the credentials form always rejects. Safe to leave unset in environments where you don't need it.</div></div>
+
+<h3>In API Routes &amp; Server Components</h3>
+<div class="flow-step"><div class="flow-num">→</div><div class="flow-text">API routes: <code>getToken({ req })</code> reads and verifies the JWT. Returns <code>null</code> if invalid/missing → route returns 401.</div></div>
+<div class="flow-step"><div class="flow-num">→</div><div class="flow-text">Server components (pages): <code>getServerSession(authOptions)</code> returns the session with <code>user.id</code>, <code>user.role</code>, <code>user.location</code>.</div></div>
 
 <h3>Role Hierarchy &amp; RBAC</h3>
 
@@ -491,12 +500,13 @@
 
 <table>
   <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Client factory</td><td><code>getSupabase()</code> in <code>lib/supabase.ts</code>. Lazy — reads env vars at call time (not module load), so the module imports cleanly even if env vars are missing in some build contexts.</td></tr>
+  <tr><td>Client (singleton)</td><td><code>getSupabase()</code> in <code>lib/supabase.ts</code>. Returns the same <code>SupabaseClient</code> instance on every call via <code>globalThis._supabase</code> (same pattern as Prisma). Throws at call time if env vars are missing, not at module load. Created with <code>auth: { persistSession: false }</code> — no session state server-side.</td></tr>
+  <tr><td>Signed URL cache</td><td><code>getSignedUrl(bucket, path)</code> — use this instead of calling <code>createSignedUrl</code> directly. Checks an in-memory <code>Map&lt;string, { url, expiresAt }&gt;</code>. Cache TTL = 55 min. Signed URLs are valid 60 min, so cached URLs always have ≥5 min remaining when served. First caller hits Supabase; subsequent callers within 55 min get the cached URL instantly.</td></tr>
   <tr><td>Credentials</td><td><code>SUPABASE_URL</code> = <code>https://&lt;project-id&gt;.supabase.co</code> (NOT the dashboard URL). <code>SUPABASE_SERVICE_ROLE_KEY</code> = starts with <code>eyJhb…</code> (JWT), found under Project Settings → API → Service Role Key.</td></tr>
   <tr><td>Buckets</td><td><code>SoW_bucket</code> (Statement of Work) · <code>PO_busket</code> (Purchase Orders). Both are private — no public access.</td></tr>
   <tr><td>Storage path pattern</td><td><code>{opportunityId}/v{version}_{timestamp}.{ext}</code> — e.g. <code>BD-001/v2_1715000000000.pdf</code>.</td></tr>
   <tr><td>Allowed MIME types</td><td>PDF, Word (.doc/.docx), Excel (.xls/.xlsx), PNG, JPEG. Max 20 MB per file.</td></tr>
-  <tr><td>Download access</td><td>Signed URLs generated server-side with 1-hour TTL via <code>supabase.storage.from(bucket).createSignedUrl(path, 3600)</code>. Returned in API responses and used directly as <code>&lt;a href&gt;</code> download links.</td></tr>
+  <tr><td>Download access</td><td>Signed URLs generated server-side with 1-hour TTL. Always call <code>getSignedUrl(bucket, path)</code> from <code>lib/supabase.ts</code> — never call <code>createSignedUrl</code> directly. The cache layer handles deduplication. Returned in API responses and used directly as <code>&lt;a href&gt;</code> download links.</td></tr>
   <tr><td>Soft delete</td><td>Deleting a document sets <code>isActive: false</code> in the DB record. The physical file in Supabase Storage is <strong>not</strong> removed — preserves history. GET endpoints filter by <code>isActive: true</code>.</td></tr>
   <tr><td>Versioning</td><td>Each upload increments <code>version</code>: <code>existing count + 1</code>. All versions are kept in storage, only the active ones are returned by the GET endpoint.</td></tr>
 </table>
@@ -698,7 +708,7 @@
   <tr><td>Production URL</td><td>Stable URL on the Vercel dashboard. Always the latest successful build of <code>main</code>.</td></tr>
   <tr><td>Preview URL</td><td>Each build also gets a unique immutable URL — useful for testing a specific deploy.</td></tr>
   <tr><td>Prisma on deploy</td><td><code>"postinstall": "prisma generate"</code> in <code>package.json</code> — regenerates the TypeScript client on every Vercel build.</td></tr>
-  <tr><td>Environment variables</td><td>Set in Vercel project settings. Must include: <code>DATABASE_URL</code> (port 6543), <code>DIRECT_URL</code> (port 5432), <code>NEXTAUTH_SECRET</code>, <code>NEXTAUTH_URL</code>, <code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, Azure AD credentials.</td></tr>
+  <tr><td>Environment variables</td><td>Set in Vercel project settings. Must include: <code>DATABASE_URL</code> (port 6543), <code>DIRECT_URL</code> (port 5432), <code>NEXTAUTH_SECRET</code>, <code>NEXTAUTH_URL</code>, <code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>AZURE_AD_CLIENT_ID</code>, <code>AZURE_AD_CLIENT_SECRET</code>, <code>AZURE_AD_TENANT_ID</code>, <code>CREDENTIALS_SECRET</code> (shared password for credentials login — omit to disable), <code>MAIL_SENDER</code> (e.g. <code>nexaadmin@procdna.com</code> — for future email notifications).</td></tr>
 </table>
 
 <!-- ═══════════════════════════════════════════════════════ -->
@@ -708,7 +718,7 @@
   <tr><th>Service</th><th>Used for</th><th>Where</th></tr>
   <tr><td>Supabase (PostgreSQL)</td><td>All structured application data. Connection via PgBouncer port 6543.</td><td><code>DATABASE_URL</code> → <code>lib/prisma.ts</code></td></tr>
   <tr><td>Supabase Storage</td><td>Private file buckets for SoW (<code>SoW_bucket</code>) and PO (<code>PO_busket</code>) documents. Server-side only, service role key.</td><td><code>SUPABASE_URL</code> + <code>SUPABASE_SERVICE_ROLE_KEY</code> → <code>lib/supabase.ts</code></td></tr>
-  <tr><td>Azure Active Directory</td><td>Syncing BD users from company directory. Runs during <code>seed.ts</code> only.</td><td><code>prisma/seed.ts</code> via <code>@azure/identity</code> + <code>@microsoft/microsoft-graph-client</code></td></tr>
+  <tr><td>Azure Active Directory</td><td>Two uses: (1) <strong>SSO login</strong> — Azure AD is the primary auth provider in NextAuth (<code>lib/auth.js</code>); (2) <strong>User sync</strong> — <code>prisma/sync-azure-users.ts</code> syncs BD staff from the company directory. App registration: <strong>NEXA</strong>.</td><td><code>AZURE_AD_CLIENT_ID</code>, <code>AZURE_AD_CLIENT_SECRET</code>, <code>AZURE_AD_TENANT_ID</code></td></tr>
   <tr><td>Vercel</td><td>Hosting + auto-deploy from GitHub. <code>postinstall: prisma generate</code> ensures Prisma client is built on every deploy.</td><td>GitHub → Vercel CI (<code>main</code> branch)</td></tr>
 </table>
 
