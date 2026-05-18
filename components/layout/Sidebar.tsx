@@ -188,6 +188,34 @@ export function Sidebar() {
             </Link>
           )
         })}
+
+        {/* Admin-only: Rate Cards */}
+        {role === 'ADMIN' && (() => {
+          const href = '/admin/rate-cards'
+          const active = pathname.startsWith(href)
+          return (
+            <Link
+              href={href}
+              title={!isOpen ? 'Rate Cards' : undefined}
+              className="relative flex items-center gap-3 rounded px-[10px] py-2.5 text-sm transition-colors overflow-hidden"
+              style={{
+                color: active ? C.iconActive : C.iconMuted,
+                borderLeft: active ? `2px solid ${C.accent}` : '2px solid transparent',
+                marginLeft: active ? '-2px' : '0',
+                paddingLeft: active ? '8px' : '10px',
+              }}
+            >
+              <span className="shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px] shrink-0">
+                  <path d="M3 3h18v4H3zM3 10h18v4H3zM3 17h18v4H3z"/>
+                </svg>
+              </span>
+              <span className={`whitespace-nowrap transition-all duration-150 flex-1 text-[13px] font-medium tracking-wide ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
+                Rate Cards
+              </span>
+            </Link>
+          )
+        })()}
       </nav>
 
       {/* Session popover */}

@@ -9,6 +9,7 @@ export async function GET() {
       id: true,
       jobRole: true,
       location: true,
+      domain: true,
       costRatePerHour: true,
       billRatePerHour: true,
     },
