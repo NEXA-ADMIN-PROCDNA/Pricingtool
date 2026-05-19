@@ -102,12 +102,15 @@ export async function POST(
     const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_PENDING' : 'APPROVAL_PENDING'
     await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: newStage } })
 
-    const context = computeContext(
-      finalVersion?.staffingResources ?? [],
-      otherCosts,
-      opp.startDate,
-      opp.endDate,
-    )
+    const context = {
+      ...computeContext(
+        finalVersion?.staffingResources ?? [],
+        otherCosts,
+        opp.startDate,
+        opp.endDate,
+      ),
+      versionNumber: finalVersion?.versionNumber ?? undefined,
+    }
 
     // Fire-and-forget — don't let mail failure block the response
     mailApprovalRequested({

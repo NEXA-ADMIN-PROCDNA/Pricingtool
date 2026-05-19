@@ -357,7 +357,7 @@ export function OpportunityTabs({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-800">Version {v.versionNumber}</span>
+                            <span className="text-sm font-semibold text-slate-800">V{v.versionNumber}</span>
                             {v.isFinal && (
                               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
                                 Final
@@ -470,7 +470,8 @@ export function OpportunityTabs({
 
           {/* Confirm modal */}
           {approvalConfirm && (() => {
-            const name = users.find(u => u.id === approverId)?.name ?? 'the selected approver'
+            const name     = users.find(u => u.id === approverId)?.name ?? 'the selected approver'
+            const finalV   = pricingVersions.find(v => v.isFinal)
             return (
               <>
                 <div
@@ -504,6 +505,16 @@ export function OpportunityTabs({
                         This will send a mail to <strong style={{ color: '#0A1F44' }}>{name}</strong>.
                         If the request is rejected, <strong style={{ color: '#0A1F44' }}>you will have to redo the pricing</strong>.
                       </p>
+                      {finalV && (
+                        <p style={{ marginTop: 10, fontSize: 12, color: '#1E5BB8', background: '#EFF4FF', border: '1px solid #C7D7F8', borderRadius: 7, padding: '6px 10px', display: 'inline-block' }}>
+                          <strong>V{finalV.versionNumber}</strong> is marked as final and will be sent for review.
+                        </p>
+                      )}
+                      {!finalV && (
+                        <p style={{ marginTop: 10, fontSize: 12, color: '#C6432F', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 7, padding: '6px 10px', display: 'inline-block' }}>
+                          No version is marked as final. The approver will see no pricing data.
+                        </p>
+                      )}
                     </div>
                   </div>
                   {approvalError && (

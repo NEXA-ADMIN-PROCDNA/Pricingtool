@@ -106,21 +106,15 @@ function metaRow(label: string, value: string): string {
 // ── Email templates ──────────────────────────────────────────────
 
 export type ApprovalMailContext = {
+  versionNumber?: number
   startDate?: string | null
   endDate?:   string | null
-  /** A — Total Revenue (staffing + other cost revenue) */
   a?:    number
-  /** D — Gross Margin */
   d?:    number
-  /** D% — Gross Margin % */
   dPct?: number
-  /** E — Discount / Premium % vs recommended rate */
   ePct?: number
-  /** F — Total Hours */
   f?:    number
-  /** G — Offshore Ratio % */
   g?:    number
-  /** H — Blended Rate / hr */
   h?:    number
 }
 
@@ -137,14 +131,15 @@ function financialRows(ctx: ApprovalMailContext): string {
   const sign = (n: number) => n > 0 ? `+${n.toFixed(1)}%` : `${n.toFixed(1)}%`
   const color = (n: number) => n >= 0 ? '#16A34A' : '#DC2626'
   return [
+    ctx.versionNumber != null ? metaRow('Pricing Version', `<strong>V${ctx.versionNumber}</strong>`) : '',
     metaRow('Start Date', fmtDate2(ctx.startDate)),
     metaRow('End Date',   fmtDate2(ctx.endDate)),
-    ctx.a    != null ? metaRow('A — Total Revenue',       `<strong>${fmtMoney(ctx.a)}</strong>`) : '',
-    ctx.d    != null ? metaRow('D — Gross Margin',        `<strong>${fmtMoney(ctx.d)}</strong>${ctx.dPct != null ? ` <span style="color:${color(ctx.dPct)};font-size:11px;">(${ctx.dPct.toFixed(1)}%)</span>` : ''}`) : '',
-    ctx.ePct != null ? metaRow('E — Discount / Premium',  `<span style="color:${color(ctx.ePct)};font-weight:600;">${sign(ctx.ePct)}</span> vs recommended`) : '',
-    ctx.f    != null ? metaRow('F — Total Hours',         `${ctx.f.toFixed(1)} h`) : '',
-    ctx.g    != null ? metaRow('G — Offshore Ratio',      `${ctx.g.toFixed(1)}%`) : '',
-    ctx.h    != null ? metaRow('H — Blended Rate / hr',   `$${ctx.h.toFixed(2)}/hr`) : '',
+    ctx.a    != null ? metaRow('Total Revenue',       `<strong>${fmtMoney(ctx.a)}</strong>`) : '',
+    ctx.d    != null ? metaRow('Gross Margin',        `<strong>${fmtMoney(ctx.d)}</strong>${ctx.dPct != null ? ` <span style="color:${color(ctx.dPct)};font-size:11px;">(${ctx.dPct.toFixed(1)}%)</span>` : ''}`) : '',
+    ctx.ePct != null ? metaRow('Discount / Premium',  `<span style="color:${color(ctx.ePct)};font-weight:600;">${sign(ctx.ePct)}</span> vs recommended`) : '',
+    ctx.f    != null ? metaRow('Total Hours',         `${ctx.f.toFixed(1)} h`) : '',
+    ctx.g    != null ? metaRow('Offshore Ratio',      `${ctx.g.toFixed(1)}%`) : '',
+    ctx.h    != null ? metaRow('Blended Rate / hr',   `$${ctx.h.toFixed(2)}/hr`) : '',
   ].join('')
 }
 

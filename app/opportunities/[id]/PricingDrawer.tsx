@@ -336,7 +336,7 @@ export function PricingDrawer({
               </div>
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  Pricing Version {version.versionNumber}
+                  Pricing V{version.versionNumber}
                   {version.isFinal && (
                     <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
                       Final
