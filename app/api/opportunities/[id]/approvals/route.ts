@@ -69,18 +69,7 @@ export async function POST(
     })
     if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
 
-    const [approval, finalVersion, otherCosts] = await Promise.all([
-      prisma.approvalRequest.create({
-        data: {
-          opportunityId: opp.id,
-          requestedById,
-          approverId,
-          approvalType,
-          status: 'PENDING',
-          requestedAt: new Date(),
-        },
-        include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
-      }),
+    const [finalVersion, otherCosts] = await Promise.all([
       prisma.pricingVersion.findFirst({
         where:   { opportunityId: opp.id, isFinal: true },
         include: {
@@ -98,6 +87,19 @@ export async function POST(
         select: { amount: true, isBillable: true, markupPct: true },
       }),
     ])
+
+    const approval = await prisma.approvalRequest.create({
+      data: {
+        opportunityId:       opp.id,
+        requestedById,
+        approverId,
+        approvalType,
+        status:              'PENDING',
+        requestedAt:         new Date(),
+        pricingVersionNumber: finalVersion?.versionNumber ?? null,
+      },
+      include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
+    })
 
     const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_PENDING' : 'APPROVAL_PENDING'
     await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: newStage } })

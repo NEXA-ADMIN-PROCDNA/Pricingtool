@@ -190,11 +190,30 @@ export async function mailApprovalRequested({
     ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
   `)
 
+  // Approver — full email with Approve / Reject buttons
   await sendMail({
     to:      approverEmail,
-    cc:      requesterEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested`,
     html,
+  })
+
+  // Requester — notification only, no action links
+  const notifyHtml = wrap(`
+    <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Approval request submitted</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
+    <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
+      ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
+      ${metaRow('Client', clientName)}
+      ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
+      ${metaRow('Sent to', approverName)}
+    </table>
+    <p style="margin:16px 0 0;font-size:12px;color:#6B7591;">You will be notified by email once a decision is made.</p>
+    ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
+  `)
+  await sendMail({
+    to:      requesterEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} submitted`,
+    html:    notifyHtml,
   })
 }
 

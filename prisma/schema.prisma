@@ -441,11 +441,12 @@ model ApprovalRequest {
   requestedBy     User           @relation("Requester", fields: [requestedById], references: [id])
   approverId      String
   approver        User           @relation("Approver", fields: [approverId], references: [id])
-  approvalType    String         @default("PRICING")   // "PRICING" | "SOW_VERIFICATION"
-  status          ApprovalStatus @default(PENDING)
-  rejectionReason String?        @db.Text
-  requestedAt     DateTime       @default(now())
-  decidedAt       DateTime?
+  approvalType          String         @default("PRICING")   // "PRICING" | "SOW_VERIFICATION"
+  status                ApprovalStatus @default(PENDING)
+  rejectionReason       String?        @db.Text
+  pricingVersionNumber  Int?
+  requestedAt           DateTime       @default(now())
+  decidedAt             DateTime?
 
   @@map("approval_requests")
 }

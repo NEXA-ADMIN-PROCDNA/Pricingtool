@@ -655,9 +655,16 @@ export function OpportunityTabs({
                   <div key={ar.id} className="rounded-xl border border-slate-100 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
-                        <p className="text-sm text-slate-700">
-                          Requested by <span className="font-semibold">{ar.requestedBy.name}</span>
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-slate-700">
+                            Requested by <span className="font-semibold">{ar.requestedBy.name}</span>
+                          </p>
+                          {ar.pricingVersionNumber != null && (
+                            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 ring-1 ring-indigo-200">
+                              V{ar.pricingVersionNumber}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-slate-700">
                           Approver: <span className="font-semibold">{ar.approver.name}</span>
                           <span className="ml-1 text-xs text-slate-400">({ar.approver.role})</span>

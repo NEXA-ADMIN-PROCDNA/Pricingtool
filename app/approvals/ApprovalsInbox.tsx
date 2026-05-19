@@ -28,6 +28,7 @@ type ApprovalItem = {
   requestedAt: string
   decidedAt: string | null
   rejectionReason: string | null
+  pricingVersionNumber: number | null
   requestedBy: { name: string; role: string }
   opportunity: {
     opportunityId: string
@@ -220,7 +221,12 @@ function ApprovalCard({
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
           <span><span className="text-slate-400">Client:</span> <span className="font-semibold text-slate-700">{item.opportunity.client.name}</span></span>
           <span><span className="text-slate-400">Period:</span> <span className="font-semibold text-slate-700">{fmtDate(item.opportunity.startDate)} – {fmtDate(item.opportunity.endDate)}</span></span>
-          <span><span className="text-slate-400">Requested by:</span> <span className="font-semibold text-slate-700">{item.requestedBy.name}</span> <span className="text-slate-400">({item.requestedBy.role})</span></span>
+          <span>
+            <span className="text-slate-400">Requested by:</span> <span className="font-semibold text-slate-700">{item.requestedBy.name}</span> <span className="text-slate-400">({item.requestedBy.role})</span>
+            {item.pricingVersionNumber != null && (
+              <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 ring-1 ring-indigo-200">V{item.pricingVersionNumber}</span>
+            )}
+          </span>
           <span><span className="text-slate-400">On:</span> <span className="font-semibold text-slate-700">{fmtDate(item.requestedAt)}</span></span>
           {item.decidedAt && (
             <span><span className="text-slate-400">Decided:</span> <span className="font-semibold text-slate-700">{fmtDate(item.decidedAt)}</span></span>
