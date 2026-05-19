@@ -53,6 +53,11 @@ export async function PATCH(
           where: { opportunityId: current.opportunityId, isFinal: true },
           data: { isFinal: false },
         })
+        // Advance stage to PRICE_LINKING_PENDING only from LEAD
+        await prisma.opportunity.updateMany({
+          where: { id: current.opportunityId, stage: 'LEAD' },
+          data: { stage: 'PRICE_LINKING_PENDING' },
+        })
       }
     }
 

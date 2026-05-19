@@ -225,6 +225,7 @@ export function TabSoW({
   const [approverId, setApproverId]       = useState('')
   const [submitting, setSubmitting]       = useState(false)
   const [submitError, setSubmitError]     = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen]     = useState(false)
 
   const anyCondition = precontract || sowCount > 0 || poCount > 0
   const canSubmit = anyCondition && (!verification || verification.status === 'REJECTED')
@@ -263,6 +264,7 @@ export function TabSoW({
       const data = await res.json() as { id: string; approver: { name: string } }
       setVerification({ id: data.id, status: 'PENDING', approver: data.approver })
       setApproverId('')
+      setConfirmOpen(false)
     } else {
       const body = await res.json().catch(() => ({})) as { error?: string }
       setSubmitError(body.error ?? 'Failed to submit')
@@ -270,8 +272,77 @@ export function TabSoW({
     setSubmitting(false)
   }
 
+  const approverName = users.find(u => u.id === approverId)?.name ?? 'the selected approver'
+
   return (
     <div style={{ padding: '28px 32px', maxWidth: 680 }}>
+
+      {/* ── Confirm modal ── */}
+      {confirmOpen && (
+        <>
+          <div
+            onClick={() => setConfirmOpen(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              background: 'rgba(10,31,68,0.45)', backdropFilter: 'blur(2px)',
+            }}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', zIndex: 201,
+            transform: 'translate(-50%,-50%)',
+            background: '#fff', borderRadius: 14, padding: '28px 28px 24px',
+            boxShadow: '0 20px 60px rgba(10,31,68,0.18)',
+            width: 400, maxWidth: 'calc(100vw - 32px)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="#EA8C00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
+                </svg>
+              </div>
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                  Submit for verification?
+                </p>
+                <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.55 }}>
+                  This will send a verification request mail to <strong style={{ color: '#0A1F44' }}>{approverName}</strong>.
+                  Once submitted, <strong style={{ color: '#0A1F44' }}>this request cannot be undone</strong>.
+                </p>
+              </div>
+            </div>
+            {submitError && (
+              <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{submitError}</p>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => { setConfirmOpen(false); setSubmitError(null) }}
+                disabled={submitting}
+                style={{
+                  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: '#F4F6FB', color: '#3A4A6A',
+                  border: '1px solid #D6DCE8', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitVerification}
+                disabled={submitting}
+                style={{
+                  padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                  background: submitting ? '#E2E6EE' : '#2563EB', color: submitting ? '#9AA3B8' : '#fff',
+                  border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submitting ? 'Submitting…' : 'Yes, submit'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Won banner */}
       {verification?.status === 'APPROVED' && (
@@ -403,7 +474,7 @@ export function TabSoW({
                   </select>
                 </div>
                 <button
-                  onClick={submitVerification}
+                  onClick={() => setConfirmOpen(true)}
                   disabled={!approverId || submitting}
                   style={{
                     padding: '9px 20px', borderRadius: 8, fontSize: 13,
@@ -413,7 +484,7 @@ export function TabSoW({
                     border: 'none', transition: 'all 150ms', whiteSpace: 'nowrap',
                   }}
                 >
-                  {submitting ? 'Submitting…' : 'Submit for Verification'}
+                  Submit for Verification
                 </button>
               </div>
               {submitError && (

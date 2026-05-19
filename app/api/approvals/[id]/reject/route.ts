@@ -35,6 +35,8 @@ export async function POST(
     },
   })
 
+  await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: 'LEAD' } })
+
   mailApprovalRejected({
     requesterEmail:  approval.requestedBy.email,
     requesterName:   approval.requestedBy.name,

@@ -91,6 +91,8 @@ export async function POST(
     },
   })
 
+  await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: 'TO_BE_ARCHIVED' } })
+
   return NextResponse.json({ ...doc, signedUrl: await getSignedUrl(PO_BUCKET, storagePath) }, { status: 201 })
 }
 

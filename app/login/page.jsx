@@ -80,12 +80,17 @@ function LoginForm() {
 
       {/* Credentials toggle / form */}
       {!showCredForm ? (
-        <button
-          onClick={() => setShowCred(true)}
-          className="w-full text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
-        >
-          Sign in with email &amp; password
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowCred(true)}
+            className="w-full text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
+          >
+            Sign in with email &amp; password
+          </button>
+          <p className="text-center text-xs text-slate-400">
+            SEL and above — use <span className="font-medium text-slate-500">Sign in with Microsoft</span>
+          </p>
+        </div>
       ) : (
         <form onSubmit={handleCredentials} className="space-y-3">
           <input
@@ -94,7 +99,11 @@ function LoginForm() {
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
+              credError
+                ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-100'
+            }`}
           />
           <input
             type="password"
@@ -102,14 +111,30 @@ function LoginForm() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
-            className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
+              credError
+                ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-100'
+            }`}
           />
+          {credError && (
+            <p className="text-xs text-red-600 flex items-center gap-1.5">
+              <span>⚠</span> Incorrect ID or password.
+            </p>
+          )}
           <button
             type="submit"
             disabled={loading}
             className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowCred(false); setCredError(null) }}
+            className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            ← Back
           </button>
         </form>
       )}

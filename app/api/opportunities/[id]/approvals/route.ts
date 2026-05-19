@@ -32,6 +32,9 @@ export async function POST(
       include: { requestedBy: { select: { name: true } }, approver: { select: { name: true, email: true } } },
     })
 
+    const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_PENDING' : 'APPROVAL_PENDING'
+    await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: newStage } })
+
     // Fire-and-forget — don't let mail failure block the response
     mailApprovalRequested({
       approverEmail:   approval.approver.email,

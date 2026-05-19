@@ -33,7 +33,7 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
-const TABS = ['Details', 'Pricing', 'Approvals', 'SoW', 'Comments'] as const
+const TABS = ['Details', 'Pricing', 'Pricing Approval', 'SOW / PO', 'Comments'] as const
 type Tab = typeof TABS[number]
 
 export function OpportunityTabs({
@@ -102,9 +102,10 @@ export function OpportunityTabs({
     }
   }
 
-  const [approverId, setApproverId] = useState('')
+  const [approverId, setApproverId]           = useState('')
   const [approvalLoading, setApprovalLoading] = useState(false)
   const [approvalError, setApprovalError]     = useState<string | null>(null)
+  const [approvalConfirm, setApprovalConfirm] = useState(false)
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
 
@@ -157,6 +158,7 @@ export function OpportunityTabs({
       const created = await res.json()
       setApprovals((prev: ApprovalItem[]) => [created as ApprovalItem, ...prev])
       setApproverId('')
+      setApprovalConfirm(false)
     } catch {
       setApprovalError('Network error')
     } finally {
@@ -184,7 +186,7 @@ export function OpportunityTabs({
                 {pricingVersions.length}
               </span>
             )}
-            {t === 'Approvals' && approvals.length > 0 && (
+            {t === 'Pricing Approval' && approvals.length > 0 && (
               <span className="ml-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5">
                 {approvals.length}
               </span>
@@ -462,9 +464,81 @@ export function OpportunityTabs({
         </div>
       )}
 
-      {/* ── Tab: Approvals ───────────────────────────────────── */}
-      {tab === 'Approvals' && (
+      {/* ── Tab: Pricing Approval ────────────────────────────── */}
+      {tab === 'Pricing Approval' && (
         <div className="max-w-2xl space-y-5">
+
+          {/* Confirm modal */}
+          {approvalConfirm && (() => {
+            const name = users.find(u => u.id === approverId)?.name ?? 'the selected approver'
+            return (
+              <>
+                <div
+                  onClick={() => setApprovalConfirm(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 200,
+                    background: 'rgba(10,31,68,0.45)', backdropFilter: 'blur(2px)',
+                  }}
+                />
+                <div style={{
+                  position: 'fixed', top: '50%', left: '50%', zIndex: 201,
+                  transform: 'translate(-50%,-50%)',
+                  background: '#fff', borderRadius: 14, padding: '28px 28px 24px',
+                  boxShadow: '0 20px 60px rgba(10,31,68,0.18)',
+                  width: 420, maxWidth: 'calc(100vw - 32px)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                      background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#EA8C00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                        Send pricing approval request?
+                      </p>
+                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                        This will send a mail to <strong style={{ color: '#0A1F44' }}>{name}</strong>.
+                        If the request is rejected, <strong style={{ color: '#0A1F44' }}>you will have to redo the pricing</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  {approvalError && (
+                    <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{approvalError}</p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                      onClick={() => { setApprovalConfirm(false); setApprovalError(null) }}
+                      disabled={approvalLoading}
+                      style={{
+                        padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        background: '#F4F6FB', color: '#3A4A6A',
+                        border: '1px solid #D6DCE8', cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={submitApproval}
+                      disabled={approvalLoading}
+                      style={{
+                        padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                        background: approvalLoading ? '#E2E6EE' : '#4F46E5',
+                        color: approvalLoading ? '#9AA3B8' : '#fff',
+                        border: 'none', cursor: approvalLoading ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {approvalLoading ? 'Sending…' : 'Yes, send'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )
+          })()}
+
           {/* Request new approval */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Request Approval</h2>
@@ -479,11 +553,11 @@ export function OpportunityTabs({
                 />
               </div>
               <button
-                onClick={submitApproval}
+                onClick={() => setApprovalConfirm(true)}
                 disabled={!approverId || approvalLoading}
                 className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
               >
-                {approvalLoading ? 'Sending…' : 'Send Request'}
+                Send Request
               </button>
             </div>
             {approvalError && (
@@ -533,7 +607,7 @@ export function OpportunityTabs({
       )}
 
       {/* ── Tab: SoW ─────────────────────────────────────────── */}
-      {tab === 'SoW' && (
+      {tab === 'SOW / PO' && (
         <TabSoW
           opportunityId={opp.opportunityId}
           initialPreContractAgreed={(opp as any).preContractAgreed ?? false}

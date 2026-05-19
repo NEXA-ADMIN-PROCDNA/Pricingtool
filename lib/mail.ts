@@ -20,23 +20,46 @@ async function getToken(): Promise<string> {
   return token
 }
 
+// ── Thread ID ────────────────────────────────────────────────────
+// Deterministic per opportunity — no DB storage needed.
+// All emails for the same opportunity share this anchor so clients
+// group them into a single thread.
+function threadMessageId(opportunityId: string): string {
+  const domain = (process.env.MAIL_SENDER ?? 'nexa').split('@')[1] ?? 'procdna.com'
+  return `<nexa-${opportunityId}@${domain}>`
+}
+
 // ── Core send function ───────────────────────────────────────────
 async function sendMail({
   to,
   cc,
   subject,
   html,
+  opportunityId,
+  isFirstInThread = false,
 }: {
   to: string | string[]
   cc?: string | string[]
   subject: string
   html: string
+  opportunityId: string
+  isFirstInThread?: boolean
 }) {
   const sender = process.env.MAIL_SENDER
   if (!sender) { console.warn('[mail] MAIL_SENDER not set — skipping'); return }
 
-  const toList  = (Array.isArray(to)  ? to  : [to ]).map(a => ({ emailAddress: { address: a } }))
-  const ccList  = (Array.isArray(cc)  ? cc  : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
+  const toList = (Array.isArray(to) ? to : [to]).map(a => ({ emailAddress: { address: a } }))
+  const ccList = (Array.isArray(cc) ? cc : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
+  const anchor = threadMessageId(opportunityId)
+
+  // First email sets the anchor Message-ID.
+  // Subsequent emails reference it so clients thread them together.
+  const internetMessageHeaders = isFirstInThread
+    ? [{ name: 'Message-ID', value: anchor }]
+    : [
+        { name: 'In-Reply-To', value: anchor },
+        { name: 'References',  value: anchor },
+      ]
 
   try {
     const token = await getToken()
@@ -46,8 +69,9 @@ async function sendMail({
       body: JSON.stringify({
         message: {
           subject,
-          body:          { contentType: 'HTML', content: html },
-          toRecipients:  toList,
+          body:                   { contentType: 'HTML', content: html },
+          toRecipients:           toList,
+          internetMessageHeaders,
           ...(ccList.length ? { ccRecipients: ccList } : {}),
         },
         saveToSentItems: false,
@@ -63,7 +87,7 @@ async function sendMail({
 }
 
 // ── Brand helpers ────────────────────────────────────────────────
-const BASE_URL = process.env.NEXTAUTH_URL ?? 'https://nexabd.vercel.app'
+const BASE_URL = (process.env.NEXTAUTH_URL ?? 'https://pricingtoolprimero.vercel.app').replace(/\/$/, '')
 
 function wrap(body: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#F4F6FB;font-family:'Segoe UI',system-ui,sans-serif;">
@@ -134,7 +158,13 @@ export async function mailApprovalRequested({
     ${btn('Review in NEXA →', `${BASE_URL}/approvals`)}
   `)
 
-  await sendMail({ to: approverEmail, subject: `[NEXA] ${typeLabel} requested — ${opportunityId}`, html })
+  await sendMail({
+    to: approverEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested`,
+    html,
+    opportunityId,
+    isFirstInThread: true,
+  })
 }
 
 export async function mailApprovalApproved({
@@ -164,7 +194,12 @@ export async function mailApprovalApproved({
     ${btn('Open opportunity →', `${BASE_URL}/opportunities/${opportunityId}`)}
   `)
 
-  await sendMail({ to: requesterEmail, subject: `[NEXA] Approved — ${opportunityName} (${opportunityId})`, html })
+  await sendMail({
+    to: requesterEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} approved`,
+    html,
+    opportunityId,
+  })
 }
 
 export async function mailApprovalRejected({
@@ -197,5 +232,10 @@ export async function mailApprovalRejected({
     ${btn('Open opportunity →', `${BASE_URL}/opportunities/${opportunityId}`)}
   `)
 
-  await sendMail({ to: requesterEmail, subject: `[NEXA] Rejected — ${opportunityName} (${opportunityId})`, html })
+  await sendMail({
+    to: requesterEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} rejected`,
+    html,
+    opportunityId,
+  })
 }
