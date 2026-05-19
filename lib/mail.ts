@@ -128,22 +128,69 @@ function metaRow(label: string, value: string): string {
 
 // ── Email templates ──────────────────────────────────────────────
 
+export type ApprovalMailContext = {
+  startDate?: string | null
+  endDate?:   string | null
+  /** A — Total Revenue (staffing + other cost revenue) */
+  a?:    number
+  /** D — Gross Margin */
+  d?:    number
+  /** D% — Gross Margin % */
+  dPct?: number
+  /** E — Discount / Premium % vs recommended rate */
+  ePct?: number
+  /** F — Total Hours */
+  f?:    number
+  /** G — Offshore Ratio % */
+  g?:    number
+  /** H — Blended Rate / hr */
+  h?:    number
+}
+
+function fmtMoney(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n.toFixed(0)}`
+}
+function fmtDate2(d: string | null | undefined) {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+function financialRows(ctx: ApprovalMailContext): string {
+  const sign = (n: number) => n > 0 ? `+${n.toFixed(1)}%` : `${n.toFixed(1)}%`
+  const color = (n: number) => n >= 0 ? '#16A34A' : '#DC2626'
+  return [
+    metaRow('Start Date', fmtDate2(ctx.startDate)),
+    metaRow('End Date',   fmtDate2(ctx.endDate)),
+    ctx.a    != null ? metaRow('A — Total Revenue',       `<strong>${fmtMoney(ctx.a)}</strong>`) : '',
+    ctx.d    != null ? metaRow('D — Gross Margin',        `<strong>${fmtMoney(ctx.d)}</strong>${ctx.dPct != null ? ` <span style="color:${color(ctx.dPct)};font-size:11px;">(${ctx.dPct.toFixed(1)}%)</span>` : ''}`) : '',
+    ctx.ePct != null ? metaRow('E — Discount / Premium',  `<span style="color:${color(ctx.ePct)};font-weight:600;">${sign(ctx.ePct)}</span> vs recommended`) : '',
+    ctx.f    != null ? metaRow('F — Total Hours',         `${ctx.f.toFixed(1)} h`) : '',
+    ctx.g    != null ? metaRow('G — Offshore Ratio',      `${ctx.g.toFixed(1)}%`) : '',
+    ctx.h    != null ? metaRow('H — Blended Rate / hr',   `$${ctx.h.toFixed(2)}/hr`) : '',
+  ].join('')
+}
+
 export async function mailApprovalRequested({
   approverEmail,
   approverName,
+  requesterEmail,
   requesterName,
   opportunityId,
   opportunityName,
   clientName,
   approvalType,
+  context,
 }: {
-  approverEmail: string
-  approverName:  string
-  requesterName: string
-  opportunityId: string
+  approverEmail:   string
+  approverName:    string
+  requesterEmail:  string
+  requesterName:   string
+  opportunityId:   string
   opportunityName: string
-  clientName: string
-  approvalType: string
+  clientName:      string
+  approvalType:    string
+  context?:        ApprovalMailContext
 }) {
   const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const html = wrap(`
@@ -154,12 +201,14 @@ export async function mailApprovalRequested({
       ${metaRow('Client', clientName)}
       ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
       ${metaRow('Requested by', requesterName)}
+      ${context ? financialRows(context) : ''}
     </table>
     ${btn('Review in NEXA →', `${BASE_URL}/approvals`)}
   `)
 
   await sendMail({
     to: approverEmail,
+    cc: requesterEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested`,
     html,
     opportunityId,
@@ -170,17 +219,19 @@ export async function mailApprovalRequested({
 export async function mailApprovalApproved({
   requesterEmail,
   requesterName,
+  approverEmail,
   approverName,
   opportunityId,
   opportunityName,
   approvalType,
 }: {
-  requesterEmail: string
-  requesterName:  string
-  approverName:   string
-  opportunityId:  string
+  requesterEmail:  string
+  requesterName:   string
+  approverEmail:   string
+  approverName:    string
+  opportunityId:   string
   opportunityName: string
-  approvalType:   string
+  approvalType:    string
 }) {
   const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const html = wrap(`
@@ -196,6 +247,7 @@ export async function mailApprovalApproved({
 
   await sendMail({
     to: requesterEmail,
+    cc: approverEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} approved`,
     html,
     opportunityId,
@@ -205,19 +257,21 @@ export async function mailApprovalApproved({
 export async function mailApprovalRejected({
   requesterEmail,
   requesterName,
+  approverEmail,
   approverName,
   opportunityId,
   opportunityName,
   approvalType,
   reason,
 }: {
-  requesterEmail: string
-  requesterName:  string
-  approverName:   string
-  opportunityId:  string
+  requesterEmail:  string
+  requesterName:   string
+  approverEmail:   string
+  approverName:    string
+  opportunityId:   string
   opportunityName: string
-  approvalType:   string
-  reason?:        string
+  approvalType:    string
+  reason?:         string
 }) {
   const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const html = wrap(`
@@ -234,6 +288,7 @@ export async function mailApprovalRejected({
 
   await sendMail({
     to: requesterEmail,
+    cc: approverEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} rejected`,
     html,
     opportunityId,

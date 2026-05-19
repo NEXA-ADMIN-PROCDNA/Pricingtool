@@ -17,7 +17,7 @@ export async function POST(
     where:   { id },
     include: {
       requestedBy: { select: { name: true, email: true } },
-      approver:    { select: { name: true } },
+      approver:    { select: { name: true, email: true } },
       opportunity: { select: { opportunityId: true, opportunityName: true } },
     },
   })
@@ -39,6 +39,7 @@ export async function POST(
   mailApprovalApproved({
     requesterEmail:  approval.requestedBy.email,
     requesterName:   approval.requestedBy.name,
+    approverEmail:   approval.approver.email,
     approverName:    approval.approver.name,
     opportunityId:   approval.opportunity.opportunityId,
     opportunityName: approval.opportunity.opportunityName,
