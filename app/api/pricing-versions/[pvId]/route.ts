@@ -46,18 +46,35 @@ export async function PATCH(
     const body = await req.json()
 
     if (body.isFinal === true) {
-      // Unset isFinal on all sibling versions, then set this one
-      const current = await prisma.pricingVersion.findUnique({ where: { id: pvId }, select: { opportunityId: true } })
+      const current = await prisma.pricingVersion.findUnique({
+        where:  { id: pvId },
+        select: { opportunityId: true, isFinal: true },
+      })
       if (current) {
+        // Unset isFinal on all sibling versions
         await prisma.pricingVersion.updateMany({
           where: { opportunityId: current.opportunityId, isFinal: true },
-          data: { isFinal: false },
+          data:  { isFinal: false },
         })
-        // Advance stage to PRICE_LINKING_PENDING only from LEAD
-        await prisma.opportunity.updateMany({
-          where: { id: current.opportunityId, stage: 'LEAD' },
-          data: { stage: 'PRICE_LINKING_PENDING' },
+
+        const opp = await prisma.opportunity.findUnique({
+          where:  { id: current.opportunityId },
+          select: { stage: true },
         })
+
+        if (opp?.stage === 'STATUS_CHANGE_PENDING') {
+          // Pricing approval was already given — changing final version invalidates it
+          await prisma.opportunity.update({
+            where: { id: current.opportunityId },
+            data:  { stage: 'LEAD' },
+          })
+        } else if (opp?.stage === 'LEAD') {
+          // Advance stage only from LEAD
+          await prisma.opportunity.update({
+            where: { id: current.opportunityId },
+            data:  { stage: 'PRICE_LINKING_PENDING' },
+          })
+        }
       }
     }
 

@@ -77,12 +77,18 @@ export function OpportunityTabs({
   }
 
   async function markAsFinal(versionId: string) {
+    if (pricingLocked) { setFinalWarningId(versionId); return }
+    await doMarkAsFinal(versionId)
+  }
+
+  async function doMarkAsFinal(versionId: string) {
     await fetch(`/api/pricing-versions/${versionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isFinal: true }),
     })
-    setPricingVersions(prev => prev.map(v => ({ ...v, isFinal: v.id === versionId })))
+    // Stage rolled back on server — reload to sync all state
+    window.location.reload()
   }
 
   async function createPricingVersion() {
@@ -101,6 +107,11 @@ export function OpportunityTabs({
       setCreatingVersion(false)
     }
   }
+
+  const [finalWarningId, setFinalWarningId]   = useState<string | null>(null)
+
+  const LOCKED_STAGES = ['STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
+  const pricingLocked = LOCKED_STAGES.includes(opp.stage as string)
 
   const [approverId, setApproverId]           = useState('')
   const [approvalLoading, setApprovalLoading] = useState(false)
@@ -294,6 +305,57 @@ export function OpportunityTabs({
         </div>
       )}
 
+      {/* ── Final-version change warning modal ──────────────── */}
+      {finalWarningId && (() => {
+        const targetV = pricingVersions.find(v => v.id === finalWarningId)
+        return (
+          <>
+            <div
+              onClick={() => setFinalWarningId(null)}
+              style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(10,31,68,0.45)', backdropFilter: 'blur(2px)' }}
+            />
+            <div style={{
+              position: 'fixed', top: '50%', left: '50%', zIndex: 201,
+              transform: 'translate(-50%,-50%)',
+              background: '#fff', borderRadius: 14, padding: '28px 28px 24px',
+              boxShadow: '0 20px 60px rgba(10,31,68,0.18)',
+              width: 420, maxWidth: 'calc(100vw - 32px)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
+                    <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                    This will reset the pricing approval
+                  </p>
+                  <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                    Marking <strong>V{targetV?.versionNumber}</strong> as final will invalidate the existing approval.
+                    The opportunity will go back to <strong>Open</strong> and a new approval will be required.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  onClick={() => setFinalWarningId(null)}
+                  style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#F4F6FB', color: '#3A4A6A', border: '1px solid #D6DCE8', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setFinalWarningId(null); doMarkAsFinal(finalWarningId) }}
+                  style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#DC2626', color: '#fff', border: 'none', cursor: 'pointer' }}
+                >
+                  Yes, change final version
+                </button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
       {/* ── Tab: Pricing ─────────────────────────────────────── */}
       {tab === 'Pricing' && (
         <div className="space-y-3">
@@ -398,11 +460,17 @@ export function OpportunityTabs({
                   <div className={`border-t px-4 py-2 flex items-center justify-between ${v.isFinal ? 'border-emerald-100' : 'border-slate-100'}`}>
                     {/* Left: selected-for-approval label or mark-as-final */}
                     {v.isFinal ? (
-                      <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
-                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
-                        </svg>
-                        Selected for approval
+                      <span className={`text-[10px] font-semibold flex items-center gap-1 ${pricingLocked ? 'text-slate-500' : 'text-emerald-600'}`}>
+                        {pricingLocked ? (
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        {pricingLocked ? 'Locked · Approved' : 'Selected for approval'}
                       </span>
                     ) : (
                       <button
