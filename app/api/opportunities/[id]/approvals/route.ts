@@ -111,14 +111,16 @@ export async function POST(
 
     // Fire-and-forget — don't let mail failure block the response
     mailApprovalRequested({
-      approverEmail:   approval.approver.email,
-      approverName:    approval.approver.name,
-      requesterEmail:  approval.requestedBy.email,
-      requesterName:   approval.requestedBy.name,
-      opportunityId:   opp.opportunityId,
-      opportunityName: opp.opportunityName,
-      clientName:      opp.client.name,
+      approverEmail:    approval.approver.email,
+      approverName:     approval.approver.name,
+      requesterEmail:   approval.requestedBy.email,
+      requesterName:    approval.requestedBy.name,
+      opportunityId:    opp.opportunityId,
+      opportunityName:  opp.opportunityName,
+      clientName:       opp.client.name,
       approvalType,
+      approvalRecordId: approval.id,
+      approverId:       approval.approverId,
       context,
     }).catch((e: unknown) => console.error('[mail] approvalRequested:', e))
 

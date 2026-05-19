@@ -1,4 +1,5 @@
 import { ClientSecretCredential } from '@azure/identity'
+import { signEmailAction } from '@/lib/approval-tokens'
 
 // ── Singleton credential ─────────────────────────────────────────
 const g = globalThis as unknown as { _mailCredential?: ClientSecretCredential }
@@ -20,46 +21,23 @@ async function getToken(): Promise<string> {
   return token
 }
 
-// ── Thread ID ────────────────────────────────────────────────────
-// Deterministic per opportunity — no DB storage needed.
-// All emails for the same opportunity share this anchor so clients
-// group them into a single thread.
-function threadMessageId(opportunityId: string): string {
-  const domain = (process.env.MAIL_SENDER ?? 'nexa').split('@')[1] ?? 'procdna.com'
-  return `<nexa-${opportunityId}@${domain}>`
-}
-
 // ── Core send function ───────────────────────────────────────────
 async function sendMail({
   to,
   cc,
   subject,
   html,
-  opportunityId,
-  isFirstInThread = false,
 }: {
   to: string | string[]
   cc?: string | string[]
   subject: string
   html: string
-  opportunityId: string
-  isFirstInThread?: boolean
 }) {
   const sender = process.env.MAIL_SENDER
   if (!sender) { console.warn('[mail] MAIL_SENDER not set — skipping'); return }
 
   const toList = (Array.isArray(to) ? to : [to]).map(a => ({ emailAddress: { address: a } }))
   const ccList = (Array.isArray(cc) ? cc : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
-  const anchor = threadMessageId(opportunityId)
-
-  // First email sets the anchor Message-ID.
-  // Subsequent emails reference it so clients thread them together.
-  const internetMessageHeaders = isFirstInThread
-    ? [{ name: 'Message-ID', value: anchor }]
-    : [
-        { name: 'In-Reply-To', value: anchor },
-        { name: 'References',  value: anchor },
-      ]
 
   try {
     const token = await getToken()
@@ -69,9 +47,8 @@ async function sendMail({
       body: JSON.stringify({
         message: {
           subject,
-          body:                   { contentType: 'HTML', content: html },
-          toRecipients:           toList,
-          internetMessageHeaders,
+          body:         { contentType: 'HTML', content: html },
+          toRecipients: toList,
           ...(ccList.length ? { ccRecipients: ccList } : {}),
         },
         saveToSentItems: false,
@@ -87,7 +64,7 @@ async function sendMail({
 }
 
 // ── Brand helpers ────────────────────────────────────────────────
-const BASE_URL = (process.env.NEXTAUTH_URL ?? 'https://pricingtoolprimero.vercel.app').replace(/\/$/, '')
+const BASE_URL = (process.env.MAIL_BASE_URL ?? 'https://pricingtoolprimero.vercel.app').replace(/\/$/, '')
 
 function wrap(body: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#F4F6FB;font-family:'Segoe UI',system-ui,sans-serif;">
@@ -180,19 +157,26 @@ export async function mailApprovalRequested({
   opportunityName,
   clientName,
   approvalType,
+  approvalRecordId,
+  approverId,
   context,
 }: {
-  approverEmail:   string
-  approverName:    string
-  requesterEmail:  string
-  requesterName:   string
-  opportunityId:   string
-  opportunityName: string
-  clientName:      string
-  approvalType:    string
-  context?:        ApprovalMailContext
+  approverEmail:    string
+  approverName:     string
+  requesterEmail:   string
+  requesterName:    string
+  opportunityId:    string
+  opportunityName:  string
+  clientName:       string
+  approvalType:     string
+  approvalRecordId: string
+  approverId:       string
+  context?:         ApprovalMailContext
 }) {
-  const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const typeLabel  = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const approveUrl = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'approve')}`
+  const rejectUrl  = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'reject')}`
+
   const html = wrap(`
     <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
@@ -203,16 +187,19 @@ export async function mailApprovalRequested({
       ${metaRow('Requested by', requesterName)}
       ${context ? financialRows(context) : ''}
     </table>
-    ${btn('Review in NEXA →', `${BASE_URL}/approvals`)}
+    <div style="margin-top:24px;display:flex;gap:12px;">
+      <a href="${approveUrl}" style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#16A34A;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10003; Approve</a>
+      <a href="${rejectUrl}"  style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#DC2626;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10005; Reject</a>
+    </div>
+    <p style="margin:16px 0 0;font-size:11px;color:#9AA3B8;">You can also review this request in the app.</p>
+    ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
   `)
 
   await sendMail({
-    to: approverEmail,
-    cc: requesterEmail,
+    to:      approverEmail,
+    cc:      requesterEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested`,
     html,
-    opportunityId,
-    isFirstInThread: true,
   })
 }
 
@@ -250,7 +237,6 @@ export async function mailApprovalApproved({
     cc: approverEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} approved`,
     html,
-    opportunityId,
   })
 }
 
@@ -291,6 +277,5 @@ export async function mailApprovalRejected({
     cc: approverEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} rejected`,
     html,
-    opportunityId,
   })
 }
