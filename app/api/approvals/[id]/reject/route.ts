@@ -11,7 +11,8 @@ export async function POST(
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const userId = token.id as string
+  const userId  = token.id as string
+  const isAdmin = (token.role as string | undefined) === 'ADMIN'
   const { reason } = await req.json().catch(() => ({ reason: '' }))
 
   const approval = await prisma.approvalRequest.findUnique({
@@ -23,7 +24,7 @@ export async function POST(
     },
   })
   if (!approval) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (approval.approverId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!isAdmin && approval.approverId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   if (approval.status !== 'PENDING') return NextResponse.json({ error: 'Already decided' }, { status: 409 })
 
   const updated = await prisma.approvalRequest.update({

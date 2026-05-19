@@ -8,7 +8,6 @@ type PricingSnap = {
   grossMarginPct: number | null
   totalHours: number | null
   discountPremiumPct: number | null
-  businessJustification: string | null
 }
 
 type DocSnap = {
@@ -29,6 +28,7 @@ type ApprovalItem = {
   decidedAt: string | null
   rejectionReason: string | null
   pricingVersionNumber: number | null
+  businessJustification: string | null
   requestedBy: { name: string; role: string }
   opportunity: {
     opportunityId: string
@@ -233,6 +233,14 @@ function ApprovalCard({
           )}
         </div>
 
+        {/* Business Justification */}
+        {item.businessJustification && (
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Business Justification</p>
+            <p className="text-xs text-slate-700 leading-relaxed">{item.businessJustification}</p>
+          </div>
+        )}
+
         {/* SOW Verification panel */}
         {isSow && <SowVerificationPanel opp={item.opportunity} />}
 
@@ -255,12 +263,6 @@ function ApprovalCard({
                 </div>
               ))}
             </div>
-            {pv.businessJustification && (
-              <div className="mt-3 border-t border-indigo-100 pt-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-500 mb-1">Business Justification</p>
-                <p className="text-xs text-slate-700 leading-relaxed">{pv.businessJustification}</p>
-              </div>
-            )}
           </div>
         )}
 

@@ -53,10 +53,13 @@ export async function POST(
 ) {
   try {
     const { id: opportunityId } = await params
-    const { approverId, requestedById, approvalType = 'PRICING' } = await req.json()
+    const { approverId, requestedById, approvalType = 'PRICING', businessJustification, ccIds } = await req.json()
 
     if (!approverId || !requestedById) {
       return NextResponse.json({ error: 'Missing approverId or requestedById' }, { status: 400 })
+    }
+    if (!businessJustification?.trim()) {
+      return NextResponse.json({ error: 'Business justification is required' }, { status: 400 })
     }
 
     const opp = await prisma.opportunity.findUnique({
@@ -69,7 +72,9 @@ export async function POST(
     })
     if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
 
-    const [finalVersion, otherCosts] = await Promise.all([
+    const ccUserIds: string[] = Array.isArray(ccIds) ? ccIds : []
+
+    const [finalVersion, otherCosts, ccUsers] = await Promise.all([
       prisma.pricingVersion.findFirst({
         where:   { opportunityId: opp.id, isFinal: true },
         include: {
@@ -86,17 +91,21 @@ export async function POST(
         where:  { opportunityId: opp.id },
         select: { amount: true, isBillable: true, markupPct: true },
       }),
+      ccUserIds.length > 0
+        ? prisma.user.findMany({ where: { id: { in: ccUserIds } }, select: { email: true } })
+        : Promise.resolve([] as { email: string }[]),
     ])
 
     const approval = await prisma.approvalRequest.create({
       data: {
-        opportunityId:       opp.id,
+        opportunityId:        opp.id,
         requestedById,
         approverId,
         approvalType,
-        status:              'PENDING',
-        requestedAt:         new Date(),
+        status:               'PENDING',
+        requestedAt:          new Date(),
         pricingVersionNumber: finalVersion?.versionNumber ?? null,
+        businessJustification: businessJustification.trim(),
       },
       include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
     })
@@ -116,16 +125,18 @@ export async function POST(
 
     // Fire-and-forget — don't let mail failure block the response
     mailApprovalRequested({
-      approverEmail:    approval.approver.email,
-      approverName:     approval.approver.name,
-      requesterEmail:   approval.requestedBy.email,
-      requesterName:    approval.requestedBy.name,
-      opportunityId:    opp.opportunityId,
-      opportunityName:  opp.opportunityName,
-      clientName:       opp.client.name,
+      approverEmail:         approval.approver.email,
+      approverName:          approval.approver.name,
+      requesterEmail:        approval.requestedBy.email,
+      requesterName:         approval.requestedBy.name,
+      ccEmails:              ccUsers.map(u => u.email),
+      opportunityId:         opp.opportunityId,
+      opportunityName:       opp.opportunityName,
+      clientName:            opp.client.name,
       approvalType,
-      approvalRecordId: approval.id,
-      approverId:       approval.approverId,
+      approvalRecordId:      approval.id,
+      approverId:            approval.approverId,
+      businessJustification: businessJustification.trim(),
       context,
     }).catch((e: unknown) => console.error('[mail] approvalRequested:', e))
 

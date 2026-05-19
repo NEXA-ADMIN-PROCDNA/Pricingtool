@@ -8,6 +8,7 @@ import { StageBadge } from '@/components/ui/StageBadge'
 import { LOBBadge } from '@/components/ui/LOBBadge'
 import { PricingDrawer } from './PricingDrawer'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { MultiSelect } from '@/components/ui/MultiSelect'
 import { TabSoW } from './TabSoW'
 
 type User = { id: string; name: string; role: string }
@@ -113,10 +114,12 @@ export function OpportunityTabs({
   const LOCKED_STAGES = ['STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(opp.stage as string)
 
-  const [approverId, setApproverId]           = useState('')
-  const [approvalLoading, setApprovalLoading] = useState(false)
-  const [approvalError, setApprovalError]     = useState<string | null>(null)
-  const [approvalConfirm, setApprovalConfirm] = useState(false)
+  const [approverId, setApproverId]                     = useState('')
+  const [ccIds, setCcIds]                               = useState<string[]>([])
+  const [businessJustification, setBusinessJustification] = useState('')
+  const [approvalLoading, setApprovalLoading]           = useState(false)
+  const [approvalError, setApprovalError]               = useState<string | null>(null)
+  const [approvalConfirm, setApprovalConfirm]           = useState(false)
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
 
@@ -159,7 +162,7 @@ export function OpportunityTabs({
       const res = await fetch(`/api/opportunities/${opp.opportunityId}/approvals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approverId, requestedById: opp.ownerId }),
+        body: JSON.stringify({ approverId, requestedById: opp.ownerId, businessJustification, ccIds }),
       })
       if (!res.ok) {
         const j = await res.json()
@@ -169,6 +172,8 @@ export function OpportunityTabs({
       const created = await res.json()
       setApprovals((prev: ApprovalItem[]) => [created as ApprovalItem, ...prev])
       setApproverId('')
+      setCcIds([])
+      setBusinessJustification('')
       setApprovalConfirm(false)
     } catch {
       setApprovalError('Network error')
@@ -539,6 +544,7 @@ export function OpportunityTabs({
           {/* Confirm modal */}
           {approvalConfirm && (() => {
             const name     = users.find(u => u.id === approverId)?.name ?? 'the selected approver'
+            const ccNames  = ccIds.map(id => users.find(u => u.id === id)?.name).filter(Boolean)
             const finalV   = pricingVersions.find(v => v.isFinal)
             return (
               <>
@@ -583,6 +589,17 @@ export function OpportunityTabs({
                           No version is marked as final. The approver will see no pricing data.
                         </p>
                       )}
+                      {ccNames.length > 0 && (
+                        <p style={{ marginTop: 8, fontSize: 12, color: '#3A4A6A' }}>
+                          CC: <strong style={{ color: '#0A1F44' }}>{ccNames.join(', ')}</strong>
+                        </p>
+                      )}
+                      {businessJustification && (
+                        <div style={{ marginTop: 10, fontSize: 12, color: '#3A4A6A', background: '#F4F6FB', border: '1px solid #D6DCE8', borderRadius: 7, padding: '8px 10px' }}>
+                          <span style={{ display: 'block', fontSize: 10, color: '#9AA3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Business Justification</span>
+                          {businessJustification}
+                        </div>
+                      )}
                     </div>
                   </div>
                   {approvalError && (
@@ -621,8 +638,9 @@ export function OpportunityTabs({
           {/* Request new approval */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Request Approval</h2>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-500">Approver</label>
                 <SearchableSelect
                   options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
                   value={approverId}
@@ -631,13 +649,41 @@ export function OpportunityTabs({
                   emptyMessage="No matching users found."
                 />
               </div>
-              <button
-                onClick={() => setApprovalConfirm(true)}
-                disabled={!approverId || approvalLoading}
-                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-              >
-                Send Request
-              </button>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-500">
+                  CC <span className="font-normal text-slate-400">(optional — they receive a notification only)</span>
+                </label>
+                <MultiSelect
+                  options={users
+                    .filter(u => u.id !== approverId)
+                    .map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                  values={ccIds}
+                  onChange={setCcIds}
+                  placeholder="Search people to CC…"
+                  emptyMessage="No matching users found."
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-500">
+                  Business Justification <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={businessJustification}
+                  onChange={e => setBusinessJustification(e.target.value)}
+                  placeholder="Explain why this pricing should be approved…"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setApprovalConfirm(true)}
+                  disabled={!approverId || !businessJustification.trim() || approvalLoading}
+                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                >
+                  Send Request
+                </button>
+              </div>
             </div>
             {approvalError && (
               <p className="mt-2 text-xs text-red-600">{approvalError}</p>
@@ -670,6 +716,12 @@ export function OpportunityTabs({
                           <span className="ml-1 text-xs text-slate-400">({ar.approver.role})</span>
                         </p>
                         <p className="text-xs text-slate-400">{fmtDate(ar.requestedAt)}</p>
+                        {ar.businessJustification && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            <span className="font-semibold not-italic">BJ: </span>
+                            <span className="italic">{ar.businessJustification}</span>
+                          </p>
+                        )}
                         {ar.rejectionReason && (
                           <p className="text-xs text-red-600 italic mt-1">{ar.rejectionReason}</p>
                         )}

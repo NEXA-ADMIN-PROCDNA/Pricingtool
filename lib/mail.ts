@@ -148,72 +148,92 @@ export async function mailApprovalRequested({
   approverName,
   requesterEmail,
   requesterName,
+  ccEmails,
   opportunityId,
   opportunityName,
   clientName,
   approvalType,
   approvalRecordId,
   approverId,
+  businessJustification,
   context,
 }: {
   approverEmail:    string
   approverName:     string
   requesterEmail:   string
   requesterName:    string
+  ccEmails?:        string[]
   opportunityId:    string
   opportunityName:  string
   clientName:       string
   approvalType:     string
-  approvalRecordId: string
-  approverId:       string
-  context?:         ApprovalMailContext
+  approvalRecordId:      string
+  approverId:            string
+  businessJustification: string
+  context?:              ApprovalMailContext
 }) {
   const typeLabel  = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const approveUrl = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'approve')}`
   const rejectUrl  = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'reject')}`
 
-  const html = wrap(`
-    <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
+  // Shared details table used by approver + CC emails
+  const detailsTable = `
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
       ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
       ${metaRow('Client', clientName)}
       ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
       ${metaRow('Requested by', requesterName)}
+      ${metaRow('Business Justification', `<em style="color:#3A4A6A;">${businessJustification}</em>`)}
       ${context ? financialRows(context) : ''}
-    </table>
-    <div style="margin-top:24px;display:flex;gap:12px;">
-      <a href="${approveUrl}" style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#16A34A;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10003; Approve</a>
-      <a href="${rejectUrl}"  style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#DC2626;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10005; Reject</a>
-    </div>
-    <p style="margin:16px 0 0;font-size:11px;color:#9AA3B8;">You can also review this request in the app.</p>
-    ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
-  `)
+    </table>`
 
   // Approver — full email with Approve / Reject buttons
   await sendMail({
     to:      approverEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested`,
-    html,
+    html: wrap(`
+      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
+      ${detailsTable}
+      <div style="margin-top:24px;display:flex;gap:12px;">
+        <a href="${approveUrl}" style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#16A34A;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10003; Approve</a>
+        <a href="${rejectUrl}"  style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#DC2626;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10005; Reject</a>
+      </div>
+      <p style="margin:16px 0 0;font-size:11px;color:#9AA3B8;">You can also review this request in the app.</p>
+      ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
+    `),
   })
 
+  // CC recipients — same details as approver, no action buttons
+  if (ccEmails && ccEmails.length > 0) {
+    await sendMail({
+      to:      ccEmails,
+      subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} requested (CC)`,
+      html: wrap(`
+        <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
+        <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">You have been CC'd on this request. <strong style="color:#0A1F44;">${requesterName}</strong> has requested approval from <strong style="color:#0A1F44;">${approverName}</strong>.</p>
+        ${detailsTable}
+        ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
+      `),
+    })
+  }
+
   // Requester — notification only, no action links
-  const notifyHtml = wrap(`
-    <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Approval request submitted</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
-    <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
-      ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
-      ${metaRow('Client', clientName)}
-      ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
-      ${metaRow('Sent to', approverName)}
-    </table>
-    <p style="margin:16px 0 0;font-size:12px;color:#6B7591;">You will be notified by email once a decision is made.</p>
-    ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
-  `)
   await sendMail({
     to:      requesterEmail,
     subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel} submitted`,
-    html:    notifyHtml,
+    html: wrap(`
+      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Approval request submitted</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
+        ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
+        ${metaRow('Client', clientName)}
+        ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
+        ${metaRow('Sent to', approverName)}
+      </table>
+      <p style="margin:16px 0 0;font-size:12px;color:#6B7591;">You will be notified by email once a decision is made.</p>
+      ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
+    `),
   })
 }
 

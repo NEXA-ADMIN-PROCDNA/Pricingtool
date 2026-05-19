@@ -7,13 +7,15 @@ export async function GET(req: NextRequest) {
   const token = await getToken({ req })
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const userId = token.id as string
+  const userId  = token.id as string
+  const role    = token.role as string | undefined
+  const isAdmin = role === 'ADMIN'
   const url = new URL(req.url)
   const onlyPending = url.searchParams.get('pending') === 'true'
 
   const approvals = await prisma.approvalRequest.findMany({
     where: {
-      approverId: userId,
+      ...(isAdmin ? {} : { approverId: userId }),
       ...(onlyPending ? { status: 'PENDING' } : {}),
     },
     include: {
@@ -35,7 +37,6 @@ export async function GET(req: NextRequest) {
               grossMarginPct: true,
               totalHours: true,
               discountPremiumPct: true,
-              businessJustification: true,
             },
             take: 1,
           },
