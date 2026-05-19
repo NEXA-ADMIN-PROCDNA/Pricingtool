@@ -5,28 +5,33 @@ import { mailApprovalRequested, type ApprovalMailContext } from '@/lib/mail'
 function computeContext(
   staffing: {
     isActive: boolean; isBillable: boolean; location: string
-    effectiveBillRate: number | null; systemBillRatePerHour: number | null; costRatePerHour: number | null
-    weeklyHours: { hours: number }[]
+    effectiveBillRate: unknown; systemBillRatePerHour: unknown; costRatePerHour: unknown
+    weeklyHours: { hours: unknown }[]
   }[],
-  otherCosts: { amount: number; isBillable: boolean; markupPct: number | null }[],
+  otherCosts: { amount: unknown; isBillable: boolean; markupPct: unknown }[],
   startDate: Date | null,
   endDate:   Date | null,
 ): ApprovalMailContext {
+  // Prisma returns Decimal objects for numeric fields — convert to plain numbers
+  const n = (v: unknown) => Number(v ?? 0)
+
   let a1 = 0, recRev = 0, b = 0, f1 = 0, f2 = 0, indiaHrs = 0
   for (const row of staffing.filter(r => r.isActive)) {
-    const hours = row.weeklyHours.reduce((s, wh) => s + wh.hours, 0)
-    b += hours * (row.costRatePerHour ?? 0)
+    const hours = row.weeklyHours.reduce((s, wh) => s + n(wh.hours), 0)
+    b += hours * n(row.costRatePerHour)
     if (row.isBillable) {
-      a1     += hours * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
-      recRev += hours * (row.systemBillRatePerHour ?? 0)
+      const effRate = n(row.effectiveBillRate) || n(row.systemBillRatePerHour)
+      a1     += hours * effRate
+      recRev += hours * n(row.systemBillRatePerHour)
       f1     += hours
       if (row.location === 'INDIA') indiaHrs += hours
     } else {
       f2 += hours
     }
   }
-  const a2 = otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
-  const c  = otherCosts.reduce((s, oc) => s + oc.amount, 0)
+  const a2 = otherCosts.filter(oc => oc.isBillable)
+    .reduce((s, oc) => s + n(oc.amount) * (1 + n(oc.markupPct) / 100), 0)
+  const c  = otherCosts.reduce((s, oc) => s + n(oc.amount), 0)
   const a  = a1 + a2
   const d  = a - b - c
   const f  = f1 + f2
