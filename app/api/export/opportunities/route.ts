@@ -2,8 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import * as XLSX from 'xlsx'
+import { ClientSecretCredential } from '@azure/identity'
 
-export async function GET(req: NextRequest) {
+const ONEDRIVE_USER = 'shreeraj.deshmukh@procdna.com'
+const FILE_PATH     = 'opportunities.xlsx'
+
+async function getGraphToken(): Promise<string> {
+  const credential = new ClientSecretCredential(
+    process.env.AZURE_AD_TENANT_ID!,
+    process.env.AZURE_AD_CLIENT_ID!,
+    process.env.AZURE_AD_CLIENT_SECRET!,
+  )
+  const { token } = await credential.getToken('https://graph.microsoft.com/.default')
+  return token
+}
+
+export async function POST(req: NextRequest) {
   const token = await getToken({ req })
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if ((token.role as string) !== 'ADMIN')
@@ -41,7 +55,7 @@ export async function GET(req: NextRequest) {
     'Client Stakeholder Email',
     'Signed Project Budget ($)',
     'Estimated Total Hours',
-    'Discount %',
+    'Discount / Premium %',
     'Approving Partner',
     'Line of Business',
     'Status',
@@ -70,39 +84,52 @@ export async function GET(req: NextRequest) {
       opp.owner.email,
       poc?.name  ?? '',
       poc?.email ?? '',
-      pv ? Number(pv.proposedBillings ?? 0) : '',
-      pv ? Number(pv.totalHours       ?? 0) : '',
-      pv ? Number(pv.discountPremiumPct ?? 0) : '',
+      pv?.proposedBillings   != null ? Number(pv.proposedBillings)   : '',
+      pv?.totalHours         != null ? Number(pv.totalHours)         : '',
+      pv?.discountPremiumPct != null ? Number(pv.discountPremiumPct) : '',
       ar?.approver.name ?? '',
       opp.primaryLob  ?? '',
       opp.status,
       opp.stage,
-      pv ? Number(pv.grossMarginPct ?? 0) : '',
-      pv ? Number(pv.offshorePct    ?? 0) : '',
+      pv?.grossMarginPct != null ? Number(pv.grossMarginPct) : '',
+      pv?.offshorePct    != null ? Number(pv.offshorePct)    : '',
     ]
   })
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-
-  // Column widths
   ws['!cols'] = [
     { wch: 14 }, { wch: 30 }, { wch: 40 }, { wch: 25 }, { wch: 14 },
     { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 28 }, { wch: 22 },
-    { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 12 }, { wch: 22 },
+    { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
     { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
   ]
 
   const wb  = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Opportunities')
+  const buf = new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer)
 
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+  // Upload to OneDrive — creates or overwrites the file
+  const graphToken = await getGraphToken()
+  const uploadUrl  = `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/root:/${FILE_PATH}:/content`
 
-  const date = new Date().toISOString().slice(0, 10)
-  return new NextResponse(buf, {
-    status: 200,
+  const res = await fetch(uploadUrl, {
+    method:  'PUT',
     headers: {
+      Authorization:  `Bearer ${graphToken}`,
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="nexa-opportunities-${date}.xlsx"`,
     },
+    body: buf,
+  })
+
+  if (!res.ok) {
+    const err = await res.text()
+    console.error('[export] OneDrive upload failed:', err)
+    return NextResponse.json({ error: 'Failed to upload to OneDrive' }, { status: 500 })
+  }
+
+  const file = await res.json()
+  return NextResponse.json({
+    message: `Uploaded successfully — ${opps.length} opportunities`,
+    webUrl:  file.webUrl,
   })
 }
