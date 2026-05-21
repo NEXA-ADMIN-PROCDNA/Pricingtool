@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 // GET
 export async function GET() {
   try {
-    const users = await prisma.user.findMany()
+    const users = await prisma.user.findMany({ where: { isActive: true } })
     return Response.json(users)
   } catch (error) {
     return Response.json({ error: 'Failed to fetch users' }, { status: 500 })

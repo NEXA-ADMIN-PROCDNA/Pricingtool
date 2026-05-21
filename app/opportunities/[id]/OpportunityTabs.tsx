@@ -111,7 +111,7 @@ export function OpportunityTabs({
 
   const [finalWarningId, setFinalWarningId]   = useState<string | null>(null)
 
-  const LOCKED_STAGES = ['STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
+  const LOCKED_STAGES = ['APPROVAL_PENDING', 'STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(opp.stage as string)
 
   const [approverId, setApproverId]                     = useState('')
@@ -313,6 +313,7 @@ export function OpportunityTabs({
       {/* ── Final-version change warning modal ──────────────── */}
       {finalWarningId && (() => {
         const targetV = pricingVersions.find(v => v.id === finalWarningId)
+        const isPendingApproval = opp.stage === 'APPROVAL_PENDING'
         return (
           <>
             <div
@@ -333,13 +334,27 @@ export function OpportunityTabs({
                   </svg>
                 </div>
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
-                    This will reset the pricing approval
-                  </p>
-                  <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
-                    Marking <strong>V{targetV?.versionNumber}</strong> as final will invalidate the existing approval.
-                    The opportunity will go back to <strong>Open</strong> and a new approval will be required.
-                  </p>
+                  {isPendingApproval ? (
+                    <>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                        Approval in progress
+                      </p>
+                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                        <strong>V{targetV?.versionNumber}</strong> cannot be marked as final while an approval request is pending.
+                        The approver must decide first, or the pending request must be withdrawn.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                        This will reset the pricing approval
+                      </p>
+                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                        Marking <strong>V{targetV?.versionNumber}</strong> as final will invalidate the existing approval.
+                        The opportunity will go back to <strong>Open</strong> and a new approval will be required.
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -347,14 +362,16 @@ export function OpportunityTabs({
                   onClick={() => setFinalWarningId(null)}
                   style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#F4F6FB', color: '#3A4A6A', border: '1px solid #D6DCE8', cursor: 'pointer' }}
                 >
-                  Cancel
+                  {isPendingApproval ? 'OK' : 'Cancel'}
                 </button>
-                <button
-                  onClick={() => { setFinalWarningId(null); doMarkAsFinal(finalWarningId) }}
-                  style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#DC2626', color: '#fff', border: 'none', cursor: 'pointer' }}
-                >
-                  Yes, change final version
-                </button>
+                {!isPendingApproval && (
+                  <button
+                    onClick={() => { setFinalWarningId(null); doMarkAsFinal(finalWarningId) }}
+                    style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#DC2626', color: '#fff', border: 'none', cursor: 'pointer' }}
+                  >
+                    Yes, change final version
+                  </button>
+                )}
               </div>
             </div>
           </>
@@ -475,7 +492,7 @@ export function OpportunityTabs({
                             <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                           </svg>
                         )}
-                        {pricingLocked ? 'Locked · Approved' : 'Selected for approval'}
+                        {opp.stage === 'APPROVAL_PENDING' ? 'Pending Approval' : pricingLocked ? 'Locked · Approved' : 'Selected for approval'}
                       </span>
                     ) : (
                       <button

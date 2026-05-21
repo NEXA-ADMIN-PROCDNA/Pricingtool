@@ -25,7 +25,7 @@ type SubTab = typeof SUB_TABS[number]
 
 const COMING_SOON: Set<SubTab> = new Set(['Resource Mix', 'Timeline', 'Risk Assessment'])
 
-const LOCKED_STAGES = new Set(['STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED'])
+const LOCKED_STAGES = new Set(['APPROVAL_PENDING', 'STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED'])
 
 export function PricingDrawer({
   version,
