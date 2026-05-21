@@ -194,6 +194,28 @@ export default async function DashboardPage({
             <div style={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: C.accent }} />
           </div>
 
+          {/* Export — admin only */}
+          {role === 'ADMIN' && (
+            <a
+              href="/api/export/opportunities"
+              download
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 16px', borderRadius: 4,
+                border: `1px solid ${C.rule}`,
+                background: C.bg, color: C.inkMuted,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 13, fontWeight: 500,
+                textDecoration: 'none', whiteSpace: 'nowrap',
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Export Excel
+            </a>
+          )}
+
           {/* New opportunity */}
           <Link
             href="/opportunities/new"
