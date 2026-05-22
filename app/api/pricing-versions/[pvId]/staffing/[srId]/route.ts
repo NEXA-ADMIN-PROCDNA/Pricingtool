@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { srId } = await params
     const { utilization, weekEntries, effectiveBillRate, isActive, isBillable } = await req.json()
@@ -43,9 +47,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { srId } = await params
     await prisma.staffingResource.delete({ where: { id: srId } })

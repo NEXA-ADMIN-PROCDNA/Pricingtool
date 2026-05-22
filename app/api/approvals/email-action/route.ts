@@ -110,15 +110,16 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  mailApprovalApproved({
-    requesterEmail:  approval.requestedBy.email,
-    requesterName:   approval.requestedBy.name,
-    approverEmail:   approval.approver.email,
-    approverName:    approval.approver.name,
-    opportunityId:   approval.opportunity.opportunityId,
-    opportunityName: approval.opportunity.opportunityName,
-    approvalType:    approval.approvalType,
-  }).catch((e: unknown) => console.error('[mail] emailAction approve:', e))
+  await mailApprovalApproved({
+    requesterEmail:   approval.requestedBy.email,
+    requesterName:    approval.requestedBy.name,
+    approverEmail:    approval.approver.email,
+    approverName:     approval.approver.name,
+    opportunityId:    approval.opportunity.opportunityId,
+    opportunityName:  approval.opportunity.opportunityName,
+    approvalType:     approval.approvalType,
+    approvalRecordId: approvalId,
+  })
 
   return successPage(
     'Approved ✓', '✅',
@@ -167,16 +168,17 @@ export async function POST(req: NextRequest) {
     data:  { stage: 'LEAD' },
   })
 
-  mailApprovalRejected({
-    requesterEmail:  approval.requestedBy.email,
-    requesterName:   approval.requestedBy.name,
-    approverEmail:   approval.approver.email,
-    approverName:    approval.approver.name,
-    opportunityId:   approval.opportunity.opportunityId,
-    opportunityName: approval.opportunity.opportunityName,
-    approvalType:    approval.approvalType,
-    reason:          reason || undefined,
-  }).catch((e: unknown) => console.error('[mail] emailAction reject:', e))
+  await mailApprovalRejected({
+    requesterEmail:   approval.requestedBy.email,
+    requesterName:    approval.requestedBy.name,
+    approverEmail:    approval.approver.email,
+    approverName:     approval.approver.name,
+    opportunityId:    approval.opportunity.opportunityId,
+    opportunityName:  approval.opportunity.opportunityName,
+    approvalType:     approval.approvalType,
+    approvalRecordId: approvalId,
+    reason:           reason || undefined,
+  })
 
   return successPage(
     'Rejected', '✕',

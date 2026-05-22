@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ reqId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if ((token.role as string) !== 'ADMIN') return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
+
   try {
     const { reqId } = await params
     const { reviewerId } = await req.json()

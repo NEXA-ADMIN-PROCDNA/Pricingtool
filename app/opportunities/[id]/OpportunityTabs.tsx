@@ -252,7 +252,7 @@ export function OpportunityTabs({
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Client Contacts (POCs)</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {opp.client.pocs.map(poc => (
+                  {opp.client.pocs.map((poc: any) => (
                     <div key={poc.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                       <p className="text-sm font-semibold text-slate-800">{poc.name}</p>
                       {poc.jobTitle && <p className="text-xs text-slate-500 mt-0.5">{poc.jobTitle}</p>}
@@ -652,60 +652,140 @@ export function OpportunityTabs({
             )
           })()}
 
-          {/* Request new approval */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">Request Approval</h2>
-            <div className="flex flex-col gap-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-500">Approver</label>
-                <SearchableSelect
-                  options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
-                  value={approverId}
-                  onChange={setApproverId}
-                  placeholder="Search approver by name…"
-                  emptyMessage="No matching users found."
-                />
+          {/* ── Approval request panel (stage-aware) ── */}
+          {(() => {
+            const stage           = opp.stage as string
+            const pendingPricing  = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'PENDING')
+            const approvedPricing = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'APPROVED')
+            const isReapproval    = !!approvedPricing && (stage === 'LEAD' || stage === 'PRICE_LINKING_PENDING')
+
+            // ── In-flight approval ────────────────────────────────
+            if (stage === 'APPROVAL_PENDING') return (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm flex items-start gap-4">
+                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800 mb-1">Approval Pending</p>
+                  <p className="text-sm text-amber-700">
+                    Awaiting decision from <strong>{(pendingPricing as any)?.approver?.name ?? 'the approver'}</strong>.
+                    They have received an email with Approve / Reject buttons.
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-500">
-                  CC <span className="font-normal text-slate-400">(optional — they receive a notification only)</span>
-                </label>
-                <MultiSelect
-                  options={users
-                    .filter(u => u.id !== approverId)
-                    .map(u => ({ value: u.id, label: u.name, sub: u.role }))}
-                  values={ccIds}
-                  onChange={setCcIds}
-                  placeholder="Search people to CC…"
-                  emptyMessage="No matching users found."
-                />
+            )
+
+            // ── Pricing approved — show next steps ────────────────
+            if (stage === 'STATUS_CHANGE_PENDING') {
+              const approvedBy = (approvedPricing as any)?.approver?.name
+              const decidedAt  = (approvedPricing as any)?.decidedAt
+              const approvedAt = decidedAt
+                ? new Date(decidedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                : null
+              return (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <path d="M20 6L9 17l-5-5"/>
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-emerald-800">Pricing Approved</p>
+                  </div>
+                  <p className="text-sm text-emerald-700 mb-4">
+                    Approved by <strong>{approvedBy ?? 'the approver'}</strong>{approvedAt ? ` on ${approvedAt}` : ''}.
+                  </p>
+                  <div className="rounded-xl bg-white border border-emerald-200 p-4 mb-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Next Step</p>
+                    <p className="text-sm text-slate-700">
+                      Go to the <strong>SOW / PO</strong> tab to upload the signed Statement of Work and Purchase Order, then submit for verification.
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    If the pricing needs to change, mark a different version as final in the Pricing tab. This will invalidate this approval and require a new submission.
+                  </p>
+                </div>
+              )
+            }
+
+            // ── Past pricing stage entirely ───────────────────────
+            if (['SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED'].includes(stage)) return (
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
+                <p className="text-sm text-slate-400">Pricing is approved and the engagement is progressing. No further pricing action is needed here.</p>
               </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-slate-500">
-                  Business Justification <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={businessJustification}
-                  onChange={e => setBusinessJustification(e.target.value)}
-                  placeholder="Explain why this pricing should be approved…"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setApprovalConfirm(true)}
-                  disabled={!approverId || !businessJustification.trim() || approvalLoading}
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
-                >
-                  Send Request
-                </button>
-              </div>
-            </div>
-            {approvalError && (
-              <p className="mt-2 text-xs text-red-600">{approvalError}</p>
-            )}
-          </div>
+            )
+
+            // ── LEAD / PRICE_LINKING_PENDING — show request form ──
+            return (
+              <>
+                {isReapproval && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-sm text-amber-800">
+                      <strong>Previous approval invalidated.</strong> A different pricing version was marked as final after{' '}
+                      <strong>{(approvedPricing as any)?.approver?.name}</strong> approved. Submit a new request below for the updated pricing.
+                    </p>
+                  </div>
+                )}
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    {isReapproval ? 'Re-request Approval' : 'Request Approval'}
+                  </h2>
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-500">Approver</label>
+                      <SearchableSelect
+                        options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                        value={approverId}
+                        onChange={setApproverId}
+                        placeholder="Search approver by name…"
+                        emptyMessage="No matching users found."
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-500">
+                        CC <span className="font-normal text-slate-400">(optional — they receive a notification only)</span>
+                      </label>
+                      <MultiSelect
+                        options={users
+                          .filter(u => u.id !== approverId)
+                          .map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                        values={ccIds}
+                        onChange={setCcIds}
+                        placeholder="Search people to CC…"
+                        emptyMessage="No matching users found."
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-500">
+                        Business Justification <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={businessJustification}
+                        onChange={e => setBusinessJustification(e.target.value)}
+                        placeholder="Explain why this pricing should be approved…"
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => setApprovalConfirm(true)}
+                        disabled={!approverId || !businessJustification.trim() || approvalLoading}
+                        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                      >
+                        {isReapproval ? 'Send Re-approval Request' : 'Send Request'}
+                      </button>
+                    </div>
+                  </div>
+                  {approvalError && (
+                    <p className="mt-2 text-xs text-red-600">{approvalError}</p>
+                  )}
+                </div>
+              </>
+            )
+          })()}
 
           {/* Existing approvals */}
           {approvals.length > 0 && (

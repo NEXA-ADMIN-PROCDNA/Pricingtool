@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { srId } = await params
     const { weekStartDate, hours } = await req.json()

@@ -38,16 +38,17 @@ export async function POST(
 
   await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: 'LEAD' } })
 
-  mailApprovalRejected({
-    requesterEmail:  approval.requestedBy.email,
-    requesterName:   approval.requestedBy.name,
-    approverEmail:   approval.approver.email,
-    approverName:    approval.approver.name,
-    opportunityId:   approval.opportunity.opportunityId,
-    opportunityName: approval.opportunity.opportunityName,
-    approvalType:    approval.approvalType,
-    reason:          reason?.trim() || undefined,
-  }).catch((e: unknown) => console.error('[mail] approvalRejected:', e))
+  await mailApprovalRejected({
+    requesterEmail:   approval.requestedBy.email,
+    requesterName:    approval.requestedBy.name,
+    approverEmail:    approval.approver.email,
+    approverName:     approval.approver.name,
+    opportunityId:    approval.opportunity.opportunityId,
+    opportunityName:  approval.opportunity.opportunityName,
+    approvalType:     approval.approvalType,
+    approvalRecordId: id,
+    reason:           reason?.trim() || undefined,
+  })
 
   return NextResponse.json(updated)
 }

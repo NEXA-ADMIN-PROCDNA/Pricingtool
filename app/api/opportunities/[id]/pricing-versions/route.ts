@@ -1,10 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { id: opportunityId } = await params
   const body = await req.json().catch(() => ({}))
 

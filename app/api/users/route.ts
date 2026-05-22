@@ -1,17 +1,24 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
-// GET
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const users = await prisma.user.findMany({ where: { isActive: true } })
-    return Response.json(users)
+    return NextResponse.json(users)
   } catch (error) {
-    return Response.json({ error: 'Failed to fetch users' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
   }
 }
 
-// POST
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if ((token.role as string) !== 'ADMIN') return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
+
   try {
     const body = await req.json()
 
@@ -23,8 +30,8 @@ export async function POST(req: Request) {
       },
     })
 
-    return Response.json(user)
+    return NextResponse.json(user)
   } catch (error) {
-    return Response.json({ error: 'Failed to create user' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
   }
 }

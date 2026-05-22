@@ -37,15 +37,16 @@ export async function POST(
     data: { stage: newStage, ...(approval.approvalType === 'SOW_VERIFICATION' ? { status: 'WON' } : {}) },
   })
 
-  mailApprovalApproved({
-    requesterEmail:  approval.requestedBy.email,
-    requesterName:   approval.requestedBy.name,
-    approverEmail:   approval.approver.email,
-    approverName:    approval.approver.name,
-    opportunityId:   approval.opportunity.opportunityId,
-    opportunityName: approval.opportunity.opportunityName,
-    approvalType:    approval.approvalType,
-  }).catch((e: unknown) => console.error('[mail] approvalApproved:', e))
+  await mailApprovalApproved({
+    requesterEmail:   approval.requestedBy.email,
+    requesterName:    approval.requestedBy.name,
+    approverEmail:    approval.approver.email,
+    approverName:     approval.approver.name,
+    opportunityId:    approval.opportunity.opportunityId,
+    opportunityName:  approval.opportunity.opportunityName,
+    approvalType:     approval.approvalType,
+    approvalRecordId: id,
+  })
 
   return NextResponse.json(updated)
 }

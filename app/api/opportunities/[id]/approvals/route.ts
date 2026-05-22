@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { mailApprovalRequested, type ApprovalMailContext } from '@/lib/mail'
 
@@ -51,6 +52,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { id: opportunityId } = await params
     const { approverId, requestedById, approvalType = 'PRICING', businessJustification, ccIds } = await req.json()
@@ -123,13 +127,12 @@ export async function POST(
       versionNumber: finalVersion?.versionNumber ?? undefined,
     }
 
-    // Fire-and-forget — don't let mail failure block the response
-    mailApprovalRequested({
+    await mailApprovalRequested({
       approverEmail:         approval.approver.email,
       approverName:          approval.approver.name,
       requesterEmail:        approval.requestedBy.email,
       requesterName:         approval.requestedBy.name,
-      ccEmails:              ccUsers.map(u => u.email),
+      ccEmails:              ccUsers.map((u: { email: string }) => u.email),
       opportunityId:         opp.opportunityId,
       opportunityName:       opp.opportunityName,
       clientName:            opp.client.name,
@@ -138,7 +141,7 @@ export async function POST(
       approverId:            approval.approverId,
       businessJustification: businessJustification.trim(),
       context,
-    }).catch((e: unknown) => console.error('[mail] approvalRequested:', e))
+    })
 
     return NextResponse.json(approval, { status: 201 })
   } catch (err) {

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const requests = await prisma.clientRequest.findMany({
     where: { status: 'PENDING' },
     include: { requestedBy: { select: { id: true, name: true, email: true } } },
@@ -11,6 +15,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { name, businessUnit, industry, region, notes, requestedById } = await req.json()
     if (!name?.trim() || !requestedById) {

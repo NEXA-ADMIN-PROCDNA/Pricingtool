@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { pvId } = await params
     await prisma.pricingVersion.delete({ where: { id: pvId } })
@@ -16,9 +20,12 @@ export async function DELETE(
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> },
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const { pvId } = await params
   const version = await prisma.pricingVersion.findUnique({
     where: { id: pvId },
@@ -41,6 +48,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   try {
     const { pvId } = await params
     const body = await req.json()
