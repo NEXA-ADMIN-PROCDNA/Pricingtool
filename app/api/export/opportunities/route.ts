@@ -17,20 +17,7 @@ async function getGraphToken(): Promise<string> {
   return token
 }
 
-export async function POST(req: NextRequest) {
-  const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((token.role as string) !== 'ADMIN')
-    return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
-
-  try { return await doExport() } catch (e: unknown) {
-    const detail = e instanceof Error ? e.message : String(e)
-    console.error('[export] unhandled error:', detail)
-    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
-  }
-}
-
-async function doExport() {
+async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
   const opps = await prisma.opportunity.findMany({
     include: {
       client: { include: { pocs: { take: 1 } } },
@@ -50,26 +37,13 @@ async function doExport() {
   })
 
   const headers = [
-    'Project Code',
-    'Project Name',
-    'Project Description',
-    'Client Organization',
-    'Is Client New?',
-    'Project Start Date',
-    'Project End Date',
-    'Account Manager',
-    'Account Manager Email',
-    'Client Stakeholder Name',
-    'Client Stakeholder Email',
-    'Signed Project Budget ($)',
-    'Estimated Total Hours',
-    'Discount / Premium %',
-    'Approving Partner',
-    'Line of Business',
-    'Status',
-    'Stage',
-    'Gross Margin %',
-    'Offshore %',
+    'Project Code', 'Project Name', 'Project Description', 'Client Organization',
+    'Is Client New?', 'Project Start Date', 'Project End Date',
+    'Account Manager', 'Account Manager Email',
+    'Client Stakeholder Name', 'Client Stakeholder Email',
+    'Signed Project Budget ($)', 'Estimated Total Hours', 'Discount / Premium %',
+    'Approving Partner', 'Line of Business', 'Status', 'Stage',
+    'Gross Margin %', 'Offshore %',
   ]
 
   const fmt = (d: Date | string | null | undefined) =>
@@ -79,26 +53,16 @@ async function doExport() {
     const pv  = opp.pricingVersions[0]  ?? null
     const ar  = opp.approvalRequests[0] ?? null
     const poc = opp.client.pocs[0]      ?? null
-
     return [
-      opp.opportunityId,
-      opp.opportunityName,
-      opp.notes ?? '',
-      opp.client.name,
+      opp.opportunityId, opp.opportunityName, opp.notes ?? '', opp.client.name,
       opp.opportunityType === 'NEW' ? 'Yes' : 'No',
-      fmt(opp.startDate),
-      fmt(opp.endDate),
-      opp.owner.name,
-      opp.owner.email,
-      poc?.name  ?? '',
-      poc?.email ?? '',
+      fmt(opp.startDate), fmt(opp.endDate),
+      opp.owner.name, opp.owner.email,
+      poc?.name ?? '', poc?.email ?? '',
       pv?.proposedBillings   != null ? Number(pv.proposedBillings)   : '',
       pv?.totalHours         != null ? Number(pv.totalHours)         : '',
       pv?.discountPremiumPct != null ? Number(pv.discountPremiumPct) : '',
-      ar?.approver.name ?? '',
-      opp.primaryLob  ?? '',
-      opp.status,
-      opp.stage,
+      ar?.approver.name ?? '', opp.primaryLob ?? '', opp.status, opp.stage,
       pv?.grossMarginPct != null ? Number(pv.grossMarginPct) : '',
       pv?.offshorePct    != null ? Number(pv.offshorePct)    : '',
     ]
@@ -111,33 +75,80 @@ async function doExport() {
     { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
     { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
   ]
-
-  const wb  = XLSX.utils.book_new()
+  const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Opportunities')
   const buf = new Uint8Array(XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer)
+  return { buf, count: opps.length }
+}
 
-  // Upload to OneDrive — creates or overwrites the file
-  const graphToken = await getGraphToken()
-  const uploadUrl  = `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/root:/${FILE_PATH}:/content`
+// GET — download xlsx directly to browser
+export async function GET(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if ((token.role as string) !== 'ADMIN')
+    return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
 
-  const res = await fetch(uploadUrl, {
-    method:  'PUT',
-    headers: {
-      Authorization:  `Bearer ${graphToken}`,
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    },
-    body: buf,
-  })
-
-  if (!res.ok) {
-    const detail = await res.text()
-    console.error('[export] OneDrive upload failed:', detail)
-    return NextResponse.json({ error: 'Failed to upload to OneDrive', detail }, { status: 500 })
+  try {
+    const { buf } = await buildBuffer()
+    return new Response(buf, {
+      headers: {
+        'Content-Type':        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename="opportunities.xlsx"',
+      },
+    })
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[export] download error:', detail)
+    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
   }
+}
 
-  const file = await res.json()
-  return NextResponse.json({
-    message: `Uploaded successfully — ${opps.length} opportunities`,
-    webUrl:  file.webUrl,
-  })
+// POST — upload to OneDrive
+export async function POST(req: NextRequest) {
+  const token = await getToken({ req })
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if ((token.role as string) !== 'ADMIN')
+    return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
+
+  try {
+    const { buf, count } = await buildBuffer()
+
+    const graphToken = await getGraphToken()
+    const uploadUrl  = `https://graph.microsoft.com/v1.0/users/${ONEDRIVE_USER}/drive/root:/${FILE_PATH}:/content`
+
+    const res = await fetch(uploadUrl, {
+      method:  'PUT',
+      headers: {
+        Authorization:  `Bearer ${graphToken}`,
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+      body: buf,
+    })
+
+    if (!res.ok) {
+      const raw = await res.text()
+      console.error('[export] OneDrive upload failed:', raw)
+      let detail = raw
+      try {
+        const parsed = JSON.parse(raw)
+        const code   = parsed?.error?.innerError?.code ?? parsed?.error?.code
+        if (code === 'resourceLocked') {
+          detail = 'The excel file is already open in some admin, close it to sync or export a latest local copy'
+        } else if (code === 'Authorization_RequestDenied') {
+          detail = 'Permission denied — Files.ReadWrite.All may not be consented for this app.'
+        }
+      } catch { /* leave as raw */ }
+      return NextResponse.json({ error: 'Failed to upload to OneDrive', detail }, { status: 500 })
+    }
+
+    const file = await res.json()
+    return NextResponse.json({
+      message: `Uploaded successfully — ${count} opportunities`,
+      webUrl:  file.webUrl,
+    })
+  } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[export] unhandled error:', detail)
+    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
+  }
 }

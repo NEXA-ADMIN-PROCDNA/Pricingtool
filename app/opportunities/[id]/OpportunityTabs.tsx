@@ -111,8 +111,9 @@ export function OpportunityTabs({
 
   const [finalWarningId, setFinalWarningId]   = useState<string | null>(null)
 
+  const [oppStage, setOppStage]   = useState<string>(opp.stage as string)
   const LOCKED_STAGES = ['APPROVAL_PENDING', 'STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
-  const pricingLocked = LOCKED_STAGES.includes(opp.stage as string)
+  const pricingLocked = LOCKED_STAGES.includes(oppStage)
 
   const [approverId, setApproverId]                     = useState('')
   const [ccIds, setCcIds]                               = useState<string[]>([])
@@ -171,6 +172,7 @@ export function OpportunityTabs({
       }
       const created = await res.json()
       setApprovals((prev: ApprovalItem[]) => [created as ApprovalItem, ...prev])
+      setOppStage('APPROVAL_PENDING')
       setApproverId('')
       setCcIds([])
       setBusinessJustification('')
@@ -234,7 +236,7 @@ export function OpportunityTabs({
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes ⭐' : 'No'} />
-                <Field label="Next Steps" value={STAGE_NEXT_STEPS[opp.stage]} wide />
+                <Field label="Next Steps" value={STAGE_NEXT_STEPS[oppStage]} wide />
                 {opp.notes     && <Field label="Notes"      value={opp.notes}     wide />}
               </dl>
             </div>
@@ -271,7 +273,7 @@ export function OpportunityTabs({
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Status</h2>
               <div className="flex flex-wrap gap-2">
                 <StatusBadge status={opp.status} />
-                <StageBadge  stage={opp.stage}   />
+                <StageBadge  stage={oppStage}   />
                 <LOBBadge    lob={opp.primaryLob} />
               </div>
             </div>
@@ -313,7 +315,7 @@ export function OpportunityTabs({
       {/* ── Final-version change warning modal ──────────────── */}
       {finalWarningId && (() => {
         const targetV = pricingVersions.find(v => v.id === finalWarningId)
-        const isPendingApproval = opp.stage === 'APPROVAL_PENDING'
+        const isPendingApproval = oppStage === 'APPROVAL_PENDING'
         return (
           <>
             <div
@@ -492,7 +494,7 @@ export function OpportunityTabs({
                             <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
                           </svg>
                         )}
-                        {opp.stage === 'APPROVAL_PENDING' ? 'Pending Approval' : pricingLocked ? 'Locked · Approved' : 'Selected for approval'}
+                        {oppStage === 'APPROVAL_PENDING' ? 'Pending Approval' : pricingLocked ? 'Locked · Approved' : 'Selected for approval'}
                       </span>
                     ) : (
                       <button
@@ -654,7 +656,7 @@ export function OpportunityTabs({
 
           {/* ── Approval request panel (stage-aware) ── */}
           {(() => {
-            const stage           = opp.stage as string
+            const stage           = oppStage
             const pendingPricing  = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'PENDING')
             const approvedPricing = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'APPROVED')
             const isReapproval    = !!approvedPricing && (stage === 'LEAD' || stage === 'PRICE_LINKING_PENDING')
