@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
   if ((token.role as string) !== 'ADMIN')
     return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
 
+  try { return await doExport() } catch (e: unknown) {
+    const detail = e instanceof Error ? e.message : String(e)
+    console.error('[export] unhandled error:', detail)
+    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
+  }
+}
+
+async function doExport() {
   const opps = await prisma.opportunity.findMany({
     include: {
       client: { include: { pocs: { take: 1 } } },
@@ -122,9 +130,9 @@ export async function POST(req: NextRequest) {
   })
 
   if (!res.ok) {
-    const err = await res.text()
-    console.error('[export] OneDrive upload failed:', err)
-    return NextResponse.json({ error: 'Failed to upload to OneDrive' }, { status: 500 })
+    const detail = await res.text()
+    console.error('[export] OneDrive upload failed:', detail)
+    return NextResponse.json({ error: 'Failed to upload to OneDrive', detail }, { status: 500 })
   }
 
   const file = await res.json()

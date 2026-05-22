@@ -62,7 +62,7 @@ export async function POST(
     if (!approverId || !requestedById) {
       return NextResponse.json({ error: 'Missing approverId or requestedById' }, { status: 400 })
     }
-    if (!businessJustification?.trim()) {
+    if (approvalType !== 'SOW_VERIFICATION' && !businessJustification?.trim()) {
       return NextResponse.json({ error: 'Business justification is required' }, { status: 400 })
     }
 

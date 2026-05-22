@@ -216,17 +216,16 @@ export function TabSoW({
   const { data: session } = useSession()
   const currentUserId = (session?.user as { id?: string })?.id ?? ''
 
-  const [precontract, setPrecontract]               = useState(initialPreContractAgreed)
-  const [saving, setSaving]                         = useState(false)
-  const [sowCount, setSowCount]                     = useState(0)
-  const [poCount, setPoCount]                       = useState(0)
-  const [verification, setVerification]             = useState<Verification | null>(existingVerification)
-  const [users, setUsers]                           = useState<User[]>([])
-  const [approverId, setApproverId]                 = useState('')
-  const [businessJustification, setBusinessJustification] = useState('')
-  const [submitting, setSubmitting]                 = useState(false)
-  const [submitError, setSubmitError]               = useState<string | null>(null)
-  const [confirmOpen, setConfirmOpen]               = useState(false)
+  const [precontract, setPrecontract]   = useState(initialPreContractAgreed)
+  const [saving, setSaving]             = useState(false)
+  const [sowCount, setSowCount]         = useState(0)
+  const [poCount, setPoCount]           = useState(0)
+  const [verification, setVerification] = useState<Verification | null>(existingVerification)
+  const [users, setUsers]               = useState<User[]>([])
+  const [approverId, setApproverId]     = useState('')
+  const [submitting, setSubmitting]     = useState(false)
+  const [submitError, setSubmitError]   = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen]   = useState(false)
 
   const anyCondition = precontract || sowCount > 0 || poCount > 0
   const canSubmit = anyCondition && (!verification || verification.status === 'REJECTED')
@@ -249,7 +248,7 @@ export function TabSoW({
   }
 
   async function submitVerification() {
-    if (!approverId || !currentUserId || !businessJustification.trim()) return
+    if (!approverId || !currentUserId) return
     setSubmitting(true)
     setSubmitError(null)
     const res = await fetch(`/api/opportunities/${opportunityId}/approvals`, {
@@ -259,14 +258,12 @@ export function TabSoW({
         approverId,
         requestedById: currentUserId,
         approvalType: 'SOW_VERIFICATION',
-        businessJustification: businessJustification.trim(),
       }),
     })
     if (res.ok) {
       const data = await res.json() as { id: string; approver: { name: string } }
       setVerification({ id: data.id, status: 'PENDING', approver: data.approver })
       setApproverId('')
-      setBusinessJustification('')
       setConfirmOpen(false)
     } else {
       const body = await res.json().catch(() => ({})) as { error?: string }
@@ -314,12 +311,6 @@ export function TabSoW({
                   This will send a verification request mail to <strong style={{ color: '#0A1F44' }}>{approverName}</strong>.
                   Once submitted, <strong style={{ color: '#0A1F44' }}>this request cannot be undone</strong>.
                 </p>
-                {businessJustification && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: '#3A4A6A', background: '#F4F6FB', border: '1px solid #D6DCE8', borderRadius: 7, padding: '8px 10px' }}>
-                    <span style={{ display: 'block', fontSize: 10, color: '#9AA3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Business Justification</span>
-                    {businessJustification}
-                  </div>
-                )}
               </div>
             </div>
             {submitError && (
@@ -459,8 +450,8 @@ export function TabSoW({
               <p style={{ fontSize: 12, color: '#6B7591', marginBottom: 14 }}>
                 One or more conditions are met. Select an approver to verify and mark this opportunity as Won.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7591', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
                     Approver
                   </label>
@@ -482,39 +473,19 @@ export function TabSoW({
                     }
                   </select>
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7591', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
-                    Business Justification <span style={{ color: '#E53935' }}>*</span>
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={businessJustification}
-                    onChange={e => setBusinessJustification(e.target.value)}
-                    placeholder="Explain why this SOW should be verified…"
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      padding: '9px 12px', borderRadius: 8,
-                      border: '1px solid #D6DCE8', fontSize: 13, color: '#0A1F44',
-                      fontFamily: 'inherit', resize: 'vertical', outline: 'none',
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={!approverId || !businessJustification.trim() || submitting}
-                    style={{
-                      padding: '9px 20px', borderRadius: 8, fontSize: 13,
-                      fontWeight: 600,
-                      cursor: !approverId || !businessJustification.trim() || submitting ? 'not-allowed' : 'pointer',
-                      background: !approverId || !businessJustification.trim() || submitting ? '#E2E6EE' : '#2563EB',
-                      color: !approverId || !businessJustification.trim() || submitting ? '#9AA3B8' : '#fff',
-                      border: 'none', transition: 'all 150ms', whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Submit for Verification
-                  </button>
-                </div>
+                <button
+                  onClick={() => setConfirmOpen(true)}
+                  disabled={!approverId || submitting}
+                  style={{
+                    padding: '9px 20px', borderRadius: 8, fontSize: 13,
+                    fontWeight: 600, cursor: !approverId || submitting ? 'not-allowed' : 'pointer',
+                    background: !approverId || submitting ? '#E2E6EE' : '#2563EB',
+                    color: !approverId || submitting ? '#9AA3B8' : '#fff',
+                    border: 'none', transition: 'all 150ms', whiteSpace: 'nowrap',
+                  }}
+                >
+                  Submit for Verification
+                </button>
               </div>
               {submitError && (
                 <p style={{ fontSize: 12, color: '#C6432F', marginTop: 8 }}>{submitError}</p>

@@ -8,20 +8,57 @@ const C = {
 }
 
 export function ExportButton() {
-  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [state, setState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [webUrl, setWebUrl] = useState<string | null>(null)
+  const [errMsg, setErrMsg] = useState<string | null>(null)
 
   async function handleExport() {
     setState('loading')
+    setErrMsg(null)
     try {
-      const res = await fetch('/api/export/opportunities', { method: 'POST' })
-      if (!res.ok) { setState('error'); return }
+      const res  = await fetch('/api/export/opportunities', { method: 'POST' })
       const data = await res.json()
+      if (!res.ok) {
+        setErrMsg(data.detail ?? data.error ?? 'Unknown error')
+        setState('error')
+        return
+      }
       setWebUrl(data.webUrl ?? null)
       setState('done')
-    } catch {
+    } catch (e) {
+      setErrMsg(e instanceof Error ? e.message : 'Network error')
       setState('error')
     }
+  }
+
+  if (state === 'error') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+        <button
+          onClick={handleExport}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 16px', borderRadius: 4,
+            border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 13, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} style={{ width: 15, height: 15 }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Failed — retry
+        </button>
+        {errMsg && (
+          <span style={{
+            maxWidth: 320, fontSize: 11, color: '#DC2626',
+            fontFamily: 'monospace', wordBreak: 'break-all', textAlign: 'right',
+          }}>
+            {errMsg}
+          </span>
+        )}
+      </div>
+    )
   }
 
   if (state === 'done' && webUrl) {
@@ -55,9 +92,7 @@ export function ExportButton() {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
         padding: '10px 16px', borderRadius: 4,
-        border: `1px solid ${state === 'error' ? '#FCA5A5' : C.rule}`,
-        background: state === 'error' ? '#FEF2F2' : C.bg,
-        color: state === 'error' ? '#DC2626' : C.inkMuted,
+        border: `1px solid ${C.rule}`, background: C.bg, color: C.inkMuted,
         fontFamily: "'Inter', system-ui, sans-serif",
         fontSize: 13, fontWeight: 500,
         cursor: state === 'loading' ? 'not-allowed' : 'pointer',
@@ -70,13 +105,6 @@ export function ExportButton() {
             <path strokeLinecap="round" d="M12 3a9 9 0 109 9" />
           </svg>
           Syncing…
-        </>
-      ) : state === 'error' ? (
-        <>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} style={{ width: 15, height: 15 }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Failed — retry
         </>
       ) : (
         <>
