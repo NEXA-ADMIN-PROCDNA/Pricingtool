@@ -181,7 +181,7 @@ export async function mailApprovalRequested({
   approvalType:     string
   approvalRecordId:      string
   approverId:            string
-  businessJustification: string
+  businessJustification?: string | null
   context?:              ApprovalMailContext
 }) {
   const typeLabel  = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
@@ -195,7 +195,7 @@ export async function mailApprovalRequested({
       ${metaRow('Client', clientName)}
       ${metaRow('Type', pill(typeLabel, approvalType === 'SOW_VERIFICATION' ? '#7C3AED' : '#1E5BB8'))}
       ${metaRow('Requested by', requesterName)}
-      ${metaRow('Business Justification', `<em style="color:#3A4A6A;">${businessJustification}</em>`)}
+      ${businessJustification?.trim() ? metaRow('Business Justification', `<em style="color:#3A4A6A;">${businessJustification}</em>`) : ''}
       ${context ? financialRows(context) : ''}
     </table>`
 

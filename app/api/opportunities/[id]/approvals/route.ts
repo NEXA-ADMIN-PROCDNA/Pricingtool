@@ -109,7 +109,7 @@ export async function POST(
         status:               'PENDING',
         requestedAt:          new Date(),
         pricingVersionNumber: finalVersion?.versionNumber ?? null,
-        businessJustification: businessJustification.trim(),
+        businessJustification: businessJustification?.trim() ?? null,
       },
       include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
     })
@@ -139,7 +139,7 @@ export async function POST(
       approvalType,
       approvalRecordId:      approval.id,
       approverId:            approval.approverId,
-      businessJustification: businessJustification.trim(),
+      businessJustification: approvalType === 'SOW_VERIFICATION' ? undefined : businessJustification?.trim() ?? '',
       context,
     })
 
