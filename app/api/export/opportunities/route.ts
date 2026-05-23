@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { buf } = await buildBuffer()
-    return new Response(buf, {
+    return new Response(buf.buffer as ArrayBuffer, {
       headers: {
         'Content-Type':        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': 'attachment; filename="opportunities.xlsx"',
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         Authorization:  `Bearer ${graphToken}`,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
-      body: buf,
+      body: buf.buffer as ArrayBuffer,
     })
 
     if (!res.ok) {
