@@ -72,19 +72,15 @@ export async function PATCH(
           select: { stage: true },
         })
 
-        if (opp?.stage === 'STATUS_CHANGE_PENDING') {
-          // Pricing approval was already given — changing final version invalidates it
+        if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING'].includes(opp?.stage ?? '')) {
+          // LEAD / PRICE_LINKING_PENDING: advance to price linked
+          // SOW_PENDING: pricing was approved but final version changed — invalidate approval
           await prisma.opportunity.update({
             where: { id: current.opportunityId },
-            data:  { stage: 'LEAD' },
-          })
-        } else if (opp?.stage === 'LEAD') {
-          // Advance stage only from LEAD
-          await prisma.opportunity.update({
-            where: { id: current.opportunityId },
-            data:  { stage: 'PRICE_LINKING_PENDING' },
+            data:  { stage: 'PRICE_LINKED' },
           })
         }
+        // PRICE_LINKED: re-marking another version as final — stage stays PRICE_LINKED, no update needed
       }
     }
 

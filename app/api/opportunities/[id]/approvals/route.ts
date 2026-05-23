@@ -114,7 +114,7 @@ export async function POST(
       include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
     })
 
-    const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_PENDING' : 'APPROVAL_PENDING'
+    const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_REVIEW_PENDING' : 'APPROVAL_PENDING'
     await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: newStage } })
 
     const context = {

@@ -14,7 +14,7 @@ export async function POST(
 
   const opp = await prisma.opportunity.findUnique({
     where: { opportunityId },
-    select: { id: true },
+    select: { id: true, stage: true },
   })
   if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
 
@@ -43,6 +43,10 @@ export async function POST(
       financialSnapshots: { orderBy: { month: 'asc' } },
     },
   })
+
+  if (opp.stage === 'LEAD') {
+    await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: 'PRICE_LINKING_PENDING' } })
+  }
 
   return NextResponse.json(version, { status: 201 })
 }

@@ -31,7 +31,7 @@ export async function POST(
     data:  { status: 'APPROVED', decidedAt: new Date() },
   })
 
-  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'PO_PENDING' : 'STATUS_CHANGE_PENDING'
+  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
   await prisma.opportunity.update({
     where: { id: approval.opportunityId },
     data: { stage: newStage, ...(approval.approvalType === 'SOW_VERIFICATION' ? { status: 'WON' } : {}) },

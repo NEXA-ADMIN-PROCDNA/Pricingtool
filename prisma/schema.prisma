@@ -48,16 +48,20 @@ enum OpportunityStatus {
 }
 
 // Stage drives the pipeline workflow:
-// LEAD → PRICE_LINKING_PENDING → APPROVAL_PENDING → STATUS_CHANGE_PENDING
-//   → (Won) SOW_PENDING → PO_PENDING → TO_BE_ARCHIVED
+// LEAD → PRICE_LINKING_PENDING → PRICE_LINKED → APPROVAL_PENDING
+//   → SOW_PENDING → SOW_SUBMITTED → SOW_REVIEW_PENDING → TO_BE_ARCHIVED
 //   → (Lost / Abandoned) — captured in OpportunityStatus
+// SOW_PENDING = pricing approved, no doc uploaded yet
+// SOW_SUBMITTED = any one of SOW / PO / pre-contract uploaded (any one is sufficient)
+// SOW_REVIEW_PENDING = SOW_VERIFICATION approval request submitted, awaiting decision
 enum OpportunityStage {
   LEAD
   PRICE_LINKING_PENDING
+  PRICE_LINKED
   APPROVAL_PENDING
-  STATUS_CHANGE_PENDING
   SOW_PENDING
-  PO_PENDING
+  SOW_SUBMITTED
+  SOW_REVIEW_PENDING
   TO_BE_ARCHIVED
 }
 

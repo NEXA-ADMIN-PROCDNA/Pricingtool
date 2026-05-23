@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Approve ──────────────────────────────────────────────────
-  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'PO_PENDING' : 'STATUS_CHANGE_PENDING'
+  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
   await prisma.approvalRequest.update({
     where: { id: approvalId },
     data:  { status: 'APPROVED', decidedAt: new Date() },
@@ -163,9 +163,10 @@ export async function POST(req: NextRequest) {
     where: { id: approvalId },
     data:  { status: 'REJECTED', decidedAt: new Date(), rejectionReason: reason || null },
   })
+  const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
   await prisma.opportunity.update({
     where: { id: approval.opportunityId },
-    data:  { stage: 'LEAD' },
+    data:  { stage: rollbackStage },
   })
 
   await mailApprovalRejected({

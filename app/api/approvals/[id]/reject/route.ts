@@ -36,7 +36,8 @@ export async function POST(
     },
   })
 
-  await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: 'LEAD' } })
+  const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
+  await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: rollbackStage } })
 
   await mailApprovalRejected({
     requesterEmail:   approval.requestedBy.email,

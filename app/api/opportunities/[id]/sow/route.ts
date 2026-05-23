@@ -52,7 +52,7 @@ export async function POST(
 
   const opp = await prisma.opportunity.findUnique({
     where:  { opportunityId },
-    select: { id: true, clientId: true },
+    select: { id: true, clientId: true, stage: true },
   })
   if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
 
@@ -95,6 +95,10 @@ export async function POST(
     },
   })
 
+  if (opp.stage === 'SOW_PENDING') {
+    await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: 'SOW_SUBMITTED' } })
+  }
+
   return NextResponse.json({ ...doc, signedUrl: await getSignedUrl(SOW_BUCKET, storagePath) }, { status: 201 })
 }
 
@@ -111,13 +115,25 @@ export async function DELETE(
 
   const doc = await prisma.sOWDocument.findFirst({
     where: { id: docId, opportunity: { opportunityId } },
+    select: { id: true, opportunityId: true },
   })
   if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  await prisma.sOWDocument.update({
-    where: { id: docId },
-    data:  { isActive: false },
+  await prisma.sOWDocument.update({ where: { id: docId }, data: { isActive: false } })
+
+  const opp = await prisma.opportunity.findUnique({
+    where:  { opportunityId },
+    select: { id: true, stage: true, preContractAgreed: true },
   })
+  if (opp?.stage === 'SOW_SUBMITTED') {
+    const [sowCount, poCount] = await Promise.all([
+      prisma.sOWDocument.count({ where: { opportunityId: opp.id, isActive: true } }),
+      prisma.pODocument.count({ where: { opportunityId: opp.id, isActive: true } }),
+    ])
+    if (sowCount === 0 && poCount === 0 && !opp.preContractAgreed) {
+      await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: 'SOW_PENDING' } })
+    }
+  }
 
   return NextResponse.json({ ok: true })
 }

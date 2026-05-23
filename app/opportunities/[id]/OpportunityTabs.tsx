@@ -112,7 +112,7 @@ export function OpportunityTabs({
   const [finalWarningId, setFinalWarningId]   = useState<string | null>(null)
 
   const [oppStage, setOppStage]   = useState<string>(opp.stage as string)
-  const LOCKED_STAGES = ['APPROVAL_PENDING', 'STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED']
+  const LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(oppStage)
 
   const [approverId, setApproverId]                     = useState('')
@@ -659,7 +659,9 @@ export function OpportunityTabs({
             const stage           = oppStage
             const pendingPricing  = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'PENDING')
             const approvedPricing = approvals.find((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'APPROVED')
-            const isReapproval    = !!approvedPricing && (stage === 'LEAD' || stage === 'PRICE_LINKING_PENDING')
+            const wasRejected     = stage === 'PRICE_LINKED' && approvals.some((ar: any) => ar.approvalType === 'PRICING' && ar.status === 'REJECTED')
+            const isInvalidated   = !!approvedPricing && stage === 'PRICE_LINKED'
+            const isReapproval    = wasRejected || isInvalidated
 
             // ── In-flight approval ────────────────────────────────
             if (stage === 'APPROVAL_PENDING') return (
@@ -680,7 +682,7 @@ export function OpportunityTabs({
             )
 
             // ── Pricing approved — show next steps ────────────────
-            if (stage === 'STATUS_CHANGE_PENDING') {
+            if (stage === 'SOW_PENDING') {
               const approvedBy = (approvedPricing as any)?.approver?.name
               const decidedAt  = (approvedPricing as any)?.decidedAt
               const approvedAt = decidedAt
@@ -713,7 +715,7 @@ export function OpportunityTabs({
             }
 
             // ── Past pricing stage entirely ───────────────────────
-            if (['SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED'].includes(stage)) return (
+            if (['SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'].includes(stage)) return (
               <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
                 <p className="text-sm text-slate-400">Pricing is approved and the engagement is progressing. No further pricing action is needed here.</p>
               </div>
@@ -722,7 +724,14 @@ export function OpportunityTabs({
             // ── LEAD / PRICE_LINKING_PENDING — show request form ──
             return (
               <>
-                {isReapproval && (
+                {wasRejected && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm text-red-800">
+                      <strong>Approval was rejected.</strong> Review the rejection reason in the history below, revise the pricing if needed, then resubmit.
+                    </p>
+                  </div>
+                )}
+                {isInvalidated && !wasRejected && (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                     <p className="text-sm text-amber-800">
                       <strong>Previous approval invalidated.</strong> A different pricing version was marked as final after{' '}
