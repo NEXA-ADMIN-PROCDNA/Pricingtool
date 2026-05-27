@@ -27,28 +27,17 @@ async function sendMail({
   cc,
   subject,
   html,
-  messageId,
-  inReplyTo,
 }: {
   to: string | string[]
   cc?: string | string[]
   subject: string
   html: string
-  messageId?: string  // sets Message-ID header (root of a new thread)
-  inReplyTo?: string  // sets In-Reply-To + References (reply in existing thread)
 }) {
   const sender = process.env.MAIL_SENDER
   if (!sender) { console.warn('[mail] MAIL_SENDER not set — skipping'); return }
 
   const toList = (Array.isArray(to) ? to : [to]).map(a => ({ emailAddress: { address: a } }))
   const ccList = (Array.isArray(cc) ? cc : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
-
-  const threadHeaders: { name: string; value: string }[] = []
-  if (messageId) threadHeaders.push({ name: 'Message-ID', value: messageId })
-  if (inReplyTo) {
-    threadHeaders.push({ name: 'In-Reply-To', value: inReplyTo })
-    threadHeaders.push({ name: 'References',  value: inReplyTo })
-  }
 
   try {
     const token = await getToken()
@@ -60,8 +49,7 @@ async function sendMail({
           subject,
           body:         { contentType: 'HTML', content: html },
           toRecipients: toList,
-          ...(ccList.length    ? { ccRecipients:         ccList        } : {}),
-          ...(threadHeaders.length ? { internetMessageHeaders: threadHeaders } : {}),
+          ...(ccList.length ? { ccRecipients: ccList } : {}),
         },
         saveToSentItems: false,
       }),
@@ -199,13 +187,10 @@ export async function mailApprovalRequested({
       ${context ? financialRows(context) : ''}
     </table>`
 
-  const threadMessageId = `<approval-${approvalRecordId}@procdna.com>`
-
-  // Approver — full email with Approve / Reject buttons (root of thread)
+  // Approver — full email with Approve / Reject buttons
   await sendMail({
-    to:        approverEmail,
-    subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
-    messageId: threadMessageId,
+    to:      approverEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
     html: wrap(`
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
@@ -222,9 +207,8 @@ export async function mailApprovalRequested({
   // CC recipients — same details as approver, no action buttons (thread reply)
   if (ccEmails && ccEmails.length > 0) {
     await sendMail({
-      to:        ccEmails,
-      subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
-      inReplyTo: threadMessageId,
+      to:      ccEmails,
+      subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
       html: wrap(`
         <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
         <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">You have been CC'd on this request. <strong style="color:#0A1F44;">${requesterName}</strong> has requested approval from <strong style="color:#0A1F44;">${approverName}</strong>.</p>
@@ -236,9 +220,8 @@ export async function mailApprovalRequested({
 
   // Requester — notification only, no action links (thread reply)
   await sendMail({
-    to:        requesterEmail,
-    subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
-    inReplyTo: threadMessageId,
+    to:      requesterEmail,
+    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
     html: wrap(`
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Approval request submitted</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
@@ -262,7 +245,6 @@ export async function mailApprovalApproved({
   opportunityId,
   opportunityName,
   approvalType,
-  approvalRecordId,
 }: {
   requesterEmail:  string
   requesterName:   string
@@ -271,7 +253,6 @@ export async function mailApprovalApproved({
   opportunityId:   string
   opportunityName: string
   approvalType:    string
-  approvalRecordId: string
 }) {
   const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const html = wrap(`
@@ -289,7 +270,6 @@ export async function mailApprovalApproved({
     to:        requesterEmail,
     cc:        approverEmail,
     subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
-    inReplyTo: `<approval-${approvalRecordId}@procdna.com>`,
     html,
   })
 }
@@ -302,7 +282,6 @@ export async function mailApprovalRejected({
   opportunityId,
   opportunityName,
   approvalType,
-  approvalRecordId,
   reason,
 }: {
   requesterEmail:  string
@@ -312,7 +291,6 @@ export async function mailApprovalRejected({
   opportunityId:   string
   opportunityName: string
   approvalType:    string
-  approvalRecordId: string
   reason?:         string
 }) {
   const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
@@ -332,7 +310,6 @@ export async function mailApprovalRejected({
     to:        requesterEmail,
     cc:        approverEmail,
     subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
-    inReplyTo: `<approval-${approvalRecordId}@procdna.com>`,
     html,
   })
 }

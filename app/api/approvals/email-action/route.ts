@@ -118,7 +118,6 @@ export async function GET(req: NextRequest) {
     opportunityId:    approval.opportunity.opportunityId,
     opportunityName:  approval.opportunity.opportunityName,
     approvalType:     approval.approvalType,
-    approvalRecordId: approvalId,
   })
 
   return successPage(
@@ -177,7 +176,6 @@ export async function POST(req: NextRequest) {
     opportunityId:    approval.opportunity.opportunityId,
     opportunityName:  approval.opportunity.opportunityName,
     approvalType:     approval.approvalType,
-    approvalRecordId: approvalId,
     reason:           reason || undefined,
   })
 

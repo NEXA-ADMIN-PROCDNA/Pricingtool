@@ -7,29 +7,29 @@ const pool    = new Pool({ connectionString: process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
 const prisma  = new PrismaClient({ adapter })
 
-async function main() { // editing the existing user
-  const user = await prisma.user.update({
-    where: { email: 'nexaadmin@procdna.com' },
-    data:  { role: 'ADMIN' , 
-      name : 'NEXA ADMIN',
-    },
-  })
-  console.log('Updated:', user.id, user.email, user.role)
-}
-//  For updating the existing
-
-// async function main() {
-//   const user = await prisma.user.create({
-//     data: {
-//       email:    'jagrit.desai@procdna.com',
-//       name:     'JAGRIT DESAI',
-//       role:     'ADMIN',
-//       location: 'INDIA',
-//       isActive: true,
+// async function main() { // editing the existing user
+//   const user = await prisma.user.update({
+//     where: { email: 'nexaadmin@procdna.com' },
+//     data:  { role: 'ADMIN' , 
+//       name : 'NEXA ADMIN',
 //     },
 //   })
-//   console.log('Created:', user.id, user.email, user.role)
+//   console.log('Updated:', user.id, user.email, user.role)
 // }
+//  For updating the existing
+
+async function main() {
+  const user = await prisma.user.create({
+    data: {
+      email:    'abhinay.kankani@procdna.com',
+      name:     'ABHINAY KANKANI',
+      role:     'ED',
+      location: 'INDIA',
+      isActive: true,
+    },
+  })
+  console.log('Created:', user.id, user.email, user.role)
+}
 //for creation of new
 
 main()

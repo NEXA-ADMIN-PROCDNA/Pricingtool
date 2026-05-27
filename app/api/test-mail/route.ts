@@ -38,12 +38,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ step: 'token', ...result }, { status: 200 })
   }
 
-  // ── 3. Send test mail to sender itself ────────────────────────
+  // ── 3. Send test mail ────────────────────────────────────────
+  const url    = new URL(req.url)
+  const testTo = url.searchParams.get('to') ?? sender
   const testBody = JSON.stringify({
     message: {
       subject: '[NEXA] Test mail — diagnostic',
-      body: { contentType: 'HTML', content: '<p>This is a diagnostic test mail from NEXA.</p>' },
-      toRecipients: [{ emailAddress: { address: sender } }],
+      body: { contentType: 'HTML', content: '<p>This is a diagnostic test mail from NEXA.</p><p>Sent via Microsoft Graph API application permissions.</p>' },
+      toRecipients: [{ emailAddress: { address: testTo } }],
     },
     saveToSentItems: false,
   })
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
     })
 
     if (res.ok) {
-      result.mailSent = `✓ success (HTTP ${res.status}) — check ${sender} inbox`
+      result.mailSent = `✓ success (HTTP ${res.status}) — check ${testTo} inbox`
     } else {
       const errText = await res.text()
       result.mailSent = `✗ Graph API error (HTTP ${res.status}): ${errText}`
