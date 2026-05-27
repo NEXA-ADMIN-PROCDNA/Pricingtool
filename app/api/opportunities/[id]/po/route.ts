@@ -22,7 +22,6 @@ export async function GET(
   if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
-  const supabase = getSupabase()
 
   const docs = await prisma.pODocument.findMany({
     where: { opportunity: { opportunityId }, isActive: true },
@@ -39,6 +38,7 @@ export async function GET(
   return NextResponse.json(withUrls)
 }
 
+// POST — issue a presigned upload URL for direct browser-to-Supabase upload
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -51,50 +51,33 @@ export async function POST(
 
   const opp = await prisma.opportunity.findUnique({
     where:  { opportunityId },
-    select: { id: true, clientId: true, stage: true },
+    select: { id: true },
   })
   if (!opp) return apiError('OPP_NOT_FOUND')
 
-  const form = await req.formData()
-  const file = form.get('file') as File | null
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  const { fileName, fileSize, mimeType } = await req.json() as {
+    fileName: string
+    fileSize: number
+    mimeType: string
+  }
 
-  if (!ALLOWED_MIME.has(file.type)) return apiError('DOC_WRONG_TYPE')
-
-  if (file.size > 49 * 1024 * 1024) return apiError('DOC_TOO_LARGE')
+  if (!ALLOWED_MIME.has(mimeType)) return apiError('DOC_WRONG_TYPE')
+  if (fileSize > 49 * 1024 * 1024) return apiError('DOC_TOO_LARGE')
 
   const existing = await prisma.pODocument.count({ where: { opportunityId: opp.id } })
   const version  = existing + 1
-  const ext      = file.name.split('.').pop() ?? 'bin'
+  const ext      = fileName.split('.').pop() ?? 'bin'
   const storagePath = `${opportunityId}/v${version}_${Date.now()}.${ext}`
-  const buffer   = Buffer.from(await file.arrayBuffer())
 
-  const { error: uploadError } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from(PO_BUCKET)
-    .upload(storagePath, buffer, { contentType: file.type, upsert: false })
+    .createSignedUploadUrl(storagePath)
 
-  if (uploadError) {
-    console.error('Supabase PO upload error:', uploadError)
-    return apiError('DOC_UPLOAD_FAILED', uploadError.message)
+  if (error || !data?.signedUrl) {
+    return apiError('DOC_UPLOAD_FAILED', error?.message)
   }
 
-  const doc = await prisma.pODocument.create({
-    data: {
-      opportunityId: opp.id,
-      clientId:      opp.clientId,
-      fileName:      file.name,
-      storagePath,
-      fileSizeBytes: file.size,
-      mimeType:      file.type,
-      version,
-    },
-  })
-
-  if (opp.stage === 'SOW_PENDING') {
-    await prisma.opportunity.update({ where: { id: opp.id }, data: { stage: 'SOW_SUBMITTED' } })
-  }
-
-  return NextResponse.json({ ...doc, signedUrl: await getSignedUrl(PO_BUCKET, storagePath) }, { status: 201 })
+  return NextResponse.json({ uploadUrl: data.signedUrl, storagePath })
 }
 
 export async function DELETE(

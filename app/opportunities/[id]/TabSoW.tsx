@@ -82,20 +82,57 @@ function DocUploadSection({
     }
     setError(null)
     setUploading(true)
-    const form = new FormData()
-    form.append('file', file)
-    const res = await fetch(apiPath, { method: 'POST', body: form })
-    if (res.ok) {
-      const doc = await res.json() as Doc
+    try {
+      // Step 1 — get presigned upload URL
+      const presignRes = await fetch(apiPath, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ fileName: file.name, fileSize: file.size, mimeType: file.type }),
+      })
+      if (!presignRes.ok) {
+        const body = await presignRes.json().catch(() => ({})) as { error?: string }
+        setError(body.error ?? 'Upload failed')
+        toast.error(body.error ?? 'Upload failed')
+        setUploading(false)
+        return
+      }
+      const { uploadUrl, storagePath } = await presignRes.json() as { uploadUrl: string; storagePath: string }
+
+      // Step 2 — upload directly to Supabase (bypasses Vercel)
+      const uploadRes = await fetch(uploadUrl, {
+        method:  'PUT',
+        headers: { 'Content-Type': file.type },
+        body:    file,
+      })
+      if (!uploadRes.ok) {
+        setError('Upload failed. Please try again.')
+        toast.error('Upload failed. Please try again.')
+        setUploading(false)
+        return
+      }
+
+      // Step 3 — confirm and create DB record
+      const confirmRes = await fetch(`${apiPath}/confirm`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ storagePath, fileName: file.name, fileSize: file.size, mimeType: file.type }),
+      })
+      if (!confirmRes.ok) {
+        const body = await confirmRes.json().catch(() => ({})) as { error?: string }
+        setError(body.error ?? 'Upload failed')
+        toast.error(body.error ?? 'Upload failed')
+        setUploading(false)
+        return
+      }
+      const doc = await confirmRes.json() as Doc
       setDocs(prev => {
         const next = [doc, ...(prev ?? [])]
         onDocCountChange(next.length)
         return next
       })
-    } else {
-      const body = await res.json().catch(() => ({})) as { error?: string }
-      setError(body.error ?? 'Upload failed')
-      toast.error(body.error ?? 'Upload failed')
+    } catch {
+      setError('Upload failed. Please try again.')
+      toast.error('Upload failed. Please try again.')
     }
     setUploading(false)
   }
