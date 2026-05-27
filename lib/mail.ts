@@ -187,13 +187,25 @@ export async function mailApprovalRequested({
       ${context ? financialRows(context) : ''}
     </table>`
 
+  const subjectLine = approvalType === 'SOW_VERIFICATION'
+    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+
+  const headingLabel = approvalType === 'SOW_VERIFICATION'
+    ? 'SOW Verification Request'
+    : 'Pricing Approval Request'
+
+  const approverIntro = approvalType === 'SOW_VERIFICATION'
+    ? `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval to verify the SOW &amp; PO documents for this opportunity.`
+    : `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval for the <strong style="color:#0A1F44;">pricing stage</strong> of this opportunity.`
+
   // Approver — full email with Approve / Reject buttons
   await sendMail({
     to:      approverEmail,
-    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
+    subject: subjectLine,
     html: wrap(`
-      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
-      <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
+      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">${approverIntro}</p>
       ${detailsTable}
       <table cellpadding="0" cellspacing="0" style="margin-top:24px;width:100%;">
         <tr>
@@ -214,9 +226,9 @@ export async function mailApprovalRequested({
   if (ccEmails && ccEmails.length > 0) {
     await sendMail({
       to:      ccEmails,
-      subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
+      subject: subjectLine,
       html: wrap(`
-        <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
+        <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
         <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">You have been CC'd on this request. <strong style="color:#0A1F44;">${requesterName}</strong> has requested approval from <strong style="color:#0A1F44;">${approverName}</strong>.</p>
         ${detailsTable}
         ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
@@ -227,9 +239,9 @@ export async function mailApprovalRequested({
   // Requester — notification only, no action links (thread reply)
   await sendMail({
     to:      requesterEmail,
-    subject: `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
+    subject: subjectLine,
     html: wrap(`
-      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Approval request submitted</h2>
+      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel} submitted</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
       <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
         ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
@@ -260,7 +272,10 @@ export async function mailApprovalApproved({
   opportunityName: string
   approvalType:    string
 }) {
-  const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const subjectLine = approvalType === 'SOW_VERIFICATION'
+    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
   const html = wrap(`
     <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request approved ✓</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been approved by <strong style="color:#0A1F44;">${approverName}</strong>.</p>
@@ -273,9 +288,9 @@ export async function mailApprovalApproved({
   `)
 
   await sendMail({
-    to:        requesterEmail,
-    cc:        approverEmail,
-    subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
+    to:      requesterEmail,
+    cc:      approverEmail,
+    subject: subjectLine,
     html,
   })
 }
@@ -299,7 +314,10 @@ export async function mailApprovalRejected({
   approvalType:    string
   reason?:         string
 }) {
-  const typeLabel = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const subjectLine = approvalType === 'SOW_VERIFICATION'
+    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
   const html = wrap(`
     <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request rejected</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been rejected by <strong style="color:#0A1F44;">${approverName}</strong>.</p>
@@ -313,9 +331,9 @@ export async function mailApprovalRejected({
   `)
 
   await sendMail({
-    to:        requesterEmail,
-    cc:        approverEmail,
-    subject:   `[NEXA] ${opportunityId} · ${opportunityName} — ${typeLabel}`,
+    to:      requesterEmail,
+    cc:      approverEmail,
+    subject: subjectLine,
     html,
   })
 }

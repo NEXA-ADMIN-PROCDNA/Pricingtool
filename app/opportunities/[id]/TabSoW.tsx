@@ -101,8 +101,12 @@ function DocUploadSection({
       // Step 2 — upload directly to Supabase (bypasses Vercel)
       const uploadRes = await fetch(uploadUrl, {
         method:  'PUT',
-        headers: { 'Content-Type': file.type },
-        body:    file,
+        headers: {
+          'Content-Type': file.type,
+          'apikey':        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''}`,
+        },
+        body: file,
       })
       if (!uploadRes.ok) {
         setError('Upload failed. Please try again.')
