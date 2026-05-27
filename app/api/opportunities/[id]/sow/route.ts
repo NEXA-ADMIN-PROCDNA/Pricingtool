@@ -65,7 +65,7 @@ export async function POST(
     return apiError('DOC_WRONG_TYPE')
   }
 
-  if (file.size > 20 * 1024 * 1024) {
+  if (file.size > 49 * 1024 * 1024) {
     return apiError('DOC_TOO_LARGE')
   }
 

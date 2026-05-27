@@ -69,6 +69,17 @@ function DocUploadSection({
   }, [apiPath])
 
   async function uploadFile(file: File) {
+    if (file.size > 49 * 1024 * 1024) {
+      setError('File exceeds the 49 MB limit.')
+      toast.error('File exceeds the 49 MB limit.')
+      return
+    }
+    const ALLOWED = new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','image/png','image/jpeg'])
+    if (!ALLOWED.has(file.type)) {
+      setError('Only PDF, Word, Excel, PNG, and JPEG files are allowed.')
+      toast.error('Only PDF, Word, Excel, PNG, and JPEG files are allowed.')
+      return
+    }
     setError(null)
     setUploading(true)
     const form = new FormData()
@@ -402,7 +413,7 @@ export function TabSoW({
       {/* ── 2. SoW upload ── */}
       <DocUploadSection
         title="Statement of Work"
-        description="Upload the signed SoW document after pricing approval. PDF, Word, and Excel files accepted · max 20 MB."
+        description="Upload the signed SoW document after pricing approval. PDF, Word, and Excel files accepted · max 49 MB."
         apiPath={`/api/opportunities/${opportunityId}/sow`}
         onDocCountChange={setSowCount}
       />
@@ -412,7 +423,7 @@ export function TabSoW({
       {/* ── 3. PO upload ── */}
       <DocUploadSection
         title="Purchase Order"
-        description="Upload the PO received from the client. PDF, Word, and Excel files accepted · max 20 MB."
+        description="Upload the PO received from the client. PDF, Word, and Excel files accepted · max 49 MB."
         apiPath={`/api/opportunities/${opportunityId}/po`}
         onDocCountChange={setPoCount}
       />

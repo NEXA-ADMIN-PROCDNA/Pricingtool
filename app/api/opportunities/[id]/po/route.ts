@@ -61,7 +61,7 @@ export async function POST(
 
   if (!ALLOWED_MIME.has(file.type)) return apiError('DOC_WRONG_TYPE')
 
-  if (file.size > 20 * 1024 * 1024) return apiError('DOC_TOO_LARGE')
+  if (file.size > 49 * 1024 * 1024) return apiError('DOC_TOO_LARGE')
 
   const existing = await prisma.pODocument.count({ where: { opportunityId: opp.id } })
   const version  = existing + 1

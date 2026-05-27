@@ -35,7 +35,7 @@ export const APP_ERRORS = {
   BJ_REQUIRED:            { status: 400, message: 'A business justification is required for pricing approvals.' },
 
   // SOW / PO
-  DOC_TOO_LARGE:          { status: 413, message: 'File exceeds the 20 MB limit.' },
+  DOC_TOO_LARGE:          { status: 413, message: 'File exceeds the 49 MB limit.' },
   DOC_WRONG_TYPE:         { status: 415, message: 'Only PDF, Word, Excel, PNG, and JPEG files are allowed.' },
   DOC_UPLOAD_FAILED:      { status: 500, message: 'Failed to upload the document. Try again.' },
   DOC_NOT_FOUND:          { status: 404, message: 'Document not found — it may have already been deleted.' },
