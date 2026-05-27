@@ -195,10 +195,16 @@ export async function mailApprovalRequested({
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">New approval request</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval.</p>
       ${detailsTable}
-      <div style="margin-top:24px;display:flex;gap:12px;">
-        <a href="${approveUrl}" style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#16A34A;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10003; Approve</a>
-        <a href="${rejectUrl}"  style="flex:1;display:inline-block;text-align:center;padding:12px 0;background:#DC2626;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10005; Reject</a>
-      </div>
+      <table cellpadding="0" cellspacing="0" style="margin-top:24px;width:100%;">
+        <tr>
+          <td style="padding-right:6px;">
+            <a href="${approveUrl}" style="display:block;text-align:center;padding:12px 0;background:#16A34A;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10003; Approve</a>
+          </td>
+          <td style="padding-left:6px;">
+            <a href="${rejectUrl}" style="display:block;text-align:center;padding:12px 0;background:#DC2626;color:#ffffff;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">&#10005; Reject</a>
+          </td>
+        </tr>
+      </table>
       <p style="margin:16px 0 0;font-size:11px;color:#9AA3B8;">You can also review this request in the app.</p>
       ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
     `),
