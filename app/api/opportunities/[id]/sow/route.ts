@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { getSupabase, getSignedUrl, SOW_BUCKET } from '@/lib/supabase'
+import { apiError } from '@/lib/errors'
 
 const ALLOWED_MIME = new Set([
   'application/pdf',
@@ -19,7 +20,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
   const supabase = getSupabase()
@@ -45,7 +46,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
   const supabase = getSupabase()
@@ -54,18 +55,18 @@ export async function POST(
     where:  { opportunityId },
     select: { id: true, clientId: true, stage: true },
   })
-  if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
+  if (!opp) return apiError('OPP_NOT_FOUND')
 
   const form = await req.formData()
   const file = form.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
   if (!ALLOWED_MIME.has(file.type)) {
-    return NextResponse.json({ error: 'File type not allowed' }, { status: 415 })
+    return apiError('DOC_WRONG_TYPE')
   }
 
   if (file.size > 20 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File exceeds 20MB limit' }, { status: 413 })
+    return apiError('DOC_TOO_LARGE')
   }
 
   const existing = await prisma.sOWDocument.count({ where: { opportunityId: opp.id } })
@@ -80,7 +81,7 @@ export async function POST(
 
   if (uploadError) {
     console.error('Supabase upload error:', uploadError)
-    return NextResponse.json({ error: uploadError.message }, { status: 500 })
+    return apiError('DOC_UPLOAD_FAILED', uploadError.message)
   }
 
   const doc = await prisma.sOWDocument.create({
@@ -108,7 +109,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
   const { docId } = await req.json() as { docId: string }
@@ -117,7 +118,7 @@ export async function DELETE(
     where: { id: docId, opportunity: { opportunityId } },
     select: { id: true, opportunityId: true },
   })
-  if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!doc) return apiError('DOC_NOT_FOUND')
 
   await prisma.sOWDocument.update({ where: { id: docId }, data: { isActive: false } })
 

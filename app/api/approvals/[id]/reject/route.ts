@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { mailApprovalRejected } from '@/lib/mail'
+import { apiError } from '@/lib/errors'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { id } = await params
   const userId  = token.id as string
@@ -23,9 +24,9 @@ export async function POST(
       opportunity: { select: { opportunityId: true, opportunityName: true } },
     },
   })
-  if (!approval) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (!isAdmin && approval.approverId !== userId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  if (approval.status !== 'PENDING') return NextResponse.json({ error: 'Already decided' }, { status: 409 })
+  if (!approval) return apiError('APPROVAL_NOT_FOUND')
+  if (!isAdmin && approval.approverId !== userId) return apiError('APPROVAL_WRONG_USER')
+  if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
 
   const updated = await prisma.approvalRequest.update({
     where: { id },

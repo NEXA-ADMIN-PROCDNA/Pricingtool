@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const token = await getToken({ req })
-  if (!token?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  if (!token?.id) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
   const { content, parentId } = await req.json()
@@ -22,7 +21,7 @@ export async function POST(
     where: { opportunityId },
     select: { id: true },
   })
-  if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
+  if (!opp) return apiError('OPP_NOT_FOUND')
 
   const comment = await prisma.comment.create({
     data: {

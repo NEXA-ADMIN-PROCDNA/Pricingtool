@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { mailApprovalRequested, type ApprovalMailContext } from '@/lib/mail'
+import { apiError } from '@/lib/errors'
 
 function computeContext(
   staffing: {
@@ -53,7 +54,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { id: opportunityId } = await params
@@ -63,7 +64,7 @@ export async function POST(
       return NextResponse.json({ error: 'Missing approverId or requestedById' }, { status: 400 })
     }
     if (approvalType !== 'SOW_VERIFICATION' && !businessJustification?.trim()) {
-      return NextResponse.json({ error: 'Business justification is required' }, { status: 400 })
+      return apiError('BJ_REQUIRED')
     }
 
     const opp = await prisma.opportunity.findUnique({
@@ -74,7 +75,7 @@ export async function POST(
         client: { select: { name: true } },
       },
     })
-    if (!opp) return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
+    if (!opp) return apiError('OPP_NOT_FOUND')
 
     const ccUserIds: string[] = Array.isArray(ccIds) ? ccIds : []
 
@@ -146,6 +147,6 @@ export async function POST(
     return NextResponse.json(approval, { status: 201 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to create approval request' }, { status: 500 })
+    return apiError('APPROVAL_SEND_FAILED')
   }
 }

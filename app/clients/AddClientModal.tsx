@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 
 const INDUSTRIES = [
   'Pharmaceuticals', 'Financial Services', 'Biotechnology',
@@ -52,6 +53,7 @@ export function AddClientModal() {
       setDone(true)
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
+      toast.error(err.message || 'Something went wrong. Please try again.')
     } finally {
       setSubmitting(false)
     }

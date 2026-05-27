@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { pvId } = await params
@@ -20,7 +21,7 @@ export async function POST(
         financialSnapshots: true,
       },
     })
-    if (!source) return NextResponse.json({ error: 'Version not found' }, { status: 404 })
+    if (!source) return apiError('PV_NOT_FOUND')
 
     // Next version number for this opportunity
     const agg = await prisma.pricingVersion.aggregate({
@@ -132,6 +133,6 @@ export async function POST(
     return NextResponse.json(newVersion, { status: 201 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to duplicate pricing version' }, { status: 500 })
+    return apiError('PV_DUPLICATE_FAILED')
   }
 }

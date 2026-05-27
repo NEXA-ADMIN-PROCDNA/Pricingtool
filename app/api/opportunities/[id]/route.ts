@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
   const body = await req.json() as { preContractAgreed?: boolean }
 
   const opp = await prisma.opportunity.findUnique({ where: { opportunityId } })
-  if (!opp) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!opp) return apiError('OPP_NOT_FOUND')
 
   if (typeof body.preContractAgreed === 'boolean') {
     await prisma.opportunity.update({

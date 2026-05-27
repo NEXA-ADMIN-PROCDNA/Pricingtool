@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 
 type ClientRequest = {
   id: string
@@ -35,7 +36,7 @@ export function AdminRequestsPanel() {
     fetch('/api/client-requests')
       .then(r => r.json())
       .then(setRequests)
-      .catch(() => {})
+      .catch(() => toast.error('Failed to load client requests'))
   }, [role])
 
   if (role !== 'ADMIN' || requests.length === 0) return null
@@ -43,15 +44,20 @@ export function AdminRequestsPanel() {
   async function handleAction(reqId: string, action: 'approve' | 'reject') {
     setActing(reqId)
     try {
-      await fetch(`/api/client-requests/${reqId}/${action}`, {
+      const res = await fetch(`/api/client-requests/${reqId}/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reviewerId: adminId }),
       })
-      setRequests(prev => prev.filter(r => r.id !== reqId))
-      if (action === 'approve') window.location.reload()
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        toast.error(j.error ?? `Failed to ${action} request`)
+      } else {
+        setRequests(prev => prev.filter(r => r.id !== reqId))
+        if (action === 'approve') window.location.reload()
+      }
     } catch {
-      // keep the card visible on error
+      toast.error(`Failed to ${action} request. Please try again.`)
     } finally {
       setActing(null)
     }

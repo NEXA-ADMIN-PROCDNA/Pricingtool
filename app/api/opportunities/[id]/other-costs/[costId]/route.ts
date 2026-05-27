@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ costId: string }> },
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { costId } = await params
   const { isBillable, markupPct } = await req.json()
@@ -26,7 +27,7 @@ export async function DELETE(
   { params }: { params: Promise<{ costId: string }> },
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { costId } = await params
   await prisma.otherCost.delete({ where: { id: costId } })

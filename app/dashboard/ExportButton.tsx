@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 const C = {
   rule:     '#D6DCE8',
@@ -19,14 +20,18 @@ export function ExportButton() {
       const res  = await fetch('/api/export/opportunities', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setErrMsg(data.detail ?? data.error ?? 'Unknown error')
+        const msg = data.detail ?? data.error ?? 'Sync to OneDrive failed'
+        setErrMsg(msg)
+        toast.error(msg)
         setState('error')
         return
       }
       setWebUrl(data.webUrl ?? null)
       setState('done')
     } catch (e) {
-      setErrMsg(e instanceof Error ? e.message : 'Network error')
+      const msg = e instanceof Error ? e.message : 'Network error'
+      setErrMsg(msg)
+      toast.error(msg)
       setState('error')
     }
   }

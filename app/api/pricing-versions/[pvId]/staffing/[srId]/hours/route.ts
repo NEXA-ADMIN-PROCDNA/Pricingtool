@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { srId } = await params
@@ -25,6 +26,6 @@ export async function PUT(
     return NextResponse.json(entry)
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to update hours' }, { status: 500 })
+    return apiError('HOURS_SAVE_FAILED')
   }
 }

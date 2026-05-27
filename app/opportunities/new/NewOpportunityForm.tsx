@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { LineOfBusiness } from '@prisma/client'
+import { toast } from 'sonner'
 
 type POC    = { id: string; name: string; email: string | null; phone: string | null; jobTitle: string | null }
 type Client = {
@@ -146,12 +147,14 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
         if (!res.ok) {
           const j = await res.json()
           setError(j.error ?? 'Failed to create opportunity')
+          toast.error(j.error ?? 'Failed to create opportunity')
           return
         }
         const opp = await res.json()
         router.push(`/opportunities/${opp.opportunityId}`)
       } catch {
         setError('Something went wrong. Please try again.')
+        toast.error('Something went wrong. Please try again.')
       }
     })
   }

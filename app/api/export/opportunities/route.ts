@@ -3,6 +3,7 @@ import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import * as XLSX from 'xlsx'
 import { ClientSecretCredential } from '@azure/identity'
+import { apiError } from '@/lib/errors'
 
 const ONEDRIVE_USER = 'shreeraj.deshmukh@procdna.com'
 const FILE_PATH     = 'opportunities.xlsx'
@@ -84,9 +85,8 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
 // GET — download xlsx directly to browser
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((token.role as string) !== 'ADMIN')
-    return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
+  if (!token) return apiError('UNAUTHORIZED')
+  if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
   try {
     const { buf } = await buildBuffer()
@@ -99,16 +99,15 @@ export async function GET(req: NextRequest) {
   } catch (e: unknown) {
     const detail = e instanceof Error ? e.message : String(e)
     console.error('[export] download error:', detail)
-    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
+    return apiError('EXPORT_FAILED', detail)
   }
 }
 
 // POST — upload to OneDrive
 export async function POST(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((token.role as string) !== 'ADMIN')
-    return NextResponse.json({ error: 'Forbidden — Admin only' }, { status: 403 })
+  if (!token) return apiError('UNAUTHORIZED')
+  if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
   try {
     const { buf, count } = await buildBuffer()
@@ -128,17 +127,13 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const raw = await res.text()
       console.error('[export] OneDrive upload failed:', raw)
-      let detail = raw
       try {
         const parsed = JSON.parse(raw)
         const code   = parsed?.error?.innerError?.code ?? parsed?.error?.code
-        if (code === 'resourceLocked') {
-          detail = 'The excel file is already open in some admin, close it to sync or export a latest local copy'
-        } else if (code === 'Authorization_RequestDenied') {
-          detail = 'Permission denied — Files.ReadWrite.All may not be consented for this app.'
-        }
-      } catch { /* leave as raw */ }
-      return NextResponse.json({ error: 'Failed to upload to OneDrive', detail }, { status: 500 })
+        if (code === 'resourceLocked') return apiError('EXPORT_LOCKED')
+        if (code === 'Authorization_RequestDenied') return apiError('EXPORT_PERMISSION')
+      } catch { /* leave as generic */ }
+      return apiError('ONEDRIVE_UPLOAD_FAILED', raw)
     }
 
     const file = await res.json()
@@ -149,6 +144,6 @@ export async function POST(req: NextRequest) {
   } catch (e: unknown) {
     const detail = e instanceof Error ? e.message : String(e)
     console.error('[export] unhandled error:', detail)
-    return NextResponse.json({ error: 'Export failed', detail }, { status: 500 })
+    return apiError('EXPORT_FAILED', detail)
   }
 }

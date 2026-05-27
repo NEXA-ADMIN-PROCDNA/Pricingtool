@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { MainLayout } from '@/components/layout/MainLayout'
+import { toast } from 'sonner'
 
 const C = {
   pageBg:      '#0D1B35',
@@ -67,8 +68,10 @@ export default function RateCardUploadPage() {
     const res = await fetch('/api/rate-cards/upload', { method: 'POST', body: fd })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
+      const msg = err.error ?? 'Upload failed'
       setState('error')
-      setErrorMsg(err.error ?? 'Upload failed')
+      setErrorMsg(msg)
+      toast.error(msg)
       return
     }
     const data = await res.json()
@@ -93,8 +96,10 @@ export default function RateCardUploadPage() {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
+      const msg = err.error ?? 'Import failed'
       setState('error')
-      setErrorMsg(err.error ?? 'Import failed')
+      setErrorMsg(msg)
+      toast.error(msg)
       return
     }
     const data = await res.json()

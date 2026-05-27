@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { toast } from 'sonner'
 
 type Doc = {
   id: string
@@ -83,6 +84,7 @@ function DocUploadSection({
     } else {
       const body = await res.json().catch(() => ({})) as { error?: string }
       setError(body.error ?? 'Upload failed')
+      toast.error(body.error ?? 'Upload failed')
     }
     setUploading(false)
   }
@@ -99,6 +101,8 @@ function DocUploadSection({
         onDocCountChange(next.length)
         return next
       })
+    } else {
+      toast.error('Failed to delete document')
     }
   }
 
@@ -239,11 +243,12 @@ export function TabSoW({
   async function togglePreContract(checked: boolean) {
     setPrecontract(checked)
     setSaving(true)
-    await fetch(`/api/opportunities/${opportunityId}`, {
+    const res = await fetch(`/api/opportunities/${opportunityId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ preContractAgreed: checked }),
     })
+    if (!res.ok) toast.error('Failed to save pre-contract status')
     setSaving(false)
   }
 
@@ -268,6 +273,7 @@ export function TabSoW({
     } else {
       const body = await res.json().catch(() => ({})) as { error?: string }
       setSubmitError(body.error ?? 'Failed to submit')
+      toast.error(body.error ?? 'Failed to submit verification request')
     }
     setSubmitting(false)
   }

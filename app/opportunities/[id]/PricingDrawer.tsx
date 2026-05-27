@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, RateCardItem, OtherCostRow, ComputedMetrics } from './pricing/types'
 import { computeFromRows, getWeekColumns, weekKey } from './pricing/utils'
@@ -88,7 +89,7 @@ export function PricingDrawer({
     const m = computeFromRows(rows)
     setVersionMetrics(m)
 
-    await fetch(`/api/pricing-versions/${version.id}`, {
+    const res = await fetch(`/api/pricing-versions/${version.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -101,6 +102,7 @@ export function PricingDrawer({
         discountPremiumPct:   m.discountPremiumPct,
       }),
     })
+    if (!res.ok) toast.error('Auto-save failed — pricing metrics may be out of sync')
   }, [version.id])
 
   useEffect(() => {
@@ -128,7 +130,10 @@ export function PricingDrawer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rateCardId: rc.id }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      toast.error('Failed to add staffing resource')
+      return
+    }
     const sr = await res.json()
     const newRow: StaffRow = {
       id: sr.id,
@@ -150,7 +155,8 @@ export function PricingDrawer({
   }, [version.id, staffRows, patchVersion])
 
   const removeRow = useCallback(async (srId: string) => {
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, { method: 'DELETE' })
+    if (!res.ok) { toast.error('Failed to remove staffing resource'); return }
     const newRows = staffRows.filter(r => r.id !== srId)
     setStaffRows(newRows)
     await patchVersion(newRows)
@@ -267,7 +273,10 @@ export function PricingDrawer({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: newDesc.trim(), amount: amt }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      toast.error('Failed to add cost item')
+      return
+    }
     const created = await res.json()
     setOtherCosts(prev => [...prev, { id: created.id, description: created.description, amount: Number(created.amount), markupPct: null, isBillable: true }])
     setNewDesc('')
@@ -312,7 +321,8 @@ export function PricingDrawer({
   }, [opp.opportunityId, otherCosts])
 
   const removeOtherCost = useCallback(async (costId: string) => {
-    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
+    if (!res.ok) { toast.error('Failed to delete cost item'); return }
     setOtherCosts(prev => prev.filter(oc => oc.id !== costId))
   }, [opp.opportunityId])
 

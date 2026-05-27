@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 
 type PricingSnap = {
   versionNumber: number
@@ -351,13 +352,17 @@ export function ApprovalsInbox() {
     fetch('/api/approvals')
       .then(r => r.json())
       .then(setItems)
-      .catch(() => setError('Failed to load approvals'))
+      .catch(() => { setError('Failed to load approvals'); toast.error('Failed to load approvals') })
       .finally(() => setLoading(false))
   }, [])
 
   async function handleApprove(id: string) {
     const res = await fetch(`/api/approvals/${id}/approve`, { method: 'POST' })
-    if (!res.ok) return
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      toast.error(j.error ?? 'Failed to approve. Please try again.')
+      return
+    }
     setItems(prev => prev.map(a => a.id === id ? { ...a, status: 'APPROVED', decidedAt: new Date().toISOString() } : a))
   }
 
@@ -367,7 +372,11 @@ export function ApprovalsInbox() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      toast.error(j.error ?? 'Failed to reject. Please try again.')
+      return
+    }
     setItems(prev => prev.map(a => a.id === id
       ? { ...a, status: 'REJECTED', decidedAt: new Date().toISOString(), rejectionReason: reason || null }
       : a

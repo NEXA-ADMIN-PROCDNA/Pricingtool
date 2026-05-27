@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 import type { ParsedRateCardRow } from '../route'
 
 export async function POST(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((token.role as string) !== 'ADMIN')
-    return NextResponse.json({ error: 'Forbidden — ADMIN only' }, { status: 403 })
+  if (!token) return apiError('UNAUTHORIZED')
+  if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
   const body = await req.json() as { rows: ParsedRateCardRow[] }
   const rows = body?.rows

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { pvId } = await params
@@ -15,7 +16,7 @@ export async function POST(
     if (!rateCardId) return NextResponse.json({ error: 'rateCardId required' }, { status: 400 })
 
     const rc = await prisma.rateCard.findUnique({ where: { id: rateCardId } })
-    if (!rc) return NextResponse.json({ error: 'Rate card not found' }, { status: 404 })
+    if (!rc) return apiError('RATE_CARD_NOT_FOUND')
 
     const sr = await prisma.staffingResource.create({
       data: {
@@ -32,6 +33,6 @@ export async function POST(
     return NextResponse.json(sr, { status: 201 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to add staffing resource' }, { status: 500 })
+    return apiError('STAFFING_SAVE_FAILED')
   }
 }

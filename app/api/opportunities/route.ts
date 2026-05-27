@@ -3,6 +3,7 @@ import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { getOpportunities } from '@/lib/db/opportunities'
 import { LineOfBusiness, OpportunityStage, OpportunityType } from '@prisma/client'
+import { apiError } from '@/lib/errors'
 
 async function nextOpportunityId(): Promise<string> {
   const last = await prisma.opportunity.findFirst({
@@ -16,7 +17,7 @@ async function nextOpportunityId(): Promise<string> {
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const userId = token.id as string | undefined
   const role   = token.role as string | undefined
@@ -96,6 +97,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(opp, { status: 201 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to create opportunity' }, { status: 500 })
+    return apiError('OPP_CREATE_FAILED')
   }
 }

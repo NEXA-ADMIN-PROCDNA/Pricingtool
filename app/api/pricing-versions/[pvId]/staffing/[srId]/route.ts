@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { srId } = await params
@@ -42,7 +43,7 @@ export async function PATCH(
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to update staffing resource' }, { status: 500 })
+    return apiError('STAFFING_SAVE_FAILED')
   }
 }
 
@@ -51,7 +52,7 @@ export async function DELETE(
   { params }: { params: Promise<{ pvId: string; srId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { srId } = await params
@@ -59,6 +60,6 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to remove staffing resource' }, { status: 500 })
+    return apiError('STAFFING_SAVE_FAILED')
   }
 }

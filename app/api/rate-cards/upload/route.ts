@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import * as XLSX from 'xlsx'
+import { apiError } from '@/lib/errors'
 
 const LOCATION_MAP: Record<string, string> = {
   india: 'INDIA',
@@ -18,9 +19,8 @@ export interface ParsedRateCardRow {
 
 export async function POST(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((token.role as string) !== 'ADMIN')
-    return NextResponse.json({ error: 'Forbidden — ADMIN only' }, { status: 403 })
+  if (!token) return apiError('UNAUTHORIZED')
+  if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
   const form = await req.formData()
   const file = form.get('file') as File | null

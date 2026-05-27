@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { pvId } = await params
@@ -15,7 +16,7 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to delete pricing version' }, { status: 500 })
+    return apiError('PV_DELETE_FAILED')
   }
 }
 
@@ -24,7 +25,7 @@ export async function GET(
   { params }: { params: Promise<{ pvId: string }> },
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const { pvId } = await params
   const version = await prisma.pricingVersion.findUnique({
@@ -40,7 +41,7 @@ export async function GET(
       financialSnapshots: { orderBy: { month: 'asc' } },
     },
   })
-  if (!version) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!version) return apiError('PV_NOT_FOUND')
   return NextResponse.json(version)
 }
 
@@ -49,7 +50,7 @@ export async function PATCH(
   { params }: { params: Promise<{ pvId: string }> }
 ) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { pvId } = await params
@@ -101,6 +102,6 @@ export async function PATCH(
     return NextResponse.json(updated)
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to update pricing version' }, { status: 500 })
+    return apiError('OPP_UPDATE_FAILED')
   }
 }

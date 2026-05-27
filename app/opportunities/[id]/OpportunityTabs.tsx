@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { ApprovalStatus } from '@prisma/client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
@@ -65,14 +66,20 @@ export function OpportunityTabs({
 
   async function deleteVersion(versionId: string) {
     const res = await fetch(`/api/pricing-versions/${versionId}`, { method: 'DELETE' })
-    if (!res.ok) return
+    if (!res.ok) {
+      toast.error('Failed to delete pricing version')
+      return
+    }
     setPricingVersions(prev => prev.filter(v => v.id !== versionId))
     setConfirmDeleteId(null)
   }
 
   async function duplicateVersion(versionId: string) {
     const res = await fetch(`/api/pricing-versions/${versionId}/duplicate`, { method: 'POST' })
-    if (!res.ok) return
+    if (!res.ok) {
+      toast.error('Failed to duplicate pricing version')
+      return
+    }
     const newVersion = await res.json() as PricingVersion
     setPricingVersions(prev => [...prev, newVersion])
   }
@@ -83,11 +90,12 @@ export function OpportunityTabs({
   }
 
   async function doMarkAsFinal(versionId: string) {
-    await fetch(`/api/pricing-versions/${versionId}`, {
+    const res = await fetch(`/api/pricing-versions/${versionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isFinal: true }),
     })
+    if (!res.ok) { toast.error('Failed to mark version as final'); return }
     // Stage rolled back on server — reload to sync all state
     window.location.reload()
   }
@@ -100,7 +108,10 @@ export function OpportunityTabs({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        toast.error('Failed to create pricing version')
+        return
+      }
       const version = await res.json() as PricingVersion
       setPricingVersions(prev => [...prev, version])
       setDrawer(version)
@@ -143,6 +154,7 @@ export function OpportunityTabs({
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
         setCommentError(j.error ?? 'Failed to post comment')
+        toast.error(j.error ?? 'Failed to post comment')
         return
       }
       const created = await res.json()
@@ -150,6 +162,7 @@ export function OpportunityTabs({
       setNewComment('')
     } catch {
       setCommentError('Network error')
+      toast.error('Network error — failed to post comment')
     } finally {
       setCommentLoading(false)
     }
@@ -167,7 +180,8 @@ export function OpportunityTabs({
       })
       if (!res.ok) {
         const j = await res.json()
-        setApprovalError(j.error ?? 'Failed')
+        setApprovalError(j.error ?? 'Failed to send approval request')
+        toast.error(j.error ?? 'Failed to send approval request')
         return
       }
       const created = await res.json()
@@ -179,6 +193,7 @@ export function OpportunityTabs({
       setApprovalConfirm(false)
     } catch {
       setApprovalError('Network error')
+      toast.error('Network error — failed to send approval request')
     } finally {
       setApprovalLoading(false)
     }

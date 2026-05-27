@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
+import { apiError } from '@/lib/errors'
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   const requests = await prisma.clientRequest.findMany({
     where: { status: 'PENDING' },
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const token = await getToken({ req })
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!token) return apiError('UNAUTHORIZED')
 
   try {
     const { name, businessUnit, industry, region, notes, requestedById } = await req.json()
@@ -37,6 +38,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(request, { status: 201 })
   } catch (err) {
     console.error(err)
-    return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 })
+    return apiError('CLIENT_REQUEST_FAILED')
   }
 }
