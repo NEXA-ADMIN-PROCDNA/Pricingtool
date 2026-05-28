@@ -96,8 +96,10 @@ export function OpportunityTabs({
       body: JSON.stringify({ isFinal: true }),
     })
     if (!res.ok) { toast.error('Failed to mark version as final'); return }
-    // Stage rolled back on server — reload to sync all state
-    window.location.reload()
+    setPricingVersions(prev => prev.map(v => ({ ...v, isFinal: v.id === versionId })))
+    if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(oppStage)) {
+      setOppStage('PRICE_LINKED')
+    }
   }
 
   async function createPricingVersion() {
@@ -329,8 +331,10 @@ export function OpportunityTabs({
 
       {/* ── Final-version change warning modal ──────────────── */}
       {finalWarningId && (() => {
-        const targetV = pricingVersions.find(v => v.id === finalWarningId)
-        const isPendingApproval = oppStage === 'APPROVAL_PENDING'
+        const targetV               = pricingVersions.find(v => v.id === finalWarningId)
+        const isPricingPending      = oppStage === 'APPROVAL_PENDING'
+        const isSowVerifyPending    = oppStage === 'SOW_REVIEW_PENDING'
+        const isBlocked             = isPricingPending || isSowVerifyPending
         return (
           <>
             <div
@@ -351,24 +355,35 @@ export function OpportunityTabs({
                   </svg>
                 </div>
                 <div>
-                  {isPendingApproval ? (
+                  {isPricingPending && (
                     <>
                       <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
-                        Approval in progress
+                        Pricing approval in progress
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
-                        <strong>V{targetV?.versionNumber}</strong> cannot be marked as final while an approval request is pending.
-                        The approver must decide first, or the pending request must be withdrawn.
+                        The pricing approver has not decided yet. Wait for their response before changing the final version.
                       </p>
                     </>
-                  ) : (
+                  )}
+                  {isSowVerifyPending && (
+                    <>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                        SOW verification in progress
+                      </p>
+                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                        A SOW / PO verification request is pending with the approver. The pricing version cannot be changed until they approve or reject it.
+                      </p>
+                    </>
+                  )}
+                  {!isBlocked && (
                     <>
                       <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
                         This will reset the pricing approval
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
-                        Marking <strong>V{targetV?.versionNumber}</strong> as final will invalidate the existing approval.
-                        The opportunity will go back to <strong>Open</strong> and a new approval will be required.
+                        Marking <strong>V{targetV?.versionNumber}</strong> as final will invalidate the existing pricing approval.
+                        The opportunity will go back to the pricing approval stage and a new approval request will be required.
+                        Uploaded SOW / PO documents will be kept.
                       </p>
                     </>
                   )}
@@ -379,9 +394,9 @@ export function OpportunityTabs({
                   onClick={() => setFinalWarningId(null)}
                   style={{ padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#F4F6FB', color: '#3A4A6A', border: '1px solid #D6DCE8', cursor: 'pointer' }}
                 >
-                  {isPendingApproval ? 'OK' : 'Cancel'}
+                  {isBlocked ? 'OK' : 'Cancel'}
                 </button>
-                {!isPendingApproval && (
+                {!isBlocked && (
                   <button
                     onClick={() => { setFinalWarningId(null); doMarkAsFinal(finalWarningId) }}
                     style={{ padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#DC2626', color: '#fff', border: 'none', cursor: 'pointer' }}

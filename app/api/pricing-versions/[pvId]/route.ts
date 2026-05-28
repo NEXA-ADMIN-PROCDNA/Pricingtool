@@ -73,15 +73,16 @@ export async function PATCH(
           select: { stage: true },
         })
 
-        if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING'].includes(opp?.stage ?? '')) {
+        if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(opp?.stage ?? '')) {
           // LEAD / PRICE_LINKING_PENDING: advance to price linked
-          // SOW_PENDING: pricing was approved but final version changed — invalidate approval
+          // SOW_PENDING / SOW_SUBMITTED: pricing was approved but final version changed — invalidate approval
           await prisma.opportunity.update({
             where: { id: current.opportunityId },
             data:  { stage: 'PRICE_LINKED' },
           })
         }
         // PRICE_LINKED: re-marking another version as final — stage stays PRICE_LINKED, no update needed
+        // SOW_REVIEW_PENDING: blocked in UI — approver must decide before final version can change
       }
     }
 
