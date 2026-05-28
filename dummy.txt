@@ -9,3 +9,4 @@ branch19 dummy
 branch23 dummy
 >>>>>>> branch20
 branch7 dummy
+branch7 dummy
