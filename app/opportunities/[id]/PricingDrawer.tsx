@@ -26,7 +26,7 @@ type SubTab = typeof SUB_TABS[number]
 
 const COMING_SOON: Set<SubTab> = new Set(['Resource Mix', 'Timeline', 'Risk Assessment'])
 
-const LOCKED_STAGES = new Set(['APPROVAL_PENDING', 'STATUS_CHANGE_PENDING', 'SOW_PENDING', 'PO_PENDING', 'TO_BE_ARCHIVED'])
+const LOCKED_STAGES = new Set(['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'])
 
 export function PricingDrawer({
   version,
@@ -454,6 +454,7 @@ export function PricingDrawer({
                 toggleRow={toggleRow}
                 toggleStaffBillable={toggleStaffBillable}
                 applyUtilization={applyUtilization}
+                readOnly={locked}
               />
             )}
 
@@ -475,6 +476,7 @@ export function PricingDrawer({
                 toggleBillable={toggleBillable}
                 commitMarkup={commitMarkup}
                 commitBilled={commitBilled}
+                readOnly={locked}
               />
             )}
 

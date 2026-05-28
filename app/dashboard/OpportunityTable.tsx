@@ -386,8 +386,8 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
     { key: 'winpct',   label: 'Win %',       w: 72,  filterable: true  },
     { key: 'window',   label: 'Time Window', w: 180, filterable: true  },
     { key: 'status',   label: 'Status',      w: 100, filterable: true  },
-    { key: 'comments', label: 'Comments',    w: 80,  filterable: true  },
     { key: 'nextstep', label: 'Next Step',   w: 90,  filterable: true  },
+    { key: 'comments', label: 'Comments',    w: 80,  filterable: true  },
   ]
 
   return (
@@ -585,8 +585,15 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     <StatusPill status={row.status} />
                   </td>
 
-                  {/* Comments */}
+                  {/* Next Step */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                    <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                      {nextStep}
+                    </span>
+                  </td>
+
+                  {/* Comments */}
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
                     {row._count.comments > 0 ? (
                       <span style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, fontVariantNumeric: 'tabular-nums' }}>
                         {row._count.comments}
@@ -594,13 +601,6 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     ) : (
                       <span style={{ color: C.inkFaint, fontSize: 12 }}>—</span>
                     )}
-                  </td>
-
-                  {/* Next Step */}
-                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
-                    <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                      {nextStep}
-                    </span>
                   </td>
                 </tr>
               )

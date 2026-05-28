@@ -19,12 +19,14 @@ interface Props {
   toggleBillable: (costId: string, billable: boolean) => void
   commitMarkup: (costId: string, val: string) => void
   commitBilled: (costId: string, val: string) => void
+  readOnly?: boolean
 }
 
 export function TabOtherCost({
   otherCosts, showAddCost, newDesc, newAmount, editCostCell, editCostVal,
   setShowAddCost, setNewDesc, setNewAmount, setEditCostCell, setEditCostVal,
   addOtherCost, removeOtherCost, toggleBillable, commitMarkup, commitBilled,
+  readOnly = false,
 }: Props) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -51,17 +53,18 @@ export function TabOtherCost({
                   <input
                     type="checkbox"
                     checked={oc.isBillable}
-                    onChange={e => toggleBillable(oc.id, e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    disabled={readOnly}
+                    onChange={e => !readOnly && toggleBillable(oc.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </td>
                 {/* Description */}
                 <td className="px-4 py-3 text-slate-800">{oc.description}</td>
                 {/* Cost */}
                 <td className="px-4 py-3 text-right font-semibold text-slate-800">{fmt(oc.amount)}</td>
-                {/* Markup % — editable */}
+                {/* Markup % */}
                 <td className="px-2 py-2 text-right">
-                  {isEditingMarkup ? (
+                  {isEditingMarkup && !readOnly ? (
                     <input
                       autoFocus type="number" step={0.1} placeholder="0"
                       value={editCostVal}
@@ -72,16 +75,16 @@ export function TabOtherCost({
                     />
                   ) : (
                     <span
-                      onClick={() => { setEditCostCell({ id: oc.id, field: 'markup' }); setEditCostVal(oc.markupPct != null ? String(oc.markupPct) : '') }}
-                      className="cursor-pointer rounded px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700"
+                      onClick={() => { if (readOnly) return; setEditCostCell({ id: oc.id, field: 'markup' }); setEditCostVal(oc.markupPct != null ? String(oc.markupPct) : '') }}
+                      className={`rounded px-2 py-1 text-xs font-semibold text-slate-600 ${readOnly ? 'cursor-default' : 'cursor-pointer hover:bg-indigo-50 hover:text-indigo-700'}`}
                     >
                       {oc.markupPct != null ? `${oc.markupPct.toFixed(1)}%` : <span className="text-slate-300">0%</span>}
                     </span>
                   )}
                 </td>
-                {/* Billed — editable (back-calculates markup) */}
+                {/* Billed */}
                 <td className="px-2 py-2 text-right">
-                  {isEditingBilled ? (
+                  {isEditingBilled && !readOnly ? (
                     <input
                       autoFocus type="number" min={0} step={1} placeholder="0"
                       value={editCostVal}
@@ -92,8 +95,8 @@ export function TabOtherCost({
                     />
                   ) : (
                     <span
-                      onClick={() => { if (!oc.isBillable) return; setEditCostCell({ id: oc.id, field: 'billed' }); setEditCostVal(billed.toFixed(0)) }}
-                      className={`rounded px-2 py-1 text-xs font-semibold ${oc.isBillable ? 'cursor-pointer text-indigo-700 hover:bg-indigo-50' : 'text-slate-400 cursor-default'}`}
+                      onClick={() => { if (readOnly || !oc.isBillable) return; setEditCostCell({ id: oc.id, field: 'billed' }); setEditCostVal(billed.toFixed(0)) }}
+                      className={`rounded px-2 py-1 text-xs font-semibold ${!readOnly && oc.isBillable ? 'cursor-pointer text-indigo-700 hover:bg-indigo-50' : 'text-slate-400 cursor-default'}`}
                     >
                       {fmt(billed)}
                     </span>
@@ -101,15 +104,17 @@ export function TabOtherCost({
                 </td>
                 {/* Delete */}
                 <td className="px-2 py-3">
-                  <button
-                    onClick={() => removeOtherCost(oc.id)}
-                    title="Remove"
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                    </svg>
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => removeOtherCost(oc.id)}
+                      title="Remove"
+                      className="flex h-6 w-6 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3 h-3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                      </svg>
+                    </button>
+                  )}
                 </td>
               </tr>
             )
@@ -132,7 +137,7 @@ export function TabOtherCost({
           )}
 
           {/* Add row */}
-          <tr className="border-t border-dashed border-slate-200 bg-white">
+          {!readOnly && <tr className="border-t border-dashed border-slate-200 bg-white">
             {showAddCost ? (
               <>
                 <td />
@@ -196,7 +201,7 @@ export function TabOtherCost({
                 </button>
               </td>
             )}
-          </tr>
+          </tr>}
         </tbody>
       </table>
     </div>
