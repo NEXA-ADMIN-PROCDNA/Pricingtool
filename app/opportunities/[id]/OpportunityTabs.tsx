@@ -30,9 +30,10 @@ function Field({ label, value, wide }: { label: string; value?: string | null; w
 }
 
 const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
-  PENDING:  'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-  APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-  REJECTED: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  PENDING:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  APPROVED:  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  REJECTED:  'bg-red-50 text-red-700 ring-1 ring-red-200',
+  WITHDRAWN: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
