@@ -2,6 +2,8 @@ import { MainLayout } from '@/components/layout/MainLayout'
 import { getClientsForSelect } from '@/lib/db/clients'
 import { NewOpportunityForm } from './NewOpportunityForm'
 
+export const dynamic = 'force-dynamic'
+
 export default async function NewOpportunityPage() {
   const clients = await getClientsForSelect()
 

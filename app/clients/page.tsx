@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { getClients } from '@/lib/db/clients'
+
+export const dynamic = 'force-dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AddClientModal } from './AddClientModal'
 import { AdminRequestsPanel } from './AdminRequestsPanel'
