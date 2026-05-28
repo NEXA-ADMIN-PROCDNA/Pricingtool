@@ -88,7 +88,9 @@ export async function GET(req: NextRequest) {
   if (!approval)                             return errorPage('Not Found',     'This approval request no longer exists.')
   if (approval.approverId !== approverId)    return errorPage('Unauthorised',  'You are not authorised to act on this request.')
   if (approval.status !== 'PENDING') {
-    const past = approval.status === 'APPROVED' ? 'already been approved' : 'already been rejected'
+    const past = approval.status === 'APPROVED'   ? 'already been approved'
+               : approval.status === 'WITHDRAWN'  ? 'been withdrawn by the requester'
+               : 'already been rejected'
     return successPage('Already Decided', 'ℹ️', `This request has ${past}. No further action is needed.`)
   }
 
@@ -154,7 +156,9 @@ export async function POST(req: NextRequest) {
   if (!approval)                          return errorPage('Not Found',    'This approval request no longer exists.')
   if (approval.approverId !== approverId) return errorPage('Unauthorised', 'You are not authorised to act on this request.')
   if (approval.status !== 'PENDING') {
-    const past = approval.status === 'APPROVED' ? 'already been approved' : 'already been rejected'
+    const past = approval.status === 'APPROVED'  ? 'already been approved'
+               : approval.status === 'WITHDRAWN' ? 'been withdrawn by the requester'
+               : 'already been rejected'
     return successPage('Already Decided', 'ℹ️', `This request has ${past}. No further action is needed.`)
   }
 

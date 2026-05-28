@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { ApprovalStatus } from '@prisma/client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
@@ -124,6 +125,9 @@ export function OpportunityTabs({
 
   const [finalWarningId, setFinalWarningId]   = useState<string | null>(null)
 
+  const { data: session } = useSession()
+  const sessionUserId = (session?.user as any)?.id as string | undefined
+
   const [oppStage, setOppStage]   = useState<string>(opp.stage as string)
   const LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(oppStage)
@@ -134,6 +138,8 @@ export function OpportunityTabs({
   const [approvalLoading, setApprovalLoading]           = useState(false)
   const [approvalError, setApprovalError]               = useState<string | null>(null)
   const [approvalConfirm, setApprovalConfirm]           = useState(false)
+  const [withdrawConfirm, setWithdrawConfirm]           = useState(false)
+  const [withdrawing, setWithdrawing]                   = useState(false)
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
 
@@ -167,6 +173,25 @@ export function OpportunityTabs({
       toast.error('Network error — failed to post comment')
     } finally {
       setCommentLoading(false)
+    }
+  }
+
+  async function withdrawApproval(approvalId: string) {
+    setWithdrawing(true)
+    try {
+      const res = await fetch(`/api/approvals/${approvalId}/withdraw`, { method: 'POST' })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        toast.error(j.error ?? 'Failed to withdraw approval')
+        return
+      }
+      setApprovals(prev => prev.map(a => a.id === approvalId ? { ...a, status: 'WITHDRAWN' as ApprovalStatus } : a))
+      setOppStage('PRICE_LINKED')
+      setWithdrawConfirm(false)
+    } catch {
+      toast.error('Network error — failed to withdraw approval')
+    } finally {
+      setWithdrawing(false)
     }
   }
 
@@ -701,12 +726,42 @@ export function OpportunityTabs({
                     <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
                   </svg>
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-amber-800 mb-1">Approval Pending</p>
                   <p className="text-sm text-amber-700">
                     Awaiting decision from <strong>{(pendingPricing as any)?.approver?.name ?? 'the approver'}</strong>.
                     They have received an email with Approve / Reject buttons.
                   </p>
+                  {sessionUserId === opp.ownerId && pendingPricing && (
+                    <div className="mt-4">
+                      {withdrawConfirm ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-amber-800 font-semibold">Withdraw this request?</span>
+                          <button
+                            onClick={() => withdrawApproval((pendingPricing as any).id)}
+                            disabled={withdrawing}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                          >
+                            {withdrawing ? 'Withdrawing…' : 'Yes, withdraw'}
+                          </button>
+                          <button
+                            onClick={() => setWithdrawConfirm(false)}
+                            disabled={withdrawing}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setWithdrawConfirm(true)}
+                          className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                        >
+                          Withdraw Approval
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )
