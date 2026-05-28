@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
+import type { ApprovalStatus } from '@prisma/client'
 
 export async function POST(
   req: NextRequest,
@@ -24,7 +25,7 @@ export async function POST(
 
   await prisma.approvalRequest.update({
     where: { id },
-    data:  { status: 'WITHDRAWN', decidedAt: new Date() },
+    data:  { status: 'WITHDRAWN' as ApprovalStatus, decidedAt: new Date() },
   })
 
   await prisma.opportunity.update({

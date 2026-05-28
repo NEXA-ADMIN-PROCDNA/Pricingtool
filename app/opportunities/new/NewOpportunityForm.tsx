@@ -2,7 +2,6 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { LineOfBusiness } from '@prisma/client'
 import { toast } from 'sonner'
 
 type POC    = { id: string; name: string; email: string | null; phone: string | null; jobTitle: string | null }
@@ -15,13 +14,13 @@ type Client = {
 // Each row in the POC form — existingPocId lets us filter the dropdown
 type PocRow = { name: string; email: string; phone: string; existingPocId?: string }
 
-const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
+const LOB_OPTIONS: { value: string; label: string }[] = [
   { value: 'TECH',      label: 'Technology'       },
   { value: 'ANALYTICS', label: 'Analytics'         },
   { value: 'DS',        label: 'Data Science'      },
   { value: 'MS',        label: 'Managed Services'  },
   { value: 'DESIGN',    label: 'Design'            },
-  { value: 'AUXO',      label: 'Auxo'               },
+  { value: 'AUXO',      label: 'Auxo'              },
 ]
 
 function Label({ text, required }: { text: string; required?: boolean }) {
