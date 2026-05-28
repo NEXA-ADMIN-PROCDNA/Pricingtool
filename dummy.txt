@@ -4,9 +4,14 @@ dummy
 dumies
 dummqqwdqay
 <<<<<<< HEAD
+<<<<<<< HEAD
 branch19 dummy
 =======
 branch23 dummy
 >>>>>>> branch20
 branch7 dummy
 branch7 dummy
+=======
+branch1 dummy
+>>>>>>> branch1
+branch12 dummy
