@@ -1043,6 +1043,7 @@ export function OpportunityTabs({
         <PricingDrawer
           version={drawerVersion}
           opp={opp}
+          currentStage={oppStage}
           onClose={closeDrawer}
         />
       )}

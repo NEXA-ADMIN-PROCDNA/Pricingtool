@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto'
 import { ClientSecretCredential } from '@azure/identity'
 import { signEmailAction } from '@/lib/approval-tokens'
 
@@ -28,27 +27,17 @@ async function sendMail({
   cc,
   subject,
   html,
-  messageId,
-  inReplyTo,
 }: {
   to: string | string[]
   cc?: string | string[]
   subject: string
   html: string
-  messageId?: string
-  inReplyTo?: string
 }) {
   const sender = process.env.MAIL_SENDER
   if (!sender) { console.warn('[mail] MAIL_SENDER not set — skipping'); return }
 
   const toList = (Array.isArray(to) ? to : [to]).map(a => ({ emailAddress: { address: a } }))
   const ccList = (Array.isArray(cc) ? cc : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
-
-  const internetMessageHeaders = [
-    ...(messageId  ? [{ name: 'Message-ID',  value: messageId  }] : []),
-    ...(inReplyTo  ? [{ name: 'In-Reply-To', value: inReplyTo  }] : []),
-    ...(inReplyTo  ? [{ name: 'References',  value: inReplyTo  }] : []),
-  ]
 
   try {
     const token = await getToken()
@@ -60,8 +49,7 @@ async function sendMail({
           subject,
           body:         { contentType: 'HTML', content: html },
           toRecipients: toList,
-          ...(ccList.length               ? { ccRecipients:          ccList                } : {}),
-          ...(internetMessageHeaders.length ? { internetMessageHeaders }                      : {}),
+          ...(ccList.length ? { ccRecipients: ccList } : {}),
         },
         saveToSentItems: false,
       }),
@@ -183,8 +171,7 @@ export async function mailApprovalRequested({
   approverId:            string
   businessJustification?: string | null
   context?:              ApprovalMailContext
-}): Promise<string> {
-  const messageId = `<${randomUUID()}@nexa.mail>`
+}) {
   const typeLabel  = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const approveUrl = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'approve')}`
   const rejectUrl  = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'reject')}`
@@ -212,11 +199,10 @@ export async function mailApprovalRequested({
     ? `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval to verify the SOW &amp; PO documents for this opportunity.`
     : `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval for the <strong style="color:#0A1F44;">pricing stage</strong> of this opportunity.`
 
-  // Approver — full email with Approve / Reject buttons; messageId seeds the thread
+  // Approver — full email with Approve / Reject buttons
   await sendMail({
-    to:        approverEmail,
-    subject:   subjectLine,
-    messageId,
+    to:      approverEmail,
+    subject: subjectLine,
     html: wrap(`
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">${approverIntro}</p>
@@ -268,7 +254,6 @@ export async function mailApprovalRequested({
     `),
   })
 
-  return messageId
 }
 
 export async function mailApprovalApproved({
@@ -362,7 +347,6 @@ export async function mailApprovalWithdrawn({
   opportunityId,
   opportunityName,
   approvalType,
-  inReplyTo,
 }: {
   approverEmail:   string
   approverName:    string
@@ -371,7 +355,6 @@ export async function mailApprovalWithdrawn({
   opportunityId:   string
   opportunityName: string
   approvalType:    string
-  inReplyTo?:      string
 }) {
   const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const subjectLine = approvalType === 'SOW_VERIFICATION'
@@ -379,9 +362,8 @@ export async function mailApprovalWithdrawn({
     : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
 
   await sendMail({
-    to:        [approverEmail, requesterEmail],
-    subject:   subjectLine,
-    inReplyTo,
+    to:      [approverEmail, requesterEmail],
+    subject: subjectLine,
     html: wrap(`
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request withdrawn</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">

@@ -52,7 +52,6 @@ export async function POST(
     opportunityId:   approval.opportunity.opportunityId,
     opportunityName: approval.opportunity.opportunityName,
     approvalType:    approval.approvalType,
-    inReplyTo:       approval.emailMessageId ?? undefined,
   })
 
   return NextResponse.json({ ok: true })

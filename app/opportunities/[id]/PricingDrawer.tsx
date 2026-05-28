@@ -31,13 +31,15 @@ const LOCKED_STAGES = new Set(['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED
 export function PricingDrawer({
   version,
   opp,
+  currentStage,
   onClose,
 }: {
   version: Version
   opp: OpportunityDetail
+  currentStage: string
   onClose: () => void
 }) {
-  const locked = version.isFinal && LOCKED_STAGES.has(opp.stage as string)
+  const locked = version.isFinal && LOCKED_STAGES.has(currentStage)
   const [sub, setSub] = useState<SubTab>('Basic Details')
 
   // ── Efforts state ────────────────────────────────────────────────
