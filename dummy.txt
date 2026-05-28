@@ -3,4 +3,9 @@ tester for merge
 dummy
 dumies
 dummqqwdqay
+<<<<<<< HEAD
 branch19 dummy
+=======
+branch23 dummy
+>>>>>>> branch20
+branch7 dummy
