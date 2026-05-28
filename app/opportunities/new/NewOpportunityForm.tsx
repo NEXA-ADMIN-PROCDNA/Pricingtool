@@ -21,6 +21,7 @@ const LOB_OPTIONS: { value: LineOfBusiness; label: string }[] = [
   { value: 'DS',        label: 'Data Science'      },
   { value: 'MS',        label: 'Managed Services'  },
   { value: 'DESIGN',    label: 'Design'            },
+  { value: 'AUXO',      label: 'Auxo'               },
 ]
 
 function Label({ text, required }: { text: string; required?: boolean }) {

@@ -37,6 +37,7 @@ enum LineOfBusiness {
   MS
   DS
   DESIGN
+  AUXO
 }
 
 enum OpportunityStatus {

@@ -6,6 +6,7 @@ const config: Record<LineOfBusiness, { label: string; classes: string }> = {
   MS:        { label: 'MS',        classes: 'bg-teal-50 text-teal-700'     },
   DS:        { label: 'DS',        classes: 'bg-pink-50 text-pink-700'     },
   DESIGN:    { label: 'Design',    classes: 'bg-slate-100 text-slate-600'  },
+  AUXO:      { label: 'Auxo',      classes: 'bg-orange-50 text-orange-700' },
 }
 
 export function LOBBadge({ lob }: { lob: LineOfBusiness }) {
