@@ -44,8 +44,7 @@ export async function POST(
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 
-  // fire-and-forget — don't block the response on email
-  mailApprovalWithdrawn({
+  await mailApprovalWithdrawn({
     approverEmail:   approval.approver.email,
     approverName:    approval.approver.name,
     requesterEmail:  approval.requestedBy.email,
@@ -54,7 +53,7 @@ export async function POST(
     opportunityName: approval.opportunity.opportunityName,
     approvalType:    approval.approvalType,
     inReplyTo:       approval.emailMessageId ?? undefined,
-  }).catch(e => console.error('[withdraw] mail error:', e))
+  })
 
   return NextResponse.json({ ok: true })
 }
