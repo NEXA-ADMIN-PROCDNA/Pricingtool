@@ -141,6 +141,7 @@ export function OpportunityTabs({
   const [approvalConfirm, setApprovalConfirm]           = useState(false)
   const [withdrawConfirm, setWithdrawConfirm]           = useState(false)
   const [withdrawing, setWithdrawing]                   = useState(false)
+  const [withdrawReason, setWithdrawReason]             = useState('')
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
 
@@ -180,7 +181,11 @@ export function OpportunityTabs({
   async function withdrawApproval(approvalId: string) {
     setWithdrawing(true)
     try {
-      const res = await fetch(`/api/approvals/${approvalId}/withdraw`, { method: 'POST' })
+      const res = await fetch(`/api/approvals/${approvalId}/withdraw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: withdrawReason.trim() || undefined }),
+      })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
         toast.error(j.error ?? 'Failed to withdraw approval')
@@ -189,6 +194,7 @@ export function OpportunityTabs({
       setApprovals(prev => prev.map(a => a.id === approvalId ? { ...a, status: 'WITHDRAWN' as ApprovalStatus } : a))
       setOppStage('PRICE_LINKED')
       setWithdrawConfirm(false)
+      setWithdrawReason('')
     } catch {
       toast.error('Network error — failed to withdraw approval')
     } finally {
@@ -736,22 +742,31 @@ export function OpportunityTabs({
                   {sessionUserId === opp.ownerId && pendingPricing && (
                     <div className="mt-4">
                       {withdrawConfirm ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2">
                           <span className="text-xs text-amber-800 font-semibold">Withdraw this request?</span>
-                          <button
-                            onClick={() => withdrawApproval((pendingPricing as any).id)}
-                            disabled={withdrawing}
-                            className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
-                          >
-                            {withdrawing ? 'Withdrawing…' : 'Yes, withdraw'}
-                          </button>
-                          <button
-                            onClick={() => setWithdrawConfirm(false)}
-                            disabled={withdrawing}
-                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
-                          >
-                            Cancel
-                          </button>
+                          <textarea
+                            value={withdrawReason}
+                            onChange={e => setWithdrawReason(e.target.value)}
+                            placeholder="Reason for withdrawal (optional)"
+                            rows={2}
+                            className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => withdrawApproval((pendingPricing as any).id)}
+                              disabled={withdrawing}
+                              className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            >
+                              {withdrawing ? 'Withdrawing…' : 'Yes, withdraw'}
+                            </button>
+                            <button
+                              onClick={() => { setWithdrawConfirm(false); setWithdrawReason('') }}
+                              disabled={withdrawing}
+                              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <button

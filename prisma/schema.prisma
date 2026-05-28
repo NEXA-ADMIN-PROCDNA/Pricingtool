@@ -453,6 +453,7 @@ model ApprovalRequest {
   businessJustification   String?        @db.Text
   pricingVersionNumber    Int?
   emailMessageId          String?
+  withdrawalReason        String?        @db.Text
   requestedAt             DateTime       @default(now())
   decidedAt               DateTime?
 

@@ -14,6 +14,8 @@ export async function POST(
 
   const { id } = await params
   const userId = token.id as string
+  const body   = await req.json().catch(() => ({})) as { reason?: string }
+  const reason = (body.reason ?? '').trim() || null
 
   const approval = await prisma.approvalRequest.findUnique({
     where:   { id },
@@ -31,7 +33,7 @@ export async function POST(
   try {
     await prisma.approvalRequest.update({
       where: { id },
-      data:  { status: 'WITHDRAWN' as ApprovalStatus, decidedAt: new Date() },
+      data:  { status: 'WITHDRAWN' as ApprovalStatus, decidedAt: new Date(), withdrawalReason: reason },
     })
 
     await prisma.opportunity.update({
@@ -52,6 +54,7 @@ export async function POST(
     opportunityId:   approval.opportunity.opportunityId,
     opportunityName: approval.opportunity.opportunityName,
     approvalType:    approval.approvalType,
+    reason:          reason ?? undefined,
   })
 
   return NextResponse.json({ ok: true })

@@ -347,6 +347,7 @@ export async function mailApprovalWithdrawn({
   opportunityId,
   opportunityName,
   approvalType,
+  reason,
 }: {
   approverEmail:   string
   approverName:    string
@@ -355,6 +356,7 @@ export async function mailApprovalWithdrawn({
   opportunityId:   string
   opportunityName: string
   approvalType:    string
+  reason?:         string
 }) {
   const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const subjectLine = approvalType === 'SOW_VERIFICATION'
@@ -375,6 +377,7 @@ export async function mailApprovalWithdrawn({
         ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
         ${metaRow('Status', pill('Withdrawn', '#6B7591'))}
         ${metaRow('Withdrawn by', requesterName)}
+        ${reason ? metaRow('Reason', `<em style="color:#6B7591;">${reason}</em>`) : ''}
       </table>
       ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
     `),
