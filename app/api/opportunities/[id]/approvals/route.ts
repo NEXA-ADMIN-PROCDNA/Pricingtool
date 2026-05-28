@@ -128,7 +128,7 @@ export async function POST(
       versionNumber: finalVersion?.versionNumber ?? undefined,
     }
 
-    await mailApprovalRequested({
+    const emailMessageId = await mailApprovalRequested({
       approverEmail:         approval.approver.email,
       approverName:          approval.approver.name,
       requesterEmail:        approval.requestedBy.email,
@@ -142,6 +142,11 @@ export async function POST(
       approverId:            approval.approverId,
       businessJustification: approvalType === 'SOW_VERIFICATION' ? undefined : businessJustification?.trim() ?? '',
       context,
+    })
+
+    await prisma.approvalRequest.update({
+      where: { id: approval.id },
+      data:  { emailMessageId },
     })
 
     return NextResponse.json(approval, { status: 201 })

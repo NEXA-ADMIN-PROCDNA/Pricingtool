@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { ClientSecretCredential } from '@azure/identity'
 import { signEmailAction } from '@/lib/approval-tokens'
 
@@ -27,17 +28,27 @@ async function sendMail({
   cc,
   subject,
   html,
+  messageId,
+  inReplyTo,
 }: {
   to: string | string[]
   cc?: string | string[]
   subject: string
   html: string
+  messageId?: string
+  inReplyTo?: string
 }) {
   const sender = process.env.MAIL_SENDER
   if (!sender) { console.warn('[mail] MAIL_SENDER not set — skipping'); return }
 
   const toList = (Array.isArray(to) ? to : [to]).map(a => ({ emailAddress: { address: a } }))
   const ccList = (Array.isArray(cc) ? cc : cc ? [cc] : []).map(a => ({ emailAddress: { address: a } }))
+
+  const internetMessageHeaders = [
+    ...(messageId  ? [{ name: 'Message-ID',  value: messageId  }] : []),
+    ...(inReplyTo  ? [{ name: 'In-Reply-To', value: inReplyTo  }] : []),
+    ...(inReplyTo  ? [{ name: 'References',  value: inReplyTo  }] : []),
+  ]
 
   try {
     const token = await getToken()
@@ -49,7 +60,8 @@ async function sendMail({
           subject,
           body:         { contentType: 'HTML', content: html },
           toRecipients: toList,
-          ...(ccList.length ? { ccRecipients: ccList } : {}),
+          ...(ccList.length               ? { ccRecipients:          ccList                } : {}),
+          ...(internetMessageHeaders.length ? { internetMessageHeaders }                      : {}),
         },
         saveToSentItems: false,
       }),
@@ -171,7 +183,8 @@ export async function mailApprovalRequested({
   approverId:            string
   businessJustification?: string | null
   context?:              ApprovalMailContext
-}) {
+}): Promise<string> {
+  const messageId = `<${randomUUID()}@nexa.mail>`
   const typeLabel  = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const approveUrl = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'approve')}`
   const rejectUrl  = `${BASE_URL}/api/approvals/email-action?token=${signEmailAction(approvalRecordId, approverId, 'reject')}`
@@ -199,10 +212,11 @@ export async function mailApprovalRequested({
     ? `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval to verify the SOW &amp; PO documents for this opportunity.`
     : `Hi ${approverName}, <strong style="color:#0A1F44;">${requesterName}</strong> has requested your approval for the <strong style="color:#0A1F44;">pricing stage</strong> of this opportunity.`
 
-  // Approver — full email with Approve / Reject buttons
+  // Approver — full email with Approve / Reject buttons; messageId seeds the thread
   await sendMail({
-    to:      approverEmail,
-    subject: subjectLine,
+    to:        approverEmail,
+    subject:   subjectLine,
+    messageId,
     html: wrap(`
       <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">${approverIntro}</p>
@@ -253,6 +267,8 @@ export async function mailApprovalRequested({
       ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
     `),
   })
+
+  return messageId
 }
 
 export async function mailApprovalApproved({
@@ -335,5 +351,50 @@ export async function mailApprovalRejected({
     cc:      approverEmail,
     subject: subjectLine,
     html,
+  })
+}
+
+export async function mailApprovalWithdrawn({
+  approverEmail,
+  approverName,
+  requesterEmail,
+  requesterName,
+  opportunityId,
+  opportunityName,
+  approvalType,
+  inReplyTo,
+}: {
+  approverEmail:   string
+  approverName:    string
+  requesterEmail:  string
+  requesterName:   string
+  opportunityId:   string
+  opportunityName: string
+  approvalType:    string
+  inReplyTo?:      string
+}) {
+  const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
+  const subjectLine = approvalType === 'SOW_VERIFICATION'
+    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+
+  await sendMail({
+    to:        [approverEmail, requesterEmail],
+    subject:   subjectLine,
+    inReplyTo,
+    html: wrap(`
+      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request withdrawn</h2>
+      <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">
+        <strong style="color:#0A1F44;">${requesterName}</strong> has withdrawn the
+        <strong style="color:#0A1F44;">${typeLabel}</strong> request.
+        Hi ${approverName}, no action is needed — the approve / reject links in the earlier email are now invalid.
+      </p>
+      <table cellpadding="0" cellspacing="0" style="width:100%;background:#F8FAFC;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
+        ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
+        ${metaRow('Status', pill('Withdrawn', '#6B7591'))}
+        ${metaRow('Withdrawn by', requesterName)}
+      </table>
+      ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
+    `),
   })
 }
