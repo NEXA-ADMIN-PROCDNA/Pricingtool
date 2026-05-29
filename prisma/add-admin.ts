@@ -9,9 +9,9 @@ const prisma  = new PrismaClient({ adapter })
 
 async function main() { // editing the existing user
   const user = await prisma.user.update({
-    where: { email: 'piyusha.sahni@procdna.com' },
-    data:  { role: 'ADMIN' , 
-      name : 'Piyusha Sahni',
+    where: { email: 'shreeraj.deshmukh@procdna.com' },
+    data:  { role: 'SEL' , 
+      name : 'Shreeraj Deshmukh',
     },
   })
   console.log('Updated:', user.id, user.email, user.role)

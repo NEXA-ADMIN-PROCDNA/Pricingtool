@@ -36,6 +36,22 @@ function successPage(title: string, icon: string, message: string) {
     </div>`)
 }
 
+function approveConfirmPage(token: string, opportunityName: string, approverName: string) {
+  return page(`
+    <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Confirm approval</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">
+      Hi <strong style="color:#0A1F44;">${approverName}</strong>, you are approving the request for
+      <strong style="color:#0A1F44;">${opportunityName}</strong>.
+    </p>
+    <form method="POST" action="/api/approvals/email-action">
+      <input type="hidden" name="token" value="${token}" />
+      <button type="submit" style="width:100%;padding:11px 0;background:#16A34A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.02em;">
+        ✓ Confirm Approval
+      </button>
+    </form>
+    <p style="margin:12px 0 0;font-size:11px;color:#9AA3B8;text-align:center;">Changed your mind? Close this tab — no action will be taken.</p>`)
+}
+
 function rejectFormPage(token: string, opportunityName: string, approverName: string) {
   return page(`
     <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Reject request</h2>
@@ -99,34 +115,8 @@ export async function GET(req: NextRequest) {
     return rejectFormPage(token, approval.opportunity.opportunityName, approval.approver.name)
   }
 
-  // ── Approve ──────────────────────────────────────────────────
-  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
-  await prisma.approvalRequest.update({
-    where: { id: approvalId },
-    data:  { status: 'APPROVED', decidedAt: new Date() },
-  })
-  await prisma.opportunity.update({
-    where: { id: approval.opportunityId },
-    data:  {
-      stage: newStage,
-      ...(approval.approvalType === 'SOW_VERIFICATION' ? { status: 'WON' } : {}),
-    },
-  })
-
-  await mailApprovalApproved({
-    requesterEmail:   approval.requestedBy.email,
-    requesterName:    approval.requestedBy.name,
-    approverEmail:    approval.approver.email,
-    approverName:     approval.approver.name,
-    opportunityId:    approval.opportunity.opportunityId,
-    opportunityName:  approval.opportunity.opportunityName,
-    approvalType:     approval.approvalType,
-  })
-
-  return successPage(
-    'Approved ✓', '✅',
-    `You have approved the request for <strong>${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
-  )
+  // ── Approve — show confirmation page (safe against Safe Links pre-scan) ──
+  return approveConfirmPage(token, approval.opportunity.opportunityName, approval.approver.name)
 }
 
 // ── POST — receive rejection reason form ─────────────────────────
@@ -148,10 +138,9 @@ export async function POST(req: NextRequest) {
   if (!token) return errorPage('Invalid Request', 'Token is missing.')
 
   const payload = verifyEmailAction(token)
-  if (!payload)                    return errorPage('Link Expired',    'This approval link has expired or is invalid.')
-  if (payload.action !== 'reject') return errorPage('Invalid Action',  'This link is not for rejection.')
+  if (!payload) return errorPage('Link Expired', 'This approval link has expired or is invalid.')
 
-  const { approvalId, approverId } = payload
+  const { approvalId, approverId, action } = payload
 
   const approval = await getApproval(approvalId)
   if (!approval)                          return errorPage('Not Found',    'This approval request no longer exists.')
@@ -164,6 +153,35 @@ export async function POST(req: NextRequest) {
     return successPage('Already Decided', 'ℹ️', `This request has ${past}. No further action is needed.`)
   }
 
+  if (action === 'approve') {
+    const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+    await prisma.approvalRequest.update({
+      where: { id: approvalId },
+      data:  { status: 'APPROVED', decidedAt: new Date() },
+    })
+    await prisma.opportunity.update({
+      where: { id: approval.opportunityId },
+      data:  {
+        stage: newStage,
+        ...(approval.approvalType === 'SOW_VERIFICATION' ? { status: 'WON' } : {}),
+      },
+    })
+    await mailApprovalApproved({
+      requesterEmail:  approval.requestedBy.email,
+      requesterName:   approval.requestedBy.name,
+      approverEmail:   approval.approver.email,
+      approverName:    approval.approver.name,
+      opportunityId:   approval.opportunity.opportunityId,
+      opportunityName: approval.opportunity.opportunityName,
+      approvalType:    approval.approvalType,
+    })
+    return successPage(
+      'Approved ✓', '✅',
+      `You have approved the request for <strong>${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
+    )
+  }
+
+  // action === 'reject'
   await prisma.approvalRequest.update({
     where: { id: approvalId },
     data:  { status: 'REJECTED', decidedAt: new Date(), rejectionReason: reason || null },
@@ -173,18 +191,16 @@ export async function POST(req: NextRequest) {
     where: { id: approval.opportunityId },
     data:  { stage: rollbackStage },
   })
-
   await mailApprovalRejected({
-    requesterEmail:   approval.requestedBy.email,
-    requesterName:    approval.requestedBy.name,
-    approverEmail:    approval.approver.email,
-    approverName:     approval.approver.name,
-    opportunityId:    approval.opportunity.opportunityId,
-    opportunityName:  approval.opportunity.opportunityName,
-    approvalType:     approval.approvalType,
-    reason:           reason || undefined,
+    requesterEmail:  approval.requestedBy.email,
+    requesterName:   approval.requestedBy.name,
+    approverEmail:   approval.approver.email,
+    approverName:    approval.approver.name,
+    opportunityId:   approval.opportunity.opportunityId,
+    opportunityName: approval.opportunity.opportunityName,
+    approvalType:    approval.approvalType,
+    reason:          reason || undefined,
   })
-
   return successPage(
     'Rejected', '✕',
     `You have rejected the request for <strong>${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,

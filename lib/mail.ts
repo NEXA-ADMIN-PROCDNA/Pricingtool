@@ -80,7 +80,8 @@ function wrap(body: string): string {
       <tr><td style="padding:32px 32px 24px;">${body}</td></tr>
       <!-- Footer -->
       <tr><td style="padding:16px 32px 28px;border-top:1px solid #D6DCE8;">
-        <p style="margin:0;font-size:11px;color:#9AA3B8;">This is an automated message from NEXA · Business Development &amp; Pricing Tool. Do not reply to this email.</p>
+        <p style="margin:0 0 6px;font-size:11px;color:#9AA3B8;">This is an automated message from NEXA · Business Development &amp; Pricing Tool. Do not reply to this email.</p>
+        <a href="https://pricingtoolprimero.vercel.app" style="font-size:11px;color:#1E5BB8;text-decoration:none;">Open NEXA app →</a>
       </td></tr>
     </table>
   </td></tr>
