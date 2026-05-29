@@ -7,11 +7,13 @@ interface Props {
   showAddCost: boolean
   newDesc: string
   newAmount: string
+  newMarkup: string
   editCostCell: { id: string; field: 'markup' | 'billed' } | null
   editCostVal: string
   setShowAddCost: (v: boolean) => void
   setNewDesc: (v: string) => void
   setNewAmount: (v: string) => void
+  setNewMarkup: (v: string) => void
   setEditCostCell: (v: { id: string; field: 'markup' | 'billed' } | null) => void
   setEditCostVal: (v: string) => void
   addOtherCost: () => void
@@ -23,8 +25,8 @@ interface Props {
 }
 
 export function TabOtherCost({
-  otherCosts, showAddCost, newDesc, newAmount, editCostCell, editCostVal,
-  setShowAddCost, setNewDesc, setNewAmount, setEditCostCell, setEditCostVal,
+  otherCosts, showAddCost, newDesc, newAmount, newMarkup, editCostCell, editCostVal,
+  setShowAddCost, setNewDesc, setNewAmount, setNewMarkup, setEditCostCell, setEditCostVal,
   addOtherCost, removeOtherCost, toggleBillable, commitMarkup, commitBilled,
   readOnly = false,
 }: Props) {
@@ -164,7 +166,17 @@ export function TabOtherCost({
                     className="w-full text-xs text-right rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                   />
                 </td>
-                <td />
+                <td className="px-3 py-2.5">
+                  <input
+                    type="number"
+                    step={0.1}
+                    placeholder="0%"
+                    value={newMarkup}
+                    onChange={e => setNewMarkup(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addOtherCost(); if (e.key === 'Escape') setShowAddCost(false) }}
+                    className="w-20 text-xs text-right rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  />
+                </td>
                 <td />
                 <td className="px-2 py-2.5">
                   <div className="flex gap-1">
@@ -179,7 +191,7 @@ export function TabOtherCost({
                       </svg>
                     </button>
                     <button
-                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount('') }}
+                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount(''); setNewMarkup('') }}
                       className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-100 transition-colors"
                       title="Cancel"
                     >

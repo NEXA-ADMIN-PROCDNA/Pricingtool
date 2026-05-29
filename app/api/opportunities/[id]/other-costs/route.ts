@@ -20,14 +20,17 @@ export async function POST(
   const opp = await prisma.opportunity.findUnique({ where: { opportunityId: oppId } })
   if (!opp) return apiError('OPP_NOT_FOUND')
 
-  const cost = await prisma.otherCost.create({
-    data: {
-      opportunityId: opp.id,
-      description: description.trim(),
-      amount,
-      markupPct: markupPct ?? null,
-    },
-  })
-
-  return NextResponse.json(cost, { status: 201 })
+  try {
+    const cost = await prisma.otherCost.create({
+      data: {
+        opportunityId: opp.id,
+        description:   description.trim(),
+        amount:        Number(amount),
+        markupPct:     markupPct != null ? Number(markupPct) : null,
+      },
+    })
+    return NextResponse.json(cost, { status: 201 })
+  } catch (e: any) {
+    return apiError('STAFFING_SAVE_FAILED', e?.message)
+  }
 }

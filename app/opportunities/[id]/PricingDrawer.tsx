@@ -83,6 +83,7 @@ export function PricingDrawer({
   const [showAddCost, setShowAddCost]   = useState(false)
   const [newDesc, setNewDesc]           = useState('')
   const [newAmount, setNewAmount]       = useState('')
+  const [newMarkup, setNewMarkup]       = useState('')
   const [editCostCell, setEditCostCell] = useState<{ id: string; field: 'markup' | 'billed' } | null>(null)
   const [editCostVal, setEditCostVal]   = useState('')
 
@@ -270,21 +271,30 @@ export function PricingDrawer({
   const addOtherCost = useCallback(async () => {
     const amt = parseFloat(newAmount)
     if (!newDesc.trim() || isNaN(amt)) return
+    const markupVal = newMarkup !== '' ? parseFloat(newMarkup) : null
     const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: newDesc.trim(), amount: amt }),
+      body: JSON.stringify({ description: newDesc.trim(), amount: amt, markupPct: markupVal }),
     })
     if (!res.ok) {
-      toast.error('Failed to add cost item')
+      const j = await res.json().catch(() => ({}))
+      toast.error(j.error ?? 'Failed to add cost item')
       return
     }
     const created = await res.json()
-    setOtherCosts(prev => [...prev, { id: created.id, description: created.description, amount: Number(created.amount), markupPct: null, isBillable: true }])
+    setOtherCosts(prev => [...prev, {
+      id: created.id,
+      description: created.description,
+      amount: Number(created.amount),
+      markupPct: created.markupPct != null ? Number(created.markupPct) : null,
+      isBillable: true,
+    }])
     setNewDesc('')
     setNewAmount('')
+    setNewMarkup('')
     setShowAddCost(false)
-  }, [newDesc, newAmount, opp.opportunityId])
+  }, [newDesc, newAmount, newMarkup, opp.opportunityId])
 
   const toggleBillable = useCallback(async (costId: string, billable: boolean) => {
     setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, isBillable: billable } : oc))
@@ -466,11 +476,13 @@ export function PricingDrawer({
                 showAddCost={showAddCost}
                 newDesc={newDesc}
                 newAmount={newAmount}
+                newMarkup={newMarkup}
                 editCostCell={editCostCell}
                 editCostVal={editCostVal}
                 setShowAddCost={setShowAddCost}
                 setNewDesc={setNewDesc}
                 setNewAmount={setNewAmount}
+                setNewMarkup={setNewMarkup}
                 setEditCostCell={setEditCostCell}
                 setEditCostVal={setEditCostVal}
                 addOtherCost={addOtherCost}

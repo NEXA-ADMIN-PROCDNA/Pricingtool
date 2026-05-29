@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { getClientDetail } from '@/lib/db/clients'
 import { Sidebar } from '@/components/layout/Sidebar'
 
+export const dynamic = 'force-dynamic'
+
 const INDUSTRY_COLORS: Record<string, { gradient: string; badge: string; text: string }> = {
   Pharmaceuticals:      { gradient: 'from-blue-400 to-blue-600',    badge: 'bg-blue-50',    text: 'text-blue-700'    },
   'Financial Services': { gradient: 'from-emerald-400 to-emerald-600', badge: 'bg-emerald-50', text: 'text-emerald-700' },

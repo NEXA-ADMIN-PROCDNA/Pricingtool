@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
+
+export const dynamic = 'force-dynamic'
 import { getOpportunityDetail } from '@/lib/db/opportunities'
 import { getUsersForSelect } from '@/lib/db/users'
 import { StatusBadge } from '@/components/ui/StatusBadge'
