@@ -32,6 +32,7 @@ export type OtherCostRow = {
   amount: number
   markupPct: number | null
   isBillable: boolean
+  lineOfBusiness: string | null
 }
 
 export type ComputedMetrics = {

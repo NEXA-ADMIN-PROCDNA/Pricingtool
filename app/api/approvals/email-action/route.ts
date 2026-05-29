@@ -161,10 +161,7 @@ export async function POST(req: NextRequest) {
     })
     await prisma.opportunity.update({
       where: { id: approval.opportunityId },
-      data:  {
-        stage: newStage,
-        ...(approval.approvalType === 'SOW_VERIFICATION' ? { status: 'WON' } : {}),
-      },
+      data:  { stage: newStage },
     })
     await mailApprovalApproved({
       requesterEmail:  approval.requestedBy.email,

@@ -11,7 +11,7 @@ export async function PATCH(
   if (!token) return apiError('UNAUTHORIZED')
 
   const { id: opportunityId } = await params
-  const body = await req.json() as { preContractAgreed?: boolean }
+  const body = await req.json() as { preContractAgreed?: boolean; status?: string; projectCodeProceed?: boolean }
 
   const opp = await prisma.opportunity.findUnique({ where: { opportunityId } })
   if (!opp) return apiError('OPP_NOT_FOUND')
@@ -35,9 +35,23 @@ export async function PATCH(
     }
   }
 
+  if (body.status === 'OPEN' || body.status === 'WON') {
+    await prisma.opportunity.update({
+      where: { id: opp.id },
+      data:  { status: body.status },
+    })
+  }
+
+  if (body.projectCodeProceed === true) {
+    await prisma.opportunity.update({
+      where: { id: opp.id },
+      data:  { projectCodeProceed: true },
+    })
+  }
+
   const updated = await prisma.opportunity.findUnique({
     where:  { id: opp.id },
-    select: { status: true, preContractAgreed: true, stage: true },
+    select: { status: true, preContractAgreed: true, stage: true, projectCodeProceed: true },
   })
 
   return NextResponse.json(updated)

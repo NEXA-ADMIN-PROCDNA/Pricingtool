@@ -78,12 +78,14 @@ export function PricingDrawer({
       amount: Number(oc.amount),
       markupPct: oc.markupPct != null ? Number(oc.markupPct) : null,
       isBillable: oc.isBillable ?? true,
+      lineOfBusiness: oc.lineOfBusiness ?? null,
     }))
   )
   const [showAddCost, setShowAddCost]   = useState(false)
   const [newDesc, setNewDesc]           = useState('')
   const [newAmount, setNewAmount]       = useState('')
   const [newMarkup, setNewMarkup]       = useState('')
+  const [newLob, setNewLob]             = useState<string>('')
   const [editCostCell, setEditCostCell] = useState<{ id: string; field: 'markup' | 'billed' } | null>(null)
   const [editCostVal, setEditCostVal]   = useState('')
 
@@ -275,7 +277,7 @@ export function PricingDrawer({
     const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: newDesc.trim(), amount: amt, markupPct: markupVal }),
+      body: JSON.stringify({ description: newDesc.trim(), amount: amt, markupPct: markupVal, lineOfBusiness: newLob || null }),
     })
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
@@ -289,12 +291,14 @@ export function PricingDrawer({
       amount: Number(created.amount),
       markupPct: created.markupPct != null ? Number(created.markupPct) : null,
       isBillable: true,
+      lineOfBusiness: created.lineOfBusiness ?? null,
     }])
     setNewDesc('')
     setNewAmount('')
     setNewMarkup('')
+    setNewLob('')
     setShowAddCost(false)
-  }, [newDesc, newAmount, newMarkup, opp.opportunityId])
+  }, [newDesc, newAmount, newMarkup, newLob, opp.opportunityId])
 
   const toggleBillable = useCallback(async (costId: string, billable: boolean) => {
     setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, isBillable: billable } : oc))
@@ -336,6 +340,15 @@ export function PricingDrawer({
     const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
     if (!res.ok) { toast.error('Failed to delete cost item'); return }
     setOtherCosts(prev => prev.filter(oc => oc.id !== costId))
+  }, [opp.opportunityId])
+
+  const updateLob = useCallback(async (costId: string, lineOfBusiness: string | null) => {
+    setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, lineOfBusiness } : oc))
+    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lineOfBusiness }),
+    })
   }, [opp.opportunityId])
 
   // ── Render ───────────────────────────────────────────────────────
@@ -477,17 +490,20 @@ export function PricingDrawer({
                 newDesc={newDesc}
                 newAmount={newAmount}
                 newMarkup={newMarkup}
+                newLob={newLob}
                 editCostCell={editCostCell}
                 editCostVal={editCostVal}
                 setShowAddCost={setShowAddCost}
                 setNewDesc={setNewDesc}
                 setNewAmount={setNewAmount}
                 setNewMarkup={setNewMarkup}
+                setNewLob={setNewLob}
                 setEditCostCell={setEditCostCell}
                 setEditCostVal={setEditCostVal}
                 addOtherCost={addOtherCost}
                 removeOtherCost={removeOtherCost}
                 toggleBillable={toggleBillable}
+                updateLob={updateLob}
                 commitMarkup={commitMarkup}
                 commitBilled={commitBilled}
                 readOnly={locked}

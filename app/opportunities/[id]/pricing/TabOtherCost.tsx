@@ -2,32 +2,44 @@
 import type { OtherCostRow } from './types'
 import { fmt } from './utils'
 
+const LOB_OPTIONS = [
+  { value: 'ANALYTICS', label: 'Analytics' },
+  { value: 'MS',        label: 'MS' },
+  { value: 'DS',        label: 'DS' },
+  { value: 'DESIGN',    label: 'Design' },
+  { value: 'TECH',      label: 'Technology' },
+  { value: 'AUXO',      label: 'AUXO' },
+]
+
 interface Props {
   otherCosts: OtherCostRow[]
   showAddCost: boolean
   newDesc: string
   newAmount: string
   newMarkup: string
+  newLob: string
   editCostCell: { id: string; field: 'markup' | 'billed' } | null
   editCostVal: string
   setShowAddCost: (v: boolean) => void
   setNewDesc: (v: string) => void
   setNewAmount: (v: string) => void
   setNewMarkup: (v: string) => void
+  setNewLob: (v: string) => void
   setEditCostCell: (v: { id: string; field: 'markup' | 'billed' } | null) => void
   setEditCostVal: (v: string) => void
   addOtherCost: () => void
   removeOtherCost: (costId: string) => void
   toggleBillable: (costId: string, billable: boolean) => void
+  updateLob: (costId: string, lob: string | null) => void
   commitMarkup: (costId: string, val: string) => void
   commitBilled: (costId: string, val: string) => void
   readOnly?: boolean
 }
 
 export function TabOtherCost({
-  otherCosts, showAddCost, newDesc, newAmount, newMarkup, editCostCell, editCostVal,
-  setShowAddCost, setNewDesc, setNewAmount, setNewMarkup, setEditCostCell, setEditCostVal,
-  addOtherCost, removeOtherCost, toggleBillable, commitMarkup, commitBilled,
+  otherCosts, showAddCost, newDesc, newAmount, newMarkup, newLob, editCostCell, editCostVal,
+  setShowAddCost, setNewDesc, setNewAmount, setNewMarkup, setNewLob, setEditCostCell, setEditCostVal,
+  addOtherCost, removeOtherCost, toggleBillable, updateLob, commitMarkup, commitBilled,
   readOnly = false,
 }: Props) {
   return (
@@ -37,6 +49,7 @@ export function TabOtherCost({
           <tr className="border-b border-slate-200 bg-slate-50">
             <th className="px-2 py-3 w-10 text-xs font-semibold uppercase tracking-wide text-slate-500 text-center">Bill</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nature of Expense</th>
+            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 w-28">Line of Business</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 w-36">Cost</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-28">Markup %</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-36">Billed</th>
@@ -62,6 +75,18 @@ export function TabOtherCost({
                 </td>
                 {/* Description */}
                 <td className="px-4 py-3 text-slate-800">{oc.description}</td>
+                {/* Line of Business */}
+                <td className="px-3 py-2">
+                  <select
+                    value={oc.lineOfBusiness ?? ''}
+                    disabled={readOnly}
+                    onChange={e => !readOnly && updateLob(oc.id, e.target.value || null)}
+                    className="w-full text-xs rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">—</option>
+                    {LOB_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
+                </td>
                 {/* Cost */}
                 <td className="px-4 py-3 text-right font-semibold text-slate-800">{fmt(oc.amount)}</td>
                 {/* Markup % */}
@@ -127,6 +152,7 @@ export function TabOtherCost({
             <tr className="bg-slate-50 border-t-2 border-slate-200 font-bold">
               <td />
               <td className="px-4 py-3 text-slate-800">Total</td>
+              <td />
               <td className="px-4 py-3 text-right text-slate-700">
                 {fmt(otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount, 0))}
               </td>
@@ -153,6 +179,16 @@ export function TabOtherCost({
                     onKeyDown={e => { if (e.key === 'Enter') addOtherCost(); if (e.key === 'Escape') setShowAddCost(false) }}
                     className="w-full text-xs rounded-lg border border-indigo-300 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                   />
+                </td>
+                <td className="px-3 py-2.5">
+                  <select
+                    value={newLob}
+                    onChange={e => setNewLob(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-indigo-300 px-2 py-1.5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  >
+                    <option value="">—</option>
+                    {LOB_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                  </select>
                 </td>
                 <td className="px-3 py-2.5">
                   <input
@@ -191,7 +227,7 @@ export function TabOtherCost({
                       </svg>
                     </button>
                     <button
-                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount(''); setNewMarkup('') }}
+                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount(''); setNewMarkup(''); setNewLob('') }}
                       className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-100 transition-colors"
                       title="Cancel"
                     >
@@ -203,7 +239,7 @@ export function TabOtherCost({
                 </td>
               </>
             ) : (
-              <td colSpan={6} className="px-4 py-2.5">
+              <td colSpan={7} className="px-4 py-2.5">
                 <button
                   onClick={() => setShowAddCost(true)}
                   className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"

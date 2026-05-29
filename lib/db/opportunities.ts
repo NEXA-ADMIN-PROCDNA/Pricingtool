@@ -83,6 +83,7 @@ export async function getOpportunities(
       endDate: true,
       estimatedRevenue: true,
       probability: true,
+      projectCodeProceed: true,
       createdAt: true,
       client:  { select: { name: true, clientId: true } },
       owner:   { select: { name: true } },

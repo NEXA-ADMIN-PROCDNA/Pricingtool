@@ -11,12 +11,13 @@ export async function PATCH(
   if (!token) return apiError('UNAUTHORIZED')
 
   const { costId } = await params
-  const { isBillable, markupPct } = await req.json()
+  const { isBillable, markupPct, lineOfBusiness } = await req.json()
   await prisma.otherCost.update({
     where: { id: costId },
     data: {
-      ...(isBillable  !== undefined && { isBillable }),
-      ...(markupPct   !== undefined && { markupPct: markupPct ?? null }),
+      ...(isBillable     !== undefined && { isBillable }),
+      ...(markupPct      !== undefined && { markupPct: markupPct ?? null }),
+      ...(lineOfBusiness !== undefined && { lineOfBusiness: lineOfBusiness ?? null }),
     },
   })
   return new NextResponse(null, { status: 204 })

@@ -386,8 +386,9 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
     { key: 'winpct',   label: 'Win %',       w: 72,  filterable: true  },
     { key: 'window',   label: 'Time Window', w: 180, filterable: true  },
     { key: 'status',   label: 'Status',      w: 100, filterable: true  },
-    { key: 'nextstep', label: 'Next Step',   w: 90,  filterable: true  },
-    { key: 'comments', label: 'Comments',    w: 80,  filterable: true  },
+    { key: 'nextstep',    label: 'Next Step',   w: 90,  filterable: true  },
+    { key: 'projectcode', label: 'Proj. Code', w: 72,  filterable: false },
+    { key: 'comments',    label: 'Comments',   w: 80,  filterable: true  },
   ]
 
   return (
@@ -590,6 +591,15 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                       {nextStep}
                     </span>
+                  </td>
+
+                  {/* Proj. Code */}
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                    {(row as any).projectCodeProceed ? (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#16A34A' }}>Yes</span>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#DC2626' }}>No</span>
+                    )}
                   </td>
 
                   {/* Comments */}

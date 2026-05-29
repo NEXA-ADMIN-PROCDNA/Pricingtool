@@ -1,8 +1,16 @@
 'use client'
-import { useState, useEffect } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { Version, ComputedMetrics, OtherCostRow } from './types'
 import { fmt, fmtDate } from './utils'
+
+const DOMAIN_LABELS: Record<string, string> = {
+  ANALYTICS: 'Analytics',
+  MS: 'MS',
+  DS: 'DS',
+  DESIGN: 'Design',
+  TECH: 'Technology',
+  AUXO: 'AUXO',
+}
 
 function ReadField({ label, value, highlight }: { label: string; value: string | null | undefined; highlight?: boolean }) {
   return (
@@ -23,14 +31,22 @@ interface Props {
 }
 
 export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Props) {
-  const [pipelineTotal, setPipelineTotal] = useState<number | null>(null)
-
-  useEffect(() => {
-    fetch('/api/pipeline-revenue')
-      .then(r => r.json())
-      .then(d => setPipelineTotal(d.total))
-      .catch(() => {})
-  }, [])
+  const domainRevMap: Record<string, number> = {}
+  for (const r of version.staffingResources) {
+    if (!r.domain) continue
+    const effRate = Number(r.effectiveBillRate ?? 0)
+    if (effRate <= 0) continue
+    const totalHrs = r.weeklyHours.reduce((s: number, w: { hours: number | { toNumber(): number } }) => s + Number(w.hours ?? 0), 0)
+    if (totalHrs <= 0) continue
+    domainRevMap[r.domain] = (domainRevMap[r.domain] ?? 0) + effRate * totalHrs
+  }
+  const grandTotal = Object.values(domainRevMap).reduce((s, v) => s + v, 0)
+  const domainPcts = grandTotal > 0
+    ? Object.entries(domainRevMap)
+        .map(([d, v]) => ({ domain: d, label: DOMAIN_LABELS[d] ?? d, pct: (v / grandTotal) * 100 }))
+        .sort((a, b) => b.pct - a.pct)
+    : []
+  const majorityDomain = domainPcts[0]?.domain
 
   return (
     <div className="space-y-5">
@@ -59,67 +75,43 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
             </span>
           )}
         </div>
-        {(() => {
-          const a2Live = otherCosts
-            .filter(oc => oc.isBillable)
-            .reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
-
-          // Revenue of this version = proposed staffing billings + billed other costs
-          const oppRevenueLive = versionMetrics.totalHours > 0
-            ? versionMetrics.proposedBillings + a2Live
-            : null
-
-          // Revenue Share = this opportunity's revenue / total pipeline revenue
-          const revenueShareLive = oppRevenueLive != null && pipelineTotal != null && pipelineTotal > 0
-            ? (oppRevenueLive / pipelineTotal) * 100
-            : null
-          const revenueShareStored = version.revenueSharePct != null ? Number(version.revenueSharePct) : null
-          const revenueShareVal = revenueShareLive ?? revenueShareStored
-          const revenueShareOver = revenueShareVal != null && revenueShareVal > 100
-
-          return (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[
-                {
-                  label: 'Revenue Share',
-                  value: revenueShareVal != null
-                    ? `${revenueShareVal.toFixed(1)}%`
-                    : pipelineTotal === null ? '…' : '—',
-                  hi: false,
-                  warn: revenueShareOver,
-                  tip: revenueShareOver
-                    ? 'This opportunity exceeds 100% of pipeline revenue'
-                    : undefined,
-                },
-                { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
-                { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
-                { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '—'), hi: true },
-                { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '—') },
-                { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
-                { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '—') },
-                { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '—') },
-              ].map(({ label, value, hi, warn, tip }) => (
-                <div key={label} title={tip} className={`rounded-xl p-3 ${
-                  warn ? 'bg-amber-50 border border-amber-200'
-                  : hi  ? 'bg-indigo-50 border border-indigo-100'
-                  :       'bg-slate-50'
-                }`}>
-                  <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                  <p className={`text-base font-bold ${
-                    warn ? 'text-amber-600'
-                    : hi  ? 'text-indigo-700'
-                    :       'text-slate-800'
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {/* Domain Revenue Mix — spans full row */}
+          <div className="col-span-2 sm:col-span-4 rounded-xl bg-slate-50 p-3">
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-2">LoB Revenue Mix</p>
+            {domainPcts.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {domainPcts.map(({ domain, label, pct }) => (
+                  <span key={domain} className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                    domain === majorityDomain
+                      ? 'bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200'
+                      : 'bg-slate-200 text-slate-600'
                   }`}>
-                    {value}
-                  </p>
-                  {warn && (
-                    <p className="text-[9px] text-amber-500 mt-0.5">Exceeds pipeline total</p>
-                  )}
-                </div>
-              ))}
+                    {label}&nbsp;·&nbsp;{pct.toFixed(1)}%
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-base font-bold text-slate-800">—</p>
+            )}
+          </div>
+          {[
+            { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
+            { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
+            { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '—'), hi: true },
+            { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '—') },
+            { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
+            { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '—') },
+            { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '—') },
+          ].map(({ label, value, hi }) => (
+            <div key={label} className={`rounded-xl p-3 ${
+              hi ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50'
+            }`}>
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+              <p className={`text-base font-bold ${hi ? 'text-indigo-700' : 'text-slate-800'}`}>{value}</p>
             </div>
-          )
-        })()}
+          ))}
+        </div>
       </div>
 
       {version.businessJustification && (

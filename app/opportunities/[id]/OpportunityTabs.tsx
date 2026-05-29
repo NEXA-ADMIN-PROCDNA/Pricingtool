@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import { ApprovalStatus } from '@prisma/client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { StageBadge } from '@/components/ui/StageBadge'
 import { LOBBadge } from '@/components/ui/LOBBadge'
 import { PricingDrawer } from './PricingDrawer'
@@ -37,7 +36,7 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
 }
 
 // ── Tab bar ──────────────────────────────────────────────────────
-const TABS = ['Details', 'Pricing', 'Pricing Approval', 'SOW / PO', 'Comments'] as const
+const TABS = ['Details', 'Pricing', 'Pricing Approval', 'SOW / PO', 'Project Code', 'Comments'] as const
 type Tab = typeof TABS[number]
 
 export function OpportunityTabs({
@@ -142,6 +141,43 @@ export function OpportunityTabs({
   const [withdrawConfirm, setWithdrawConfirm]           = useState(false)
   const [withdrawing, setWithdrawing]                   = useState(false)
   const [withdrawReason, setWithdrawReason]             = useState('')
+
+  const [oppStatus, setOppStatus]                       = useState<string>(opp.status as string)
+  const [statusSaving, setStatusSaving]                 = useState(false)
+  const [projectCodeProceed, setProjectCodeProceed]     = useState<boolean>((opp as any).projectCodeProceed ?? false)
+  const [projectCodeConfirm, setProjectCodeConfirm]     = useState(false)
+  const [projectCodeSaving, setProjectCodeSaving]       = useState(false)
+
+  async function updateStatus(newStatus: string) {
+    setStatusSaving(true)
+    try {
+      const res = await fetch(`/api/opportunities/${opp.opportunityId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      if (!res.ok) { toast.error('Failed to update status'); return }
+      setOppStatus(newStatus)
+    } finally {
+      setStatusSaving(false)
+    }
+  }
+
+  async function confirmProjectCode() {
+    setProjectCodeSaving(true)
+    try {
+      const res = await fetch(`/api/opportunities/${opp.opportunityId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectCodeProceed: true }),
+      })
+      if (!res.ok) { toast.error('Failed to save'); return }
+      setProjectCodeProceed(true)
+      setProjectCodeConfirm(false)
+    } finally {
+      setProjectCodeSaving(false)
+    }
+  }
   type ApprovalItem = OpportunityDetail['approvalRequests'][number]
   const [approvals, setApprovals] = useState<ApprovalItem[]>(opp.approvalRequests)
 
@@ -320,11 +356,20 @@ export function OpportunityTabs({
           <div className="space-y-5">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">Status</h2>
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge status={opp.status} />
+              <div className="flex flex-wrap gap-2 items-center">
+                <select
+                  value={oppStatus}
+                  disabled={statusSaving}
+                  onChange={e => updateStatus(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-50 cursor-pointer"
+                >
+                  <option value="OPEN">Open</option>
+                  <option value="WON">Won</option>
+                </select>
                 <StageBadge  stage={oppStage}   />
                 <LOBBadge    lob={opp.primaryLob} />
               </div>
+              <p className="mt-2 text-[10px] text-slate-400">You can change the status at any time.</p>
             </div>
 
             {pricingVersions.length > 0 && (() => {
@@ -964,6 +1009,72 @@ export function OpportunityTabs({
             ) ?? null
           }
         />
+      )}
+
+      {/* ── Tab: Project Code ────────────────────────────────── */}
+      {tab === 'Project Code' && (
+        <div className="max-w-xl">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">Project Code Creation</h3>
+            <p className="text-xs text-slate-500 mb-6">
+              Confirm that you want to proceed with project code creation. Once confirmed, the finance team will generate a project code.
+              You must then upload a SoW, PO, or pre-contract agreement to formalise the legal contract and allocate company resources.
+            </p>
+
+            {projectCodeProceed ? (
+              <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-emerald-600 shrink-0">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">Confirmed — proceed with project code</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">This cannot be undone. Finance has been notified.</p>
+                </div>
+              </div>
+            ) : projectCodeConfirm ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-red-600 shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-bold text-red-700">This action is permanent and cannot be undone.</p>
+                    <p className="text-xs text-red-600 mt-1">
+                      Once confirmed, the finance team will create a project code. You will be required to upload a SoW or PO
+                      to establish a legal contract before company resources can be allocated to this project.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={confirmProjectCode}
+                    disabled={projectCodeSaving}
+                    className="rounded-lg px-4 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {projectCodeSaving ? 'Confirming…' : 'Yes, proceed with project code'}
+                  </button>
+                  <button
+                    onClick={() => setProjectCodeConfirm(false)}
+                    disabled={projectCodeSaving}
+                    className="rounded-lg px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setProjectCodeConfirm(true)}
+                className="flex items-center gap-3 w-full rounded-xl border-2 border-dashed border-slate-300 px-4 py-3 text-left hover:border-indigo-400 hover:bg-indigo-50 transition-colors group"
+              >
+                <span className="w-5 h-5 rounded border-2 border-slate-300 group-hover:border-indigo-500 flex items-center justify-center shrink-0 transition-colors" />
+                <span className="text-sm text-slate-500 group-hover:text-indigo-700 font-medium transition-colors">
+                  Proceed with project code creation
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Tab: Comments ────────────────────────────────────── */}

@@ -219,6 +219,7 @@ model Opportunity {
   stage             OpportunityStage  @default(LEAD)
   starConnect          Boolean           @default(false)
   preContractAgreed    Boolean           @default(false)
+  projectCodeProceed   Boolean           @default(false)
   estimatedRevenue     Int?                              // user-entered pre-pricing revenue estimate
   probability          Int?                              // win probability 1–100
   ownerId              String
@@ -364,8 +365,9 @@ model OtherCost {
   description   String
   amount        Decimal     @db.Decimal(12, 2)
   markupPct     Decimal?    @db.Decimal(8, 4)
-  isBillable    Boolean     @default(true)
-  month         DateTime?   @db.Timestamptz(3)
+  isBillable      Boolean     @default(true)
+  lineOfBusiness  String?     @db.VarChar(20)
+  month           DateTime?   @db.Timestamptz(3)
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 

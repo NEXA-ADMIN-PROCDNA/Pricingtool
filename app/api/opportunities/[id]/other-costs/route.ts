@@ -11,7 +11,7 @@ export async function POST(
   if (!token) return apiError('UNAUTHORIZED')
 
   const { id: oppId } = await params
-  const { description, amount, markupPct } = await req.json()
+  const { description, amount, markupPct, lineOfBusiness } = await req.json()
 
   if (!description?.trim() || amount == null) {
     return NextResponse.json({ error: 'description and amount are required' }, { status: 400 })
@@ -27,6 +27,7 @@ export async function POST(
         description:   description.trim(),
         amount:        Number(amount),
         markupPct:     markupPct != null ? Number(markupPct) : null,
+        lineOfBusiness: lineOfBusiness ?? null,
       },
     })
     return NextResponse.json(cost, { status: 201 })
