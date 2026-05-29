@@ -27,6 +27,7 @@ export async function POST(
         domain: rc.domain ?? null,
         costRatePerHour: rc.costRatePerHour,
         systemBillRatePerHour: rc.billRatePerHour,
+        effectiveBillRate: rc.billRatePerHour,
       },
       include: { weeklyHours: true },
     })

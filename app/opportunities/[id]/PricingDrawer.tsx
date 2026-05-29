@@ -147,7 +147,7 @@ export function PricingDrawer({
       systemBillRatePerHour: rc.billRatePerHour,
       domain: rc.domain ?? null,
       utilization: null,
-      effectiveBillRate: null,
+      effectiveBillRate: rc.billRatePerHour,
       isActive: true,
       isBillable: true,
       weeklyHours: [],
