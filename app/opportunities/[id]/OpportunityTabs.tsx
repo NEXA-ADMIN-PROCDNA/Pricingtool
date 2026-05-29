@@ -132,6 +132,18 @@ export function OpportunityTabs({
   const LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(oppStage)
 
+  const SOW_UNLOCKED_STAGES = new Set(['SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'])
+  const tabDimmed = (t: Tab) => {
+    if (t === 'SOW / PO')       return !SOW_UNLOCKED_STAGES.has(oppStage)
+    if (t === 'Project Code')   return oppStage !== 'TO_BE_ARCHIVED'
+    return false
+  }
+  const tabTooltip = (t: Tab) => {
+    if (t === 'SOW / PO')     return 'Available after Pricing Approval'
+    if (t === 'Project Code') return 'Available after SOW Verification'
+    return undefined
+  }
+
   const [approverId, setApproverId]                     = useState('')
   const [ccIds, setCcIds]                               = useState<string[]>([])
   const [businessJustification, setBusinessJustification] = useState('')
@@ -277,11 +289,12 @@ export function OpportunityTabs({
           <button
             key={t}
             onClick={() => setTab(t)}
+            title={tabDimmed(t) ? tabTooltip(t) : undefined}
             className={`px-5 py-3 text-sm font-semibold transition-all border-b-2 -mb-px ${
               tab === t
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
+            } ${tabDimmed(t) ? 'opacity-40' : ''}`}
           >
             {t}
             {t === 'Pricing' && pricingVersions.length > 0 && (

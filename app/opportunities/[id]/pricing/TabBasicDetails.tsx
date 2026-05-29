@@ -35,10 +35,11 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
   for (const r of version.staffingResources) {
     if (!r.domain) continue
     const effRate = Number(r.effectiveBillRate ?? 0)
-    if (effRate <= 0) continue
     const totalHrs = r.weeklyHours.reduce((s: number, w: { hours: number | { toNumber(): number } }) => s + Number(w.hours ?? 0), 0)
     if (totalHrs <= 0) continue
-    domainRevMap[r.domain] = (domainRevMap[r.domain] ?? 0) + effRate * totalHrs
+    // revenue when rate exists; fall back to hours so zero-rate resources still appear
+    const weight = effRate > 0 ? effRate * totalHrs : totalHrs
+    domainRevMap[r.domain] = (domainRevMap[r.domain] ?? 0) + weight
   }
   const grandTotal = Object.values(domainRevMap).reduce((s, v) => s + v, 0)
   const domainPcts = grandTotal > 0

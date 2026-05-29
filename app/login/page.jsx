@@ -2,150 +2,118 @@
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 
 const ERROR_MESSAGES = {
   not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
   account_disabled: 'Your account has been disabled. Contact your admin.',
-  CredentialsSignin: 'Invalid email or password.',
 }
 
+const serif  = "'DM Serif Display', Georgia, serif"
+const sans   = "'DM Sans', system-ui, sans-serif"
+
 function LoginForm() {
-  const [loading, setLoading]         = useState(false)
-  const [email, setEmail]             = useState('')
-  const [password, setPassword]       = useState('')
-  const [credError, setCredError]     = useState(null)
-  const [showCredForm, setShowCred]   = useState(false)
-  const params = useSearchParams()
-  const errorKey = params.get('error')
-  const errorMsg = ERROR_MESSAGES[errorKey] ?? null
+  const [loading, setLoading] = useState(false)
+  const params   = useSearchParams()
+  const errorMsg = ERROR_MESSAGES[params.get('error')] ?? null
 
   async function handleMicrosoft() {
     setLoading(true)
     await signIn('azure-ad', { callbackUrl: '/dashboard' })
   }
 
-  async function handleCredentials(e) {
-    e.preventDefault()
-    setCredError(null)
-    setLoading(true)
-    const result = await signIn('credentials', {
-      email,
-      password,
-      callbackUrl: '/dashboard',
-      redirect: false,
-    })
-    if (result?.error) {
-      setCredError('Invalid email or password.')
-      setLoading(false)
-    } else if (result?.url) {
-      window.location.href = result.url
-    }
-  }
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-10 w-full max-w-sm space-y-6">
+    <div style={{ display: 'flex', width: 860, minHeight: 520, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 40px rgba(11,28,61,0.12)' }}>
 
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">ProcDNA</h1>
-        <p className="text-slate-500 text-sm mt-1">BD Tracker &amp; Pricing Tool</p>
-      </div>
+      {/* ── Left panel ── */}
+      <div style={{ flex: 1.1, background: '#0B1C3D', padding: '48px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(0,122,255,0.08)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(0,122,255,0.05)', pointerEvents: 'none' }} />
 
-      {(errorMsg || credError) && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {credError ?? errorMsg}
+        {/* Brand */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
+          <Image src="/logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
+          <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
+            ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
+          </span>
         </div>
-      )}
 
-      {/* Microsoft SSO */}
-      <button
-        onClick={handleMicrosoft}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
-      >
-        <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
-          <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
-          <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
-          <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
-          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-        </svg>
-        {loading ? 'Redirecting…' : 'Sign in with Microsoft'}
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-slate-200" />
-        <span className="text-xs text-slate-400">or</span>
-        <div className="flex-1 h-px bg-slate-200" />
-      </div>
-
-      {/* Credentials toggle / form */}
-      {!showCredForm ? (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowCred(true)}
-            className="w-full text-sm text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors"
-          >
-            Sign in with email &amp; password
-          </button>
-          <p className="text-center text-xs text-slate-400">
-            SEL and above — use <span className="font-medium text-slate-500">Sign in with Microsoft</span>
+        {/* Headline */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <h1 style={{ fontFamily: serif, fontSize: 30, color: '#fff', lineHeight: 1.3, fontWeight: 400, marginBottom: 12 }}>
+            New Engagement<br />Expense Approvals,<br />simplified.
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, maxWidth: 260 }}>
+            Request, review, and approve engagement expenses with full visibility at every step.
           </p>
         </div>
-      ) : (
-        <form onSubmit={handleCredentials} className="space-y-3">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className={`w-full rounded-xl border px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-              credError
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-100'
-            }`}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className={`w-full rounded-xl border px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-colors ${
-              credError
-                ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-100'
-            }`}
-          />
-          {credError && (
-            <p className="text-xs text-red-600 flex items-center gap-1.5">
-              <span>⚠</span> Incorrect ID or password.
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowCred(false); setCredError(null) }}
-            className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            ← Back
-          </button>
-        </form>
-      )}
+      </div>
 
+      {/* ── Right panel ── */}
+      <div style={{ flex: 1, background: '#fff', padding: '48px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+
+        <div style={{ marginBottom: 36 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0B1C3D', letterSpacing: '-0.3px', marginBottom: 4 }}>Welcome to NEXA</h2>
+          <span style={{ fontSize: 13, color: '#8A93A6', lineHeight: 1.5, display: 'block' }}>
+            Sign in with your firm Microsoft account<br />to access the approval portal.
+          </span>
+        </div>
+
+        {errorMsg && (
+          <div style={{ marginBottom: 20, padding: '12px 14px', background: '#FFF1F2', borderRadius: 8, border: '0.5px solid #FCA5A5' }}>
+            <p style={{ fontSize: 12, color: '#DC2626', lineHeight: 1.6 }}>{errorMsg}</p>
+          </div>
+        )}
+
+        {/* Microsoft SSO button */}
+        <button
+          onClick={handleMicrosoft}
+          disabled={loading}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '14px 20px', border: 'none', borderRadius: 9, background: '#0B1C3D', fontSize: 14, fontWeight: 600, color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.65 : 1, fontFamily: sans, letterSpacing: '0.2px', transition: 'background 0.15s' }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#1A3060' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#0B1C3D' }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2.5, width: 18, height: 18, flexShrink: 0 }}>
+            <div style={{ background: '#F25022' }} />
+            <div style={{ background: '#7FBA00' }} />
+            <div style={{ background: '#00A4EF' }} />
+            <div style={{ background: '#FFB900' }} />
+          </div>
+          {loading ? 'Redirecting…' : 'Sign in with Microsoft'}
+        </button>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 20px' }}>
+          <div style={{ flex: 1, height: 0.5, background: '#E4E8F0' }} />
+          <span style={{ fontSize: 11, color: '#B0B8C8', fontWeight: 500, letterSpacing: '0.5px' }}>need help?</span>
+          <div style={{ flex: 1, height: 0.5, background: '#E4E8F0' }} />
+        </div>
+
+        <p style={{ fontSize: 12, color: '#8A93A6', textAlign: 'center', lineHeight: 1.6 }}>
+          Having trouble signing in? Contact your<br />
+          IT administrator or{' '}
+          <a href="mailto:nexa_admin@procdna.com" style={{ color: '#1A6EFF', textDecoration: 'none', fontWeight: 500 }}>
+            nexa_admin@procdna.com
+          </a>
+        </p>
+
+        {/* Trust badges */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 32, paddingTop: 18, borderTop: '0.5px solid #EDF0F5', flexWrap: 'wrap' }}>
+          {['SOC 2 Compliant', 'SSO Enabled', 'Firm Data Isolated'].map(badge => (
+            <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#B0B8C8', fontWeight: 500 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
+              {badge}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F4F6F9', fontFamily: sans }}>
       <Suspense>
         <LoginForm />
       </Suspense>
