@@ -1,6 +1,7 @@
 'use server'
 import { Suspense } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
@@ -39,7 +40,24 @@ const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
 // Calendar-year fiscal quarter (Jan–Mar = Q1 … Oct–Dec = Q4)
 function NexaWordmark() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <Image
+        src="/procdna-logo.png"
+        alt="ProcDNA"
+        width={34}
+        height={34}
+        style={{ borderRadius: 6, objectFit: 'contain', flexShrink: 0 }}
+      />
+      <span style={{
+        fontFamily: "'Playfair Display', 'Georgia', serif",
+        fontWeight: 500,
+        fontSize: 20,
+        letterSpacing: '0.04em',
+        color: C.inkMuted,
+        lineHeight: 1,
+      }}>
+        ProcDNA
+      </span>
       <span style={{
         fontFamily: "'Playfair Display', 'Georgia', serif",
         fontWeight: 800,

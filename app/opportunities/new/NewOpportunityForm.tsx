@@ -15,12 +15,12 @@ type Client = {
 type PocRow = { name: string; email: string; phone: string; existingPocId?: string }
 
 const LOB_OPTIONS: { value: string; label: string }[] = [
-  { value: 'TECH',      label: 'Technology'       },
   { value: 'ANALYTICS', label: 'Analytics'         },
-  { value: 'DS',        label: 'Data Science'      },
-  { value: 'MS',        label: 'Managed Services'  },
-  { value: 'DESIGN',    label: 'Design'            },
   { value: 'AUXO',      label: 'Auxo'              },
+  { value: 'DS',        label: 'Data Science'      },
+  { value: 'DESIGN',    label: 'Design'            },
+  { value: 'MS',        label: 'Managed Services'  },
+  { value: 'TECH',      label: 'Technology'        },
 ]
 
 function Label({ text, required }: { text: string; required?: boolean }) {
@@ -61,9 +61,14 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
 
   const selectedClient = clients.find(c => c.id === clientId) ?? null
 
+  const sortedClients = [...clients].sort((a, b) => a.name.localeCompare(b.name))
+
   // POC IDs already added via dropdown — hidden from the dropdown options
   const usedPocIds = new Set(pocRows.filter(r => r.existingPocId).map(r => r.existingPocId!))
-  const availableExisting = selectedClient?.pocs.filter(p => !usedPocIds.has(p.id)) ?? []
+  const availableExisting = (selectedClient?.pocs ?? [])
+    .filter(p => !usedPocIds.has(p.id))
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   function addPocFromExisting(poc: POC) {
     setPocRows(prev => [...prev, {
@@ -182,7 +187,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
               className={inputCls}
             >
               <option value="">Select client…</option>
-              {clients.map(c => (
+              {sortedClients.map(c => (
                 <option key={c.id} value={c.id}>{c.name} ({c.clientId})</option>
               ))}
             </select>
