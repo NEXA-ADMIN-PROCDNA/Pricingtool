@@ -1,158 +1,356 @@
 import Link from 'next/link'
-import { getClients } from '@/lib/db/clients'
+import { getClients, type ClientRow } from '@/lib/db/clients'
 
 export const dynamic = 'force-dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AddClientModal } from './AddClientModal'
 import { AdminRequestsPanel } from './AdminRequestsPanel'
 
-function initial(name: string) {
+// V8 palette — matches dashboard
+const C = {
+  bg:         '#F4F6FB',
+  bgSoft:     '#EAEEF6',
+  rule:       '#D6DCE8',
+  ruleSoft:   '#E2E6EE',
+  ink:        '#0A1F44',
+  inkSoft:    '#3A4A6A',
+  inkMuted:   '#6B7591',
+  inkFaint:   '#9AA3B8',
+  accent:     '#1E5BB8',
+  accentDeep: '#143E80',
+  accentSoft: '#DCE7F5',
+}
+
+const MONO: React.CSSProperties = {
+  fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+}
+
+const SERIF: React.CSSProperties = {
+  fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
+}
+
+function initials(name: string) {
   return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-const INDUSTRY_COLORS: Record<string, string> = {
-  Pharmaceuticals:     'from-blue-400 to-blue-600',
-  'Financial Services':'from-emerald-400 to-emerald-600',
-  Biotechnology:       'from-violet-400 to-violet-600',
-  Technology:          'from-cyan-400 to-cyan-600',
-  Healthcare:          'from-pink-400 to-pink-600',
+function KPIStrip({ clients }: { clients: ClientRow[] }) {
+  const totalOpps = clients.reduce((s, c) => s + c._count.opportunities, 0)
+  const totalPocs = clients.reduce((s, c) => s + c.pocs.length, 0)
+  const avgOpps   = clients.length > 0 ? (totalOpps / clients.length).toFixed(1) : '0'
+
+  const items = [
+    { label: 'Total Clients',       value: String(clients.length), sub: 'in master registry' },
+    { label: 'Total Opportunities', value: String(totalOpps),      sub: 'across all clients'  },
+    { label: 'POC Contacts',        value: String(totalPocs),      sub: `${avgOpps} avg. deals/client` },
+  ]
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      borderTop: `1px solid ${C.rule}`,
+      borderBottom: `1px solid ${C.rule}`,
+      padding: '24px 0',
+    }}>
+      {items.map((it, i) => (
+        <div key={i} style={{
+          padding: '0 36px',
+          borderRight: i < 2 ? `1px solid ${C.rule}` : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          <div style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: C.inkMuted,
+            fontWeight: 500,
+          }}>{it.label}</div>
+
+          <div style={{
+            ...SERIF,
+            fontSize: 44,
+            fontWeight: 400,
+            letterSpacing: '-0.02em',
+            color: C.ink,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>{it.value}</div>
+
+          <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, color: C.inkMuted }}>
+            {it.sub}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-function getGradient(industry?: string | null) {
-  return (industry && INDUSTRY_COLORS[industry]) ?? 'from-indigo-400 to-indigo-600'
+function ClientCard({ client }: { client: ClientRow }) {
+  return (
+    <Link
+      href={`/clients/${client.clientId}`}
+      style={{
+        background: '#ffffff',
+        border: `1px solid ${C.rule}`,
+        textDecoration: 'none',
+        display: 'block',
+        transition: 'border-color 120ms, background 120ms',
+      }}
+      className="hover:border-[#1E5BB8] hover:bg-[#FAFBFE]"
+    >
+      {/* Card header — ID + Industry */}
+      <div style={{
+        padding: '12px 16px 10px',
+        borderBottom: `1px solid ${C.ruleSoft}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }}>
+        <span style={{
+          ...MONO,
+          fontSize: 10.5,
+          color: C.inkMuted,
+          letterSpacing: '0.08em',
+        }}>{client.clientId}</span>
+        {client.industry && (
+          <span style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 9.5,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: C.inkMuted,
+            fontWeight: 500,
+            padding: '2px 8px',
+            border: `1px solid ${C.rule}`,
+            whiteSpace: 'nowrap',
+          }}>{client.industry}</span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '16px 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{
+            width: 40, height: 40, flexShrink: 0,
+            background: C.accentSoft, color: C.accentDeep,
+            display: 'grid', placeItems: 'center',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
+          }}>
+            {initials(client.name)}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              ...SERIF,
+              fontSize: 19,
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+              color: C.ink,
+              lineHeight: 1.15,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>{client.name}</div>
+          </div>
+        </div>
+
+        {/* Metric row */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          borderTop: `1px solid ${C.ruleSoft}`,
+          borderBottom: `1px solid ${C.ruleSoft}`,
+          marginBottom: 14,
+        }}>
+          <div style={{ padding: '10px 0', borderRight: `1px solid ${C.ruleSoft}` }}>
+            <div style={{
+              ...SERIF, fontSize: 24, color: C.ink, lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+            }}>{client._count.opportunities}</div>
+            <div style={{
+              fontFamily: "'Inter', system-ui, sans-serif", fontSize: 9.5,
+              letterSpacing: '0.16em', textTransform: 'uppercase',
+              color: C.inkMuted, marginTop: 4, fontWeight: 500,
+            }}>Deals</div>
+          </div>
+          <div style={{ padding: '10px 0 10px 14px' }}>
+            <div style={{
+              ...SERIF, fontSize: 24, color: C.ink, lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+            }}>{client.pocs.length}</div>
+            <div style={{
+              fontFamily: "'Inter', system-ui, sans-serif", fontSize: 9.5,
+              letterSpacing: '0.16em', textTransform: 'uppercase',
+              color: C.inkMuted, marginTop: 4, fontWeight: 500,
+            }}>Contacts</div>
+          </div>
+        </div>
+
+        {/* POC list */}
+        {client.pocs.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {client.pocs.slice(0, 2).map(poc => (
+              <div key={poc.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 12, color: C.inkSoft,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 999,
+                  background: C.bgSoft, color: C.inkMuted,
+                  display: 'grid', placeItems: 'center',
+                  fontSize: 8.5, fontWeight: 700, flexShrink: 0,
+                }}>{initials(poc.name)}</div>
+                <span style={{
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+                }}>
+                  {poc.name}
+                  {poc.jobTitle && (
+                    <span style={{ color: C.inkFaint, fontWeight: 400 }}> · {poc.jobTitle}</span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {client.pocs.length > 2 && (
+              <div style={{
+                ...MONO, fontSize: 10, color: C.inkFaint, paddingLeft: 26,
+                letterSpacing: '0.06em',
+              }}>+{client.pocs.length - 2} MORE</div>
+            )}
+          </div>
+        ) : (
+          <div style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 12, color: C.inkFaint, fontStyle: 'italic',
+          }}>No POC contacts on file.</div>
+        )}
+
+        {/* Footer metadata */}
+        {(client.region || client.businessUnit) && (
+          <div style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: `1px solid ${C.ruleSoft}`,
+            display: 'flex', gap: 16, flexWrap: 'wrap',
+            ...MONO,
+            fontSize: 10,
+            color: C.inkFaint,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}>
+            {client.region && <span>{client.region}</span>}
+            {client.businessUnit && <span>· {client.businessUnit}</span>}
+          </div>
+        )}
+      </div>
+    </Link>
+  )
 }
 
 export default async function ClientsPage() {
   const clients = await getClients()
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: C.bg }}>
       <Sidebar />
 
-      {/* Right panel — header fixed, content scrolls */}
+      {/* Right panel */}
       <div className="flex flex-1 flex-col min-w-0">
 
-        {/* Sticky header */}
-        <header className="shrink-0 flex items-center justify-between border-b border-slate-200 bg-white px-8 py-4">
-          <h1 className="text-xl font-bold text-slate-900">Client Master</h1>
+        {/* Sticky editorial header */}
+        <header
+          style={{
+            background: C.bg,
+            borderBottom: `1px solid ${C.rule}`,
+            padding: '22px 44px 18px',
+            flexShrink: 0,
+          }}
+          className="flex items-center justify-between gap-6"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 10.5,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: C.inkMuted,
+              fontWeight: 500,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span style={{
+                width: 5, height: 5, background: C.accent,
+                display: 'inline-block', transform: 'rotate(45deg)',
+              }} />
+              NEXA · Client Registry
+            </div>
+            <h1 style={{
+              ...SERIF,
+              fontSize: 30,
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+              color: C.ink,
+              lineHeight: 1.1,
+              margin: 0,
+            }}>Client Master</h1>
+          </div>
           <AddClientModal />
         </header>
 
         {/* Scrollable body */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-8 py-6">
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ padding: '0 44px 32px' }}>
 
           {/* Admin pending requests */}
           <AdminRequestsPanel />
 
-          {/* Stats strip */}
-          <div className="mb-6 flex flex-wrap items-center gap-4">
-            {[
-              {
-                label: 'Total Clients',
-                value: clients.length,
-                color: 'bg-indigo-50',
-                stroke: '#6366f1',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />,
-              },
-              {
-                label: 'Total Opportunities',
-                value: clients.reduce((s, c) => s + c._count.opportunities, 0),
-                color: 'bg-emerald-50',
-                stroke: '#10b981',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />,
-              },
-              {
-                label: 'POC Contacts',
-                value: clients.reduce((s, c) => s + c.pocs.length, 0),
-                color: 'bg-blue-50',
-                stroke: '#3b82f6',
-                icon: <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />,
-              },
-            ].map(({ label, value, color, stroke, icon }) => (
-              <div key={label} className="rounded-xl bg-white border border-slate-200 px-5 py-3 flex items-center gap-3">
-                <div className={`h-9 w-9 rounded-lg ${color} flex items-center justify-center`}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={1.8} className="w-5 h-5">
-                    {icon}
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900">{value}</p>
-                  <p className="text-xs text-slate-500">{label}</p>
-                </div>
-              </div>
-            ))}
+          {/* KPI strip */}
+          <KPIStrip clients={clients} />
+
+          {/* Section heading — matches dashboard editorial style */}
+          <div style={{
+            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+            padding: '20px 0 12px',
+            borderBottom: `1.5px solid ${C.ink}`,
+            marginBottom: 18,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+              <h2 style={{
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: C.ink,
+                fontWeight: 600,
+                margin: 0,
+              }}>All Clients</h2>
+              <span style={{
+                ...MONO, fontSize: 10.5, color: C.inkFaint, letterSpacing: '0.08em',
+              }}>{String(clients.length).padStart(2, '0')} TOTAL</span>
+            </div>
           </div>
 
           {/* Client cards grid */}
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {clients.map(client => (
-              <Link
-                key={client.id}
-                href={`/clients/${client.clientId}`}
-                className="group relative rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden block"
-              >
-                <div className={`h-1.5 w-full bg-gradient-to-r ${getGradient(client.industry)}`} />
-                <div className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${getGradient(client.industry)} text-white font-bold text-sm shadow-md`}>
-                      {initial(client.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 truncate">{client.name}</p>
-                      <p className="text-xs text-indigo-600 font-mono">{client.clientId}</p>
-                      {client.industry && (
-                        <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                          {client.industry}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-slate-50 p-2.5 text-center">
-                      <p className="text-xl font-bold text-slate-900">{client._count.opportunities}</p>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Deals</p>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 p-2.5 text-center">
-                      <p className="text-xl font-bold text-slate-900">{client.pocs.length}</p>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-wide">Contacts</p>
-                    </div>
-                  </div>
-
-                  {client.pocs.length > 0 && (
-                    <div className="mt-3 space-y-1.5">
-                      {client.pocs.slice(0, 2).map(poc => (
-                        <div key={poc.id} className="flex items-center gap-2 text-xs text-slate-500">
-                          <div className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
-                            {initial(poc.name)}
-                          </div>
-                          <span className="truncate">{poc.name}</span>
-                          {poc.jobTitle && <span className="text-slate-400">· {poc.jobTitle}</span>}
-                        </div>
-                      ))}
-                      {client.pocs.length > 2 && (
-                        <p className="text-[10px] text-slate-400 pl-7">+{client.pocs.length - 2} more</p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="mt-3 flex items-center gap-3 text-[10px] text-slate-400 uppercase tracking-wide">
-                    {client.region && <span>🌐 {client.region}</span>}
-                    {client.businessUnit && <span>· {client.businessUnit}</span>}
-                  </div>
-                </div>
-              </Link>
-            ))}
-
-            {clients.length === 0 && (
-              <div className="col-span-3 py-20 text-center text-slate-400">
-                No clients yet. Submit a request using the button above.
-              </div>
-            )}
-          </div>
-
-          {/* Bottom padding so last card isn't flush against viewport edge */}
-          <div className="h-8" />
+          {clients.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {clients.map(client => (
+                <ClientCard key={client.id} client={client} />
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              padding: '80px 0',
+              textAlign: 'center',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 14, color: C.inkMuted,
+            }}>
+              No clients yet. Submit a request using the button above.
+            </div>
+          )}
         </div>
       </div>
     </div>

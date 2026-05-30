@@ -457,7 +457,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                     key={col.key}
                     style={{
                       padding: '12px 42px 12px 0',
-                      textAlign: 'center',
+                      textAlign: 'left',
                       fontFamily: "'Inter', system-ui, sans-serif",
                       fontSize: 11, fontWeight: 600,
                       letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -466,7 +466,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-start', gap: 5 }}>
                       <span>{col.label}</span>
                       {col.filterable && (
                         <button
@@ -493,7 +493,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
+                <td colSpan={11} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
                   No opportunities found.
                 </td>
               </tr>
@@ -515,7 +515,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   {/* BD ID */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
                       onClick={e => e.stopPropagation()}
@@ -526,19 +526,19 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Client */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center', fontWeight: 500, color: C.ink, fontSize: 14, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left', fontWeight: 500, color: C.ink, fontSize: 14, whiteSpace: 'nowrap' }}>
                     {row.client.name}
                   </td>
 
                   {/* Opportunity */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left', maxWidth: 220, color: C.inkSoft, fontSize: 14 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.opportunityName}
                     </div>
                   </td>
 
                   {/* Owner */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
                       <Avatar initials={ownerInitials(row.owner.name)} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -548,7 +548,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Revenue */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <span style={{
                       ...SERIF, fontSize: 19, fontWeight: 400,
                       letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums',
@@ -558,13 +558,13 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                       <span style={{
                         ...MONO, display: 'block',
                         fontSize: 9, fontWeight: 600, letterSpacing: '0.08em',
-                        textTransform: 'uppercase', color: '#1F6B3C', textAlign: 'center',
+                        textTransform: 'uppercase', color: '#1F6B3C', textAlign: 'left',
                       }}>FINAL</span>
                     )}
                   </td>
 
                   {/* Win % */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     {prob !== null ? (
                       <span style={{ ...MONO, fontSize: 12.5, color: C.inkSoft, fontVariantNumeric: 'tabular-nums' }}>
                         {prob}%
@@ -575,26 +575,26 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Time Window */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <span style={{ ...MONO, fontSize: 12, color: C.inkMuted, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                       {start} → {end}
                     </span>
                   </td>
 
                   {/* Status */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <StatusPill status={row.status} />
                   </td>
 
                   {/* Next Step */}
-                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <span style={{ fontSize: 13, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
                       {nextStep}
                     </span>
                   </td>
 
                   {/* Proj. Code */}
-                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     {(row as any).projectCodeProceed ? (
                       <span style={{ fontSize: 11, fontWeight: 600, color: '#16A34A' }}>Yes</span>
                     ) : (
@@ -603,7 +603,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                   </td>
 
                   {/* Comments */}
-                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'center' }}>
+                  <td style={{ padding: '14px 0 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     {row._count.comments > 0 ? (
                       <span style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, fontVariantNumeric: 'tabular-nums' }}>
                         {row._count.comments}

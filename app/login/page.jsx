@@ -32,7 +32,7 @@ function LoginForm() {
 
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-          <Image src="/logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
+          <Image src="/procdna-logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
           <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
             ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
           </span>
