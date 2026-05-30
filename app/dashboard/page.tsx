@@ -32,9 +32,9 @@ function fmt(n: number) {
 const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
   ADMIN:    { label: 'Admin View',              restriction: 'Full platform access · All data visible' },
   PARTNER:  { label: 'Partner View',            restriction: 'All Opportunities Visible' },
-  ED:       { label: 'Executive Director View', restriction: 'Restricted to Executive Directors & above' },
-  DIRECTOR: { label: 'Director View',           restriction: 'Restricted to Directors & above' },
-  SEL:      { label: 'SEL View',                restriction: 'Senior Engagement Lead access' },
+  ED:       { label: 'Executive Director View', restriction: '-' },
+  DIRECTOR: { label: 'Director View',           restriction: '-' },
+  SEL:      { label: 'SEL View',                restriction: 'Senior Engagement Lead View' },
 }
 
 // Calendar-year fiscal quarter (Jan–Mar = Q1 … Oct–Dec = Q4)
@@ -271,7 +271,7 @@ export default async function DashboardPage({
         {/* Filter tabs + Table */}
         <div style={{ padding: '0 44px' }} className="flex flex-1 flex-col min-h-0">
           <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
-            <OpportunityTable rows={rows} />
+            <OpportunityTable rows={rows} roleLabel={banner.label} />
           </Suspense>
         </div>
       </div>

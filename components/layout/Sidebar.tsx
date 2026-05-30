@@ -1,5 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+const PIN_KEY = 'nexa.sidebar.pinned'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -62,6 +64,21 @@ export function Sidebar() {
   const [sessionOpen, setSessionOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const { data: session } = useSession()
+
+  // Restore the pinned-state from localStorage on mount, then keep it in sync
+  // on every change. The ref guards against clobbering the saved value with the
+  // initial `false` on first render (before the load read has run).
+  const pinHydrated = useRef(false)
+  useEffect(() => {
+    if (!pinHydrated.current) {
+      pinHydrated.current = true
+      try {
+        if (localStorage.getItem(PIN_KEY) === '1') setPinned(true)
+      } catch {}
+      return
+    }
+    try { localStorage.setItem(PIN_KEY, pinned ? '1' : '0') } catch {}
+  }, [pinned])
 
   useEffect(() => {
     fetch('/api/approvals?pending=true')
@@ -134,20 +151,37 @@ export function Sidebar() {
             color: '#6B7591',
             fontWeight: 500,
             marginTop: 4,
-          }}>BD & Pricing</div>
+          }}>Pricing Tool</div>
         </div>
 
-        {/* Pin button */}
+        {/* Pin button — thumbtack icon */}
         <button
           onClick={() => setPinned(p => !p)}
-          className={`ml-auto shrink-0 rounded p-0.5 transition-all duration-150 ${
+          className={`ml-auto shrink-0 grid place-items-center rounded h-7 w-7 transition-all duration-150 hover:bg-white/10 ${
             isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
-          style={{ color: pinned ? C.accent : '#6B7591' }}
-          title={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+          style={{
+            color: pinned ? C.accent : '#9AA3B8',
+            background: pinned ? 'rgba(30,91,184,0.14)' : 'transparent',
+          }}
+          aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
+          title={pinned ? 'Pinned — click to unpin' : 'Click to keep sidebar open'}
         >
-          <svg viewBox="0 0 24 24" fill={pinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+          {/* Thumbtack/pushpin — rotates 45° when pinned (pressed into the wall) */}
+          <svg
+            viewBox="0 0 24 24"
+            fill={pinned ? 'currentColor' : 'none'}
+            stroke="currentColor"
+            strokeWidth={1.75}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 transition-transform duration-150"
+            style={{ transform: pinned ? 'rotate(45deg)' : 'rotate(0deg)' }}
+          >
+            {/* Head */}
+            <path d="M9 4h6v4l3 3v3H6v-3l3-3V4z" />
+            {/* Needle */}
+            <path d="M12 14v6" />
           </svg>
         </button>
       </div>

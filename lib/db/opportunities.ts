@@ -153,8 +153,10 @@ export async function getDashboardStats(auth?: AuthCtx) {
     prisma.opportunity.findMany({
       where: { isActive: true, ...ownerFilter },
       select: {
-        estimatedRevenue: true,
-        probability:      true,
+        estimatedRevenue:   true,
+        probability:        true,
+        status:             true,
+        projectCodeProceed: true,
         pricingVersions: {
           where:  { isFinal: true },
           select: { proposedBillings: true },
@@ -170,7 +172,10 @@ export async function getDashboardStats(auth?: AuthCtx) {
     const finalBillings = opp.pricingVersions[0]?.proposedBillings
     const raw = finalBillings != null ? Number(finalBillings) : (opp.estimatedRevenue ?? 0)
     estimatedRevenue += raw
-    weightedRevenue  += raw * ((opp.probability ?? 100) / 100)
+    // WON + project code confirmed → effectively certain, treat as 100%
+    const certain = opp.status === 'WON' && opp.projectCodeProceed
+    const probPct = certain ? 100 : (opp.probability ?? 100)
+    weightedRevenue += raw * (probPct / 100)
   }
 
   const byStatus = Object.fromEntries(

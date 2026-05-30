@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { getOpportunities } from '@/lib/db/opportunities'
-import { LineOfBusiness, OpportunityStage, OpportunityType } from '@prisma/client'
+import { OpportunityStage, OpportunityType } from '@prisma/client'
 import { apiError } from '@/lib/errors'
 
 async function nextOpportunityId(): Promise<string> {
@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
       clientId,
       opportunityName,
       opportunityType,
-      primaryLob,
       businessUnit,
       stage,
       startDate,
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
       pocs,
     } = body
 
-    if (!clientId || !opportunityName || !primaryLob || !startDate) {
+    if (!clientId || !opportunityName || !startDate) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
         clientId,
         opportunityName,
         opportunityType:  (opportunityType as OpportunityType) ?? 'NEW',
-        primaryLob:       primaryLob as LineOfBusiness,
         businessUnit:     businessUnit?.trim() || null,
         stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,

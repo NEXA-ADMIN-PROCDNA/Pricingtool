@@ -7,7 +7,14 @@ const config: Record<string, { label: string; classes: string }> = {
   AUXO:      { label: 'Auxo',      classes: 'bg-orange-50 text-orange-700' },
 }
 
-export function LOBBadge({ lob }: { lob: string }) {
+export function LOBBadge({ lob }: { lob: string | null | undefined }) {
+  if (!lob) {
+    return (
+      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-400 italic">
+        Unassigned
+      </span>
+    )
+  }
   const { label, classes } = config[lob] ?? { label: lob, classes: 'bg-slate-100 text-slate-600' }
   return (
     <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${classes}`}>

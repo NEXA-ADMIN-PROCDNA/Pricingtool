@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
+import { LineOfBusiness } from '@prisma/client'
+
+const VALID_LOBS = new Set<string>(Object.values(LineOfBusiness))
+
+// Revenue-weighted majority domain across staffing (effectiveBillRate × totalHours),
+// falling back to hours if rate is 0 so zero-rate rows still count. Matches the UI
+// "LoB Revenue Mix" badge in TabBasicDetails.
+async function computeMajorityLob(pvId: string): Promise<LineOfBusiness | null> {
+  const staffing = await prisma.staffingResource.findMany({
+    where:   { pricingVersionId: pvId },
+    select:  {
+      domain: true,
+      effectiveBillRate: true,
+      weeklyHours: { select: { hours: true } },
+    },
+  })
+  const tally: Record<string, number> = {}
+  for (const r of staffing) {
+    if (!r.domain) continue
+    const totalHrs = r.weeklyHours.reduce((s, w) => s + Number(w.hours ?? 0), 0)
+    if (totalHrs <= 0) continue
+    const effRate = Number(r.effectiveBillRate ?? 0)
+    const weight  = effRate > 0 ? effRate * totalHrs : totalHrs
+    tally[r.domain] = (tally[r.domain] ?? 0) + weight
+  }
+  const top = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]
+  if (!top) return null
+  return VALID_LOBS.has(top[0]) ? (top[0] as LineOfBusiness) : null
+}
 
 export async function DELETE(
   req: NextRequest,
@@ -73,15 +102,24 @@ export async function PATCH(
           select: { stage: true },
         })
 
-        if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(opp?.stage ?? '')) {
-          // LEAD / PRICE_LINKING_PENDING: advance to price linked
-          // SOW_PENDING / SOW_SUBMITTED: pricing was approved but final version changed — invalidate approval
+        // Recompute Primary LoB from this version's staffing; only overwrite when we get
+        // a valid result, so an empty/un-domained pricing keeps the previous value.
+        const majorityLob = await computeMajorityLob(pvId)
+
+        const stageData = ['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(opp?.stage ?? '')
+          ? { stage: 'PRICE_LINKED' as const }
+          : {}
+
+        if (majorityLob || stageData.stage) {
           await prisma.opportunity.update({
             where: { id: current.opportunityId },
-            data:  { stage: 'PRICE_LINKED' },
+            data:  {
+              ...stageData,
+              ...(majorityLob ? { primaryLob: majorityLob } : {}),
+            },
           })
         }
-        // PRICE_LINKED: re-marking another version as final — stage stays PRICE_LINKED, no update needed
+        // PRICE_LINKED: re-marking another version as final — stage stays PRICE_LINKED
         // SOW_REVIEW_PENDING: blocked in UI — approver must decide before final version can change
       }
     }

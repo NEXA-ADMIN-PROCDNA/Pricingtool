@@ -221,7 +221,7 @@ function FilterPopover({
   )
 }
 
-export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
+export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; roleLabel: string }) {
   const router = useRouter()
   const params = useSearchParams()
   const active = (params.get('status') ?? 'ALL') as 'ALL' | OpportunityStatus
@@ -554,13 +554,6 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
                       letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums',
                       color: revStr === '—' ? C.inkFaint : isFinal ? '#1F6B3C' : C.ink,
                     }}>{revStr}</span>
-                    {isFinal && revStr !== '—' && (
-                      <span style={{
-                        ...MONO, display: 'block',
-                        fontSize: 9, fontWeight: 600, letterSpacing: '0.08em',
-                        textTransform: 'uppercase', color: '#1F6B3C', textAlign: 'left',
-                      }}>FINAL</span>
-                    )}
                   </td>
 
                   {/* Win % */}
@@ -640,7 +633,7 @@ export function OpportunityTable({ rows }: { rows: OpportunityRow[] }) {
         background: '#F4F6FB',
       }}>
         <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
-          {visible.length} of {rows.length}&nbsp;&nbsp;SHOWN · CONFIDENTIAL · NEXA · PARTNERS&apos; VIEW
+          {visible.length} of {rows.length}&nbsp;&nbsp; SHOWN · CONFIDENTIAL · NEXA · {roleLabel.toUpperCase()}
         </span>
         <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
           {active !== 'ALL' && `FILTERED BY ${active}`}

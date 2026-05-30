@@ -211,7 +211,7 @@ model Opportunity {
   client            Client            @relation(fields: [clientId], references: [id])
   opportunityName   String
   opportunityType   OpportunityType   @default(NEW)
-  primaryLob        LineOfBusiness
+  primaryLob        LineOfBusiness?
   businessUnit      String?
   startDate         DateTime
   endDate           DateTime

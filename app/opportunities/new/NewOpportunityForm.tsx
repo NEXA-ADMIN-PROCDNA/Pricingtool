@@ -11,44 +11,129 @@ type Client = {
   pocs: POC[]
 }
 
-// Each row in the POC form — existingPocId lets us filter the dropdown
 type PocRow = { name: string; email: string; phone: string; existingPocId?: string }
 
-const LOB_OPTIONS: { value: string; label: string }[] = [
-  { value: 'ANALYTICS', label: 'Analytics'         },
-  { value: 'AUXO',      label: 'Auxo'              },
-  { value: 'DS',        label: 'Data Science'      },
-  { value: 'DESIGN',    label: 'Design'            },
-  { value: 'MS',        label: 'Managed Services'  },
-  { value: 'TECH',      label: 'Technology'        },
-]
+// ─── Editorial palette (matches dashboard / clients page) ───────────────────
+const C = {
+  bg:         '#F4F6FB',
+  bgSoft:     '#EAEEF6',
+  rule:       '#D6DCE8',
+  ruleSoft:   '#E2E6EE',
+  ink:        '#0A1F44',
+  inkSoft:    '#3A4A6A',
+  inkMuted:   '#6B7591',
+  inkFaint:   '#9AA3B8',
+  accent:     '#1E5BB8',
+  accentDeep: '#143E80',
+  accentSoft: '#DCE7F5',
+  danger:     '#C6432F',
+  dangerSoft: '#FBE9E7',
+}
 
-function Label({ text, required }: { text: string; required?: boolean }) {
+const MONO: React.CSSProperties = {
+  fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+}
+
+const PHONE_RE = /^(\+\d{1,3})?\d{10}$/
+
+// ─── Atoms ───────────────────────────────────────────────────────────────────
+
+function SectionHeader({ label, count }: { label: string; count?: string }) {
   return (
-    <label className="block text-sm font-medium text-slate-700 mb-1">
-      {text} {required && <span className="text-red-500">*</span>}
+    <div style={{
+      display: 'flex',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      borderTop: `1.5px solid ${C.ink}`,
+      paddingTop: 10,
+      marginTop: 28,
+      marginBottom: 18,
+    }}>
+      <span style={{
+        ...MONO,
+        fontSize: 11,
+        letterSpacing: '0.18em',
+        textTransform: 'uppercase',
+        color: C.ink,
+        fontWeight: 600,
+      }}>{label}</span>
+      {count && (
+        <span style={{ ...MONO, fontSize: 10.5, color: C.inkFaint, letterSpacing: '0.08em' }}>
+          {count}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function FieldLabel({ text, required }: { text: string; required?: boolean }) {
+  return (
+    <label style={{
+      ...MONO,
+      display: 'block',
+      fontSize: 10,
+      letterSpacing: '0.14em',
+      textTransform: 'uppercase',
+      color: C.inkMuted,
+      fontWeight: 500,
+      marginBottom: 6,
+    }}>
+      {text}{required && <span style={{ color: C.danger, marginLeft: 4 }}>*</span>}
     </label>
   )
 }
 
-// +1–3 digit country code (optional) followed by exactly 10 digits
-const PHONE_RE = /^(\+\d{1,3})?\d{10}$/
-
-const inputCls =
-  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition'
-
-const inputErrCls =
-  'w-full rounded-xl border border-red-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition'
+function FieldHint({ text }: { text: string }) {
+  return (
+    <p style={{ ...MONO, fontSize: 10, color: C.inkFaint, marginTop: 5, letterSpacing: '0.02em' }}>
+      {text}
+    </p>
+  )
+}
 
 function FieldError({ msg }: { msg: string | undefined }) {
   if (!msg) return null
-  return <p className="mt-1 text-xs text-red-500">{msg}</p>
+  return (
+    <p style={{ ...MONO, fontSize: 10, color: C.danger, marginTop: 5, letterSpacing: '0.02em' }}>
+      {msg}
+    </p>
+  )
 }
+
+// ─── Input styling ───────────────────────────────────────────────────────────
+// Square, thin border, accent focus. No rounded-xl, no shadow.
+
+const inputBase: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '9px 12px',
+  border: `1px solid ${C.rule}`,
+  background: '#ffffff',
+  fontSize: 13.5,
+  color: C.ink,
+  outline: 'none',
+  borderRadius: 2,
+  transition: 'border-color 120ms',
+  fontFamily: 'inherit',
+}
+
+const inputErr: React.CSSProperties = { ...inputBase, borderColor: C.danger }
+
+const focusHandlers = {
+  onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = C.accent
+  },
+  onBlur: (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    e.currentTarget.style.borderColor = C.rule
+  },
+}
+
+// ─── Form ────────────────────────────────────────────────────────────────────
 
 export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   const router = useRouter()
   const { data: session } = useSession()
-  const sessionUser = session?.user as any
+  const sessionUser = session?.user as { name?: string } | undefined
   const ownerName = sessionUser?.name ?? '…'
 
   const [isPending, startTransition] = useTransition()
@@ -63,7 +148,6 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
 
   const sortedClients = [...clients].sort((a, b) => a.name.localeCompare(b.name))
 
-  // POC IDs already added via dropdown — hidden from the dropdown options
   const usedPocIds = new Set(pocRows.filter(r => r.existingPocId).map(r => r.existingPocId!))
   const availableExisting = (selectedClient?.pocs ?? [])
     .filter(p => !usedPocIds.has(p.id))
@@ -133,7 +217,6 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
     setError(null)
     const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
-    // Strip the internal existingPocId before sending
     data.pocs = pocRows
       .filter(p => p.name.trim())
       .map(({ name, email, phone }) => ({ name, email, phone }))
@@ -164,332 +247,423 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
     })
   }
 
+  const ownerInitials = ownerName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} style={{ fontFamily: 'inherit' }}>
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
+        <div style={{
+          background: C.dangerSoft,
+          border: `1px solid ${C.danger}`,
+          color: C.danger,
+          padding: '10px 14px',
+          fontSize: 12.5,
+          marginBottom: 18,
+          borderRadius: 2,
+        }}>{error}</div>
       )}
 
-      {/* Section: Client */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Client</h2>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-
-          <div>
-            <Label text="Client Name" required />
-            <select
-              name="clientId"
-              required
-              value={clientId}
-              onChange={e => handleClientChange(e.target.value)}
-              className={inputCls}
+      {/* ── CLIENT ───────────────────────────────────────────────────────── */}
+      <SectionHeader label="Client" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div>
+          <FieldLabel text="Client Name" required />
+          <select
+            name="clientId"
+            required
+            value={clientId}
+            onChange={e => handleClientChange(e.target.value)}
+            style={inputBase}
+            {...focusHandlers}
+          >
+            <option value="">Select client…</option>
+            {sortedClients.map(c => (
+              <option key={c.id} value={c.id}>{c.name} ({c.clientId})</option>
+            ))}
+          </select>
+          <div style={{
+            marginTop: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            {selectedClient
+              ? <span style={{ ...MONO, fontSize: 10, color: C.inkFaint, letterSpacing: '0.06em' }}>
+                  {selectedClient.clientId}
+                </span>
+              : <span />
+            }
+            <a
+              href="/clients"
+              target="_blank"
+              style={{
+                ...MONO,
+                fontSize: 10,
+                color: C.accent,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+              }}
             >
-              <option value="">Select client…</option>
-              {sortedClients.map(c => (
-                <option key={c.id} value={c.id}>{c.name} ({c.clientId})</option>
+              + Request new client
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel text="Business Unit" />
+          <input
+            name="businessUnit"
+            type="text"
+            placeholder="e.g. Commercial, R&D, IT…"
+            style={inputBase}
+            {...focusHandlers}
+          />
+        </div>
+
+        {/* POC sub-section */}
+        <div style={{ gridColumn: '1 / -1', marginTop: 4 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+          }}>
+            <FieldLabel text="Client POCs" />
+            <button
+              type="button"
+              onClick={addBlankPoc}
+              style={{
+                ...MONO,
+                fontSize: 10,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: C.accent,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 0',
+                fontWeight: 600,
+              }}
+            >
+              + Add POC
+            </button>
+          </div>
+
+          {availableExisting.length > 0 && (
+            <select
+              value=""
+              onChange={e => {
+                const poc = selectedClient!.pocs.find(p => p.id === e.target.value)
+                if (poc) addPocFromExisting(poc)
+              }}
+              style={{ ...inputBase, marginBottom: 12 }}
+              {...focusHandlers}
+            >
+              <option value="">Select from existing POCs…</option>
+              {availableExisting.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}{p.jobTitle ? ` — ${p.jobTitle}` : ''}
+                </option>
               ))}
             </select>
-            <div className="mt-1 flex items-center justify-between">
-              {selectedClient
-                ? <p className="text-[10px] text-slate-400 font-mono">{selectedClient.clientId}</p>
-                : <span />
-              }
-              <a
-                href="/clients"
-                target="_blank"
-                className="text-[10px] text-indigo-500 hover:text-indigo-700 hover:underline transition-colors"
-              >
-                + Request new client →
-              </a>
-            </div>
-          </div>
+          )}
 
-          <div>
-            <Label text="Business Unit" />
-            <input
-              name="businessUnit"
-              type="text"
-              placeholder="e.g. Commercial, R&D, IT…"
-              className={inputCls}
-            />
-          </div>
+          {pocRows.length === 0 && availableExisting.length === 0 && (
+            <p style={{ ...MONO, fontSize: 10.5, color: C.inkFaint, letterSpacing: '0.02em' }}>
+              {selectedClient ? 'No existing POCs for this client.' : 'Select a client to see existing POCs.'}
+            </p>
+          )}
 
-          {/* POC section */}
-          <div className="col-span-full">
-            <div className="flex items-center justify-between mb-2">
-              <Label text="Client POCs" />
-              <button
-                type="button"
-                onClick={addBlankPoc}
-                className="flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Add POC
-              </button>
-            </div>
-
-            {/* Dropdown to pick from existing client POCs */}
-            {availableExisting.length > 0 && (
-              <div className="mb-3">
-                <select
-                  value=""
+          {pocRows.map((poc, i) => (
+            <div key={i} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="text"
+                  placeholder="Name"
+                  value={poc.name}
+                  onChange={e => updatePoc(i, 'name', e.target.value)}
+                  style={{ ...inputBase, flex: 1 }}
+                  {...focusHandlers}
+                />
+                <input
+                  type="text"
+                  placeholder="Email"
+                  value={poc.email}
                   onChange={e => {
-                    const poc = selectedClient!.pocs.find(p => p.id === e.target.value)
-                    if (poc) addPocFromExisting(poc)
+                    updatePoc(i, 'email', e.target.value)
+                    const err = validateEmail(e.target.value)
+                    setPocErrors(prev => {
+                      const next = [...prev]
+                      next[i] = { ...next[i], email: err }
+                      return next
+                    })
                   }}
-                  className={inputCls}
+                  style={{ ...(pocErrors[i]?.email ? inputErr : inputBase), flex: 1 }}
+                  {...focusHandlers}
+                />
+                <input
+                  type="tel"
+                  placeholder="+919876543210"
+                  value={poc.phone}
+                  onChange={e => {
+                    updatePoc(i, 'phone', e.target.value)
+                    const err = validatePhone(e.target.value)
+                    setPocErrors(prev => {
+                      const next = [...prev]
+                      next[i] = { ...next[i], phone: err }
+                      return next
+                    })
+                  }}
+                  style={{ ...(pocErrors[i]?.phone ? inputErr : inputBase), flex: 1 }}
+                  {...focusHandlers}
+                />
+                <button
+                  type="button"
+                  onClick={() => removePoc(i)}
+                  aria-label="Remove POC"
+                  style={{
+                    flexShrink: 0,
+                    width: 32,
+                    height: 32,
+                    background: 'transparent',
+                    border: `1px solid ${C.rule}`,
+                    color: C.inkMuted,
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center',
+                    borderRadius: 2,
+                  }}
                 >
-                  <option value="">Select from existing POCs…</option>
-                  {availableExisting.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}{p.jobTitle ? ` — ${p.jobTitle}` : ''}
-                    </option>
-                  ))}
-                </select>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} style={{ width: 14, height: 14 }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-            )}
-
-            {pocRows.length === 0 && availableExisting.length === 0 && (
-              <p className="text-xs text-slate-400 italic">
-                {selectedClient ? 'No existing POCs for this client.' : 'Select a client to see existing POCs.'}
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {pocRows.map((poc, i) => (
-                <div key={i} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Name"
-                      value={poc.name}
-                      onChange={e => updatePoc(i, 'name', e.target.value)}
-                      className={inputCls + ' flex-1'}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Email"
-                      value={poc.email}
-                      onChange={e => {
-                        updatePoc(i, 'email', e.target.value)
-                        const err = validateEmail(e.target.value)
-                        setPocErrors(prev => {
-                          const next = [...prev]
-                          next[i] = { ...next[i], email: err }
-                          return next
-                        })
-                      }}
-                      className={(pocErrors[i]?.email ? inputErrCls : inputCls) + ' flex-1'}
-                    />
-                    <input
-                      type="tel"
-                      placeholder="e.g. +919876543210"
-                      value={poc.phone}
-                      onChange={e => {
-                        updatePoc(i, 'phone', e.target.value)
-                        const err = validatePhone(e.target.value)
-                        setPocErrors(prev => {
-                          const next = [...prev]
-                          next[i] = { ...next[i], phone: err }
-                          return next
-                        })
-                      }}
-                      className={(pocErrors[i]?.phone ? inputErrCls : inputCls) + ' flex-1'}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePoc(i)}
-                      className="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  {poc.existingPocId && (
-                    <p className="text-[10px] text-indigo-400 pl-1">Autofilled from existing POC — edit if needed</p>
-                  )}
-                  {pocErrors[i]?.email && <FieldError msg={pocErrors[i].email} />}
-                  {pocErrors[i]?.phone && <FieldError msg={pocErrors[i].phone} />}
-                </div>
-              ))}
+              {poc.existingPocId && (
+                <p style={{ ...MONO, fontSize: 9.5, color: C.accent, marginTop: 4, letterSpacing: '0.04em' }}>
+                  Autofilled from existing POC — edit if needed
+                </p>
+              )}
+              <FieldError msg={pocErrors[i]?.email} />
+              <FieldError msg={pocErrors[i]?.phone} />
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Section: Opportunity Details */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Opportunity Details</h2>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      {/* ── OPPORTUNITY DETAILS ──────────────────────────────────────────── */}
+      <SectionHeader label="Opportunity Details" />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div>
+          <FieldLabel text="Opportunity Type" required />
+          <select name="opportunityType" required style={inputBase} {...focusHandlers}>
+            <option value="NEW">New Opportunity</option>
+            <option value="EXISTING">Existing Client</option>
+          </select>
+        </div>
 
-          <div>
-            <Label text="Opportunity Type" required />
-            <select name="opportunityType" required className={inputCls}>
-              <option value="NEW">New Opportunity</option>
-              <option value="EXISTING">Existing Client</option>
-            </select>
-          </div>
+        <div>
+          <FieldLabel text="Opportunity Name" required />
+          <input
+            name="opportunityName"
+            type="text"
+            required
+            placeholder="e.g. Commercial Analytics Transformation"
+            style={inputBase}
+            {...focusHandlers}
+          />
+        </div>
 
-          <div>
-            <Label text="Opportunity Name" required />
-            <input
-              name="opportunityName"
-              type="text"
-              required
-              placeholder="e.g. Commercial Analytics Transformation"
-              className={inputCls}
-            />
-          </div>
+        <div>
+          <FieldLabel text="Start Date" required />
+          <input name="startDate" type="date" required style={inputBase} {...focusHandlers} />
+        </div>
 
-          <div>
-            <Label text="Start Date" required />
-            <input name="startDate" type="date" required className={inputCls} />
-          </div>
+        <div>
+          <FieldLabel text="End Date" />
+          <input
+            name="endDate"
+            type="date"
+            style={dateError ? inputErr : inputBase}
+            onChange={e => {
+              const form = e.currentTarget.form
+              const start = (form?.elements.namedItem('startDate') as HTMLInputElement)?.value ?? ''
+              checkDates(start, e.target.value)
+            }}
+            {...focusHandlers}
+          />
+          <FieldError msg={dateError ?? undefined} />
+        </div>
 
-          <div>
-            <Label text="End Date" />
-            <input
-              name="endDate"
-              type="date"
-              className={dateError ? inputErrCls : inputCls}
-              onChange={e => {
-                const form = e.currentTarget.form
-                const start = (form?.elements.namedItem('startDate') as HTMLInputElement)?.value ?? ''
-                checkDates(start, e.target.value)
-              }}
-            />
-            <FieldError msg={dateError ?? undefined} />
-          </div>
-
-          <div>
-            <Label text="Primary Line of Business" required />
-            <select name="primaryLob" required className={inputCls}>
-              <option value="">Select LOB…</option>
-              {LOB_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* STAR Connect — yes/no toggle */}
-          <div>
-            <Label text="STAR Connect Required?" />
-            <div className="flex gap-3 mt-1">
-              {(['yes', 'no'] as const).map(v => (
+        {/* STAR Connect — segmented control */}
+        <div>
+          <FieldLabel text="STAR Connect Required" />
+          <div style={{
+            display: 'inline-flex',
+            border: `1px solid ${C.rule}`,
+            borderRadius: 2,
+            overflow: 'hidden',
+            background: '#ffffff',
+          }}>
+            {(['no', 'yes'] as const).map((v, idx) => {
+              const active = starConnect === v
+              return (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setStarConnect(v)}
-                  className={`flex-1 rounded-xl border py-2.5 text-sm font-semibold transition-all ${
-                    starConnect === v
-                      ? v === 'yes'
-                        ? 'border-amber-400 bg-amber-50 text-amber-700'
-                        : 'border-slate-300 bg-slate-100 text-slate-700'
-                      : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50'
-                  }`}
+                  style={{
+                    ...MONO,
+                    fontSize: 11,
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    padding: '8px 22px',
+                    background: active ? C.ink : 'transparent',
+                    color:      active ? '#ffffff' : C.inkMuted,
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderLeft: idx === 0 ? 'none' : `1px solid ${C.rule}`,
+                    fontWeight: 600,
+                  }}
                 >
-                  {v === 'yes' ? '⭐ Yes' : 'No'}
+                  {v}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Estimated Revenue */}
-          <div>
-            <Label text="Estimated Revenue ($)" />
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
-              <input
-                name="estimatedRevenue"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="e.g. 500000"
-                className={inputCls + ' pl-7'}
-              />
-            </div>
-            <p className="mt-1 text-[10px] text-slate-400">
-              Used in pipeline if no final pricing exists. Weighted by probability below.
-            </p>
-          </div>
-
-          {/* Win Probability */}
-          <div>
-            <Label text="Win Probability (%)" />
-            <div className="relative">
-              <input
-                name="probability"
-                type="number"
-                min={1}
-                max={100}
-                step={1}
-                placeholder="e.g. 70"
-                className={inputCls + ' pr-8'}
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
-            </div>
-            <p className="mt-1 text-[10px] text-slate-400">
-              1 – 100. Multiplied by estimated revenue for pipeline calculation.
-            </p>
+              )
+            })}
           </div>
         </div>
-      </div>
 
-      {/* Section: Owner (auto-filled) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Owner</h2>
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
-            {ownerName.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800">{ownerName}</p>
-            <p className="text-xs text-slate-400">Automatically set to you</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Section: Notes */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Notes</h2>
         <div>
-          <Label text="Notes" />
-          <textarea
-            name="notes"
-            rows={3}
-            placeholder="Any additional context…"
-            className={inputCls + ' resize-none'}
-          />
+          <FieldLabel text="Estimated Revenue (USD)" />
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute',
+              left: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              ...MONO,
+              fontSize: 12,
+              color: C.inkFaint,
+            }}>$</span>
+            <input
+              name="estimatedRevenue"
+              type="number"
+              min={0}
+              step={1}
+              placeholder="500000"
+              style={{ ...inputBase, paddingLeft: 24, fontVariantNumeric: 'tabular-nums' }}
+              {...focusHandlers}
+            />
+          </div>
+          <FieldHint text="Used in pipeline when no final pricing exists. Weighted by probability." />
+        </div>
+
+        <div>
+          <FieldLabel text="Win Probability (%)" />
+          <div style={{ position: 'relative' }}>
+            <input
+              name="probability"
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              placeholder="70"
+              style={{ ...inputBase, paddingRight: 28, fontVariantNumeric: 'tabular-nums' }}
+              {...focusHandlers}
+            />
+            <span style={{
+              position: 'absolute',
+              right: 12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              ...MONO,
+              fontSize: 12,
+              color: C.inkFaint,
+            }}>%</span>
+          </div>
+          <FieldHint text="1 – 100. Multiplied by Estimated Revenue for the weighted pipeline." />
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-3 pb-8">
+      {/* ── OWNER ────────────────────────────────────────────────────────── */}
+      <SectionHeader label="Owner" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 36,
+          height: 36,
+          background: C.accentSoft,
+          color: C.accentDeep,
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '-0.01em',
+          flexShrink: 0,
+        }}>
+          {ownerInitials}
+        </div>
+        <div>
+          <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{ownerName}</div>
+          <div style={{ ...MONO, fontSize: 10, color: C.inkFaint, marginTop: 2, letterSpacing: '0.04em' }}>
+            Automatically set to you
+          </div>
+        </div>
+      </div>
+
+      {/* ── NOTES ────────────────────────────────────────────────────────── */}
+      <SectionHeader label="Notes" />
+      <textarea
+        name="notes"
+        rows={4}
+        placeholder="Any additional context…"
+        style={{ ...inputBase, resize: 'none', minHeight: 92 }}
+        {...focusHandlers}
+      />
+
+      {/* ── ACTIONS ──────────────────────────────────────────────────────── */}
+      <div style={{
+        marginTop: 36,
+        paddingTop: 18,
+        borderTop: `1px solid ${C.rule}`,
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: 10,
+      }}>
         <a
           href="/dashboard"
-          className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+          style={{
+            ...MONO,
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: C.inkMuted,
+            border: `1px solid ${C.rule}`,
+            padding: '10px 18px',
+            background: '#ffffff',
+            textDecoration: 'none',
+          }}
         >
           Cancel
         </a>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          style={{
+            ...MONO,
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            background: C.accent,
+            color: '#ffffff',
+            border: `1px solid ${C.accentDeep}`,
+            padding: '10px 22px',
+            cursor: isPending ? 'not-allowed' : 'pointer',
+            opacity: isPending ? 0.55 : 1,
+            fontWeight: 600,
+          }}
         >
-          {isPending ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Creating…
-            </>
-          ) : 'Create Opportunity'}
+          {isPending ? 'Creating…' : 'Create Opportunity'}
         </button>
       </div>
     </form>

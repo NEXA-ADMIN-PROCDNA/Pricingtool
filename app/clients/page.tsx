@@ -35,19 +35,17 @@ function initials(name: string) {
 
 function KPIStrip({ clients }: { clients: ClientRow[] }) {
   const totalOpps = clients.reduce((s, c) => s + c._count.opportunities, 0)
-  const totalPocs = clients.reduce((s, c) => s + c.pocs.length, 0)
   const avgOpps   = clients.length > 0 ? (totalOpps / clients.length).toFixed(1) : '0'
 
   const items = [
     { label: 'Total Clients',       value: String(clients.length), sub: 'in master registry' },
-    { label: 'Total Opportunities', value: String(totalOpps),      sub: 'across all clients'  },
-    { label: 'POC Contacts',        value: String(totalPocs),      sub: `${avgOpps} avg. deals/client` },
+    { label: 'Total Opportunities', value: String(totalOpps),      sub: `${avgOpps} avg. deals/client` },
   ]
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
+      gridTemplateColumns: 'repeat(2, 1fr)',
       borderTop: `1px solid ${C.rule}`,
       borderBottom: `1px solid ${C.rule}`,
       padding: '24px 0',
@@ -55,7 +53,7 @@ function KPIStrip({ clients }: { clients: ClientRow[] }) {
       {items.map((it, i) => (
         <div key={i} style={{
           padding: '0 36px',
-          borderRight: i < 2 ? `1px solid ${C.rule}` : 'none',
+          borderRight: i < 1 ? `1px solid ${C.rule}` : 'none',
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
@@ -94,17 +92,20 @@ function ClientCard({ client }: { client: ClientRow }) {
       href={`/clients/${client.clientId}`}
       style={{
         background: '#ffffff',
-        border: `1px solid ${C.rule}`,
+        border: `1px solid ${C.inkMuted}`,
+        borderTop: `3px solid ${C.ink}`,
+        boxShadow: `0 1px 0 ${C.rule}, 4px 4px 0 -1px ${C.bgSoft}`,
         textDecoration: 'none',
         display: 'block',
-        transition: 'border-color 120ms, background 120ms',
+        transition: 'border-color 120ms, background 120ms, box-shadow 120ms, transform 120ms',
       }}
-      className="hover:border-[#1E5BB8] hover:bg-[#FAFBFE]"
+      className="hover:border-[#1E5BB8] hover:bg-[#FAFBFE] hover:[border-top-color:#1E5BB8] hover:-translate-y-0.5"
     >
       {/* Card header — ID + Industry */}
       <div style={{
         padding: '12px 16px 10px',
-        borderBottom: `1px solid ${C.ruleSoft}`,
+        borderBottom: `1px solid ${C.rule}`,
+        background: C.bgSoft,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
