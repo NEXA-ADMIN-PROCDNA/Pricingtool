@@ -395,7 +395,6 @@ export function OpportunityTabs({
                 </select>
                 <StageBadge  stage={oppStage}   />
               </div>
-              <p className="mt-2 text-[10px] text-slate-400">You can change the status at any time.</p>
             </div>
 
             {pricingVersions.length > 0 && (() => {
@@ -714,45 +713,94 @@ export function OpportunityTabs({
                   boxShadow: '0 20px 60px rgba(10,31,68,0.18)',
                   width: 420, maxWidth: 'calc(100vw - 32px)',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+                  <div style={{ marginBottom: 18 }}>
+                    {/* Editorial eyebrow */}
                     <div style={{
-                      width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                      background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                      fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
+                      color: '#6B7591', fontWeight: 500, marginBottom: 14,
                     }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#EA8C00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
-                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
-                      </svg>
+                      <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                      NEXA · Confirmation
                     </div>
-                    <div>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
-                        Send pricing approval request?
-                      </p>
-                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
-                        This will send a mail to <strong style={{ color: '#0A1F44' }}>{name}</strong>.
-                        If the request is rejected, <strong style={{ color: '#0A1F44' }}>you will have to redo the pricing</strong>.
-                      </p>
-                      {finalV && (
-                        <p style={{ marginTop: 10, fontSize: 12, color: '#1E5BB8', background: '#EFF4FF', border: '1px solid #C7D7F8', borderRadius: 7, padding: '6px 10px', display: 'inline-block' }}>
-                          <strong>V{finalV.versionNumber}</strong> is marked as final and will be sent for review.
-                        </p>
-                      )}
-                      {!finalV && (
-                        <p style={{ marginTop: 10, fontSize: 12, color: '#C6432F', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 7, padding: '6px 10px', display: 'inline-block' }}>
-                          No version is marked as final. The approver will see no pricing data.
-                        </p>
-                      )}
-                      {ccNames.length > 0 && (
-                        <p style={{ marginTop: 8, fontSize: 12, color: '#3A4A6A' }}>
-                          CC: <strong style={{ color: '#0A1F44' }}>{ccNames.join(', ')}</strong>
-                        </p>
-                      )}
-                      {businessJustification && (
-                        <div style={{ marginTop: 10, fontSize: 12, color: '#3A4A6A', background: '#F4F6FB', border: '1px solid #D6DCE8', borderRadius: 7, padding: '8px 10px' }}>
-                          <span style={{ display: 'block', fontSize: 10, color: '#9AA3B8', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>Business Justification</span>
-                          {businessJustification}
-                        </div>
-                      )}
-                    </div>
+
+                    <h3 style={{
+                      fontSize: 18, fontWeight: 600, color: '#0A1F44',
+                      margin: '0 0 10px', letterSpacing: '-0.01em', lineHeight: 1.25,
+                    }}>
+                      Submit pricing approval request
+                    </h3>
+
+                    <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
+                      An approval request for <strong style={{ color: '#0A1F44' }}>{opp.opportunityName}</strong>
+                      {' '}
+                      (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opp.opportunityId}</span>)
+                      {' '}will be issued to <strong style={{ color: '#0A1F44' }}>{name}</strong> for review.
+                    </p>
+
+                    <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 0' }}>
+                      On approval, the opportunity advances to SOW preparation. If declined, the request will be returned
+                      for revision and resubmission.
+                    </p>
+
+                    {finalV && (
+                      <div style={{
+                        marginTop: 14, padding: '8px 12px',
+                        background: '#F4F6FB', border: '1px solid #D6DCE8', borderRadius: 4,
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        fontSize: 12, color: '#3A4A6A',
+                      }}>
+                        <span style={{
+                          fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                          fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+                          color: '#1E5BB8', fontWeight: 600,
+                        }}>For Review</span>
+                        <span style={{ color: '#D6DCE8' }}>·</span>
+                        <span>Pricing <strong style={{ color: '#0A1F44' }}>V{finalV.versionNumber}</strong> (marked Final)</span>
+                      </div>
+                    )}
+                    {!finalV && (
+                      <div style={{
+                        marginTop: 14, padding: '8px 12px',
+                        background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 4,
+                        fontSize: 12, color: '#8A2A1F',
+                      }}>
+                        <span style={{
+                          fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                          fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+                          fontWeight: 600,
+                        }}>Warning</span>
+                        {' · '}No version is marked as Final. The reviewer will receive no pricing context.
+                      </div>
+                    )}
+
+                    {ccNames.length > 0 && (
+                      <div style={{
+                        marginTop: 10,
+                        fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                        fontSize: 11, color: '#6B7591', letterSpacing: '0.04em',
+                      }}>
+                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: 10 }}>CC</span>
+                        {' · '}
+                        <span style={{ color: '#0A1F44' }}>{ccNames.join(', ')}</span>
+                      </div>
+                    )}
+
+                    {businessJustification && (
+                      <div style={{
+                        marginTop: 12, padding: '10px 12px',
+                        background: '#F4F6FB', border: '1px solid #D6DCE8', borderRadius: 4,
+                        fontSize: 12.5, color: '#3A4A6A', lineHeight: 1.55,
+                      }}>
+                        <div style={{
+                          fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                          fontSize: 10, color: '#6B7591', textTransform: 'uppercase',
+                          letterSpacing: '0.14em', fontWeight: 500, marginBottom: 6,
+                        }}>Business Justification</div>
+                        {businessJustification}
+                      </div>
+                    )}
                   </div>
                   {approvalError && (
                     <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{approvalError}</p>
@@ -1028,6 +1076,7 @@ export function OpportunityTabs({
       {tab === 'SOW / PO' && (
         <TabSoW
           opportunityId={opp.opportunityId}
+          opportunityName={opp.opportunityName}
           initialPreContractAgreed={(opp as any).preContractAgreed ?? false}
           existingVerification={
             (opp.approvalRequests as any[]).find(
@@ -1058,31 +1107,69 @@ export function OpportunityTabs({
                 </div>
               </div>
             ) : projectCodeConfirm ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-red-600 shrink-0 mt-0.5">
-                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-bold text-red-700">This action is permanent and cannot be undone.</p>
-                    <p className="text-xs text-red-600 mt-1">
-                      Once confirmed, the finance team will create a project code. You will be required to upload a SoW or PO
-                      to establish a legal contract before company resources can be allocated to this project.
-                    </p>
-                  </div>
+              <div style={{
+                padding: '18px 18px 16px',
+                border: '1px solid #D6DCE8',
+                borderLeft: '3px solid #C6432F',
+                background: '#fff',
+                borderRadius: 4,
+              }}>
+                {/* Editorial eyebrow */}
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                  fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
+                  color: '#6B7591', fontWeight: 500, marginBottom: 12,
+                }}>
+                  <span style={{ width: 5, height: 5, background: '#C6432F', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                  NEXA · Confirmation · Irreversible
                 </div>
-                <div className="flex gap-2 pt-1">
+
+                <h4 style={{
+                  fontSize: 16, fontWeight: 600, color: '#0A1F44',
+                  margin: '0 0 8px', letterSpacing: '-0.01em', lineHeight: 1.25,
+                }}>
+                  Confirm project code generation
+                </h4>
+
+                <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
+                  Confirming will instruct the Finance team to generate a project code for
+                  {' '}<strong style={{ color: '#0A1F44' }}>{opp.opportunityName}</strong>
+                  {' '}(<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opp.opportunityId}</span>).
+                </p>
+
+                <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 14px' }}>
+                  A signed Statement of Work, Purchase Order or pre-contract agreement must subsequently be
+                  uploaded to formalise the engagement before resources can be allocated. This action cannot be reversed.
+                </p>
+
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={confirmProjectCode}
                     disabled={projectCodeSaving}
-                    className="rounded-lg px-4 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    style={{
+                      fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                      fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+                      padding: '8px 16px', borderRadius: 4,
+                      background: projectCodeSaving ? '#E2E6EE' : '#C6432F',
+                      color: projectCodeSaving ? '#9AA3B8' : '#fff',
+                      border: 'none', fontWeight: 600,
+                      cursor: projectCodeSaving ? 'not-allowed' : 'pointer',
+                    }}
                   >
-                    {projectCodeSaving ? 'Confirming…' : 'Yes, proceed with project code'}
+                    {projectCodeSaving ? 'Confirming…' : 'Authorise Project Code'}
                   </button>
                   <button
                     onClick={() => setProjectCodeConfirm(false)}
                     disabled={projectCodeSaving}
-                    className="rounded-lg px-4 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+                    style={{
+                      fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                      fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+                      padding: '8px 16px', borderRadius: 4,
+                      background: '#fff', color: '#6B7591',
+                      border: '1px solid #D6DCE8', fontWeight: 600,
+                      cursor: projectCodeSaving ? 'not-allowed' : 'pointer',
+                    }}
                   >
                     Cancel
                   </button>

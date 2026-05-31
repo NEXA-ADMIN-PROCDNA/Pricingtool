@@ -262,10 +262,12 @@ function DocUploadSection({
 
 export function TabSoW({
   opportunityId,
+  opportunityName,
   initialPreContractAgreed = false,
   existingVerification = null,
 }: {
   opportunityId: string
+  opportunityName: string
   initialPreContractAgreed?: boolean
   existingVerification?: Verification | null
 }) {
@@ -352,24 +354,36 @@ export function TabSoW({
             boxShadow: '0 20px 60px rgba(10,31,68,0.18)',
             width: 400, maxWidth: 'calc(100vw - 32px)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
+            <div style={{ marginBottom: 18 }}>
+              {/* Editorial eyebrow */}
               <div style={{
-                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: '#6B7591', fontWeight: 500, marginBottom: 14,
               }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="#EA8C00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
-                </svg>
+                <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                NEXA · Confirmation
               </div>
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
-                  Submit for verification?
-                </p>
-                <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.55 }}>
-                  This will send a verification request mail to <strong style={{ color: '#0A1F44' }}>{approverName}</strong>.
-                  Once submitted, <strong style={{ color: '#0A1F44' }}>this request cannot be undone</strong>.
-                </p>
-              </div>
+
+              <h3 style={{
+                fontSize: 18, fontWeight: 600, color: '#0A1F44',
+                margin: '0 0 10px', letterSpacing: '-0.01em', lineHeight: 1.25,
+              }}>
+                Submit SoW &amp; PO verification request
+              </h3>
+
+              <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
+                A verification request for <strong style={{ color: '#0A1F44' }}>{opportunityName}</strong>
+                {' '}
+                (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opportunityId}</span>)
+                {' '}will be issued to <strong style={{ color: '#0A1F44' }}>{approverName}</strong> for review.
+              </p>
+
+              <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 0' }}>
+                On approval, the opportunity will be marked Won and routed to project code generation.
+                If returned, supporting documents may be updated and the request resubmitted.
+              </p>
             </div>
             {submitError && (
               <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{submitError}</p>
@@ -395,7 +409,7 @@ export function TabSoW({
                   border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
                 }}
               >
-                {submitting ? 'Submitting…' : 'Yes, submit'}
+                {submitting ? 'Submitting…' : 'Submit Request'}
               </button>
             </div>
           </div>

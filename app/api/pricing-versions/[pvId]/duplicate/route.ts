@@ -30,6 +30,9 @@ export async function POST(
     })
     const nextNum = (agg._max.versionNumber ?? 0) + 1
 
+    // We batch all children with `createMany` + nested writes so the work stays
+    // well under the 5 s interactive-tx timeout on the Supabase pooler. The
+    // explicit 30 s timeout is a belt-and-braces safety net.
     const newVersion = await prisma.$transaction(async (tx) => {
       const pv = await tx.pricingVersion.create({
         data: {
@@ -49,9 +52,11 @@ export async function POST(
         },
       })
 
-      // Copy staffing resources + their week entries
+      // Staffing resources — each created with its week entries nested via
+      // createMany, so one row + its N week entries land in two round-trips
+      // instead of 1 + N.
       for (const sr of source.staffingResources) {
-        const newSr = await tx.staffingResource.create({
+        await tx.staffingResource.create({
           data: {
             pricingVersionId:      pv.id,
             rateCardId:            sr.rateCardId ?? null,
@@ -66,23 +71,24 @@ export async function POST(
             effectiveBillRate:     sr.effectiveBillRate ?? null,
             costRatePerHour:       sr.costRatePerHour ?? null,
             utilization:           sr.utilization ?? null,
+            ...(sr.weeklyHours.length > 0 && {
+              weeklyHours: {
+                createMany: {
+                  data: sr.weeklyHours.map(wh => ({
+                    weekStartDate: wh.weekStartDate,
+                    hours:         wh.hours,
+                  })),
+                },
+              },
+            }),
           },
         })
-        for (const wh of sr.weeklyHours) {
-          await tx.staffingWeekEntry.create({
-            data: {
-              staffingResourceId: newSr.id,
-              weekStartDate:      wh.weekStartDate,
-              hours:              wh.hours,
-            },
-          })
-        }
       }
 
-      // Copy schedule of payments
-      for (const sop of source.scheduleOfPayments) {
-        await tx.scheduleOfPayment.create({
-          data: {
+      // SoP and snapshots have no children — single batched inserts.
+      if (source.scheduleOfPayments.length > 0) {
+        await tx.scheduleOfPayment.createMany({
+          data: source.scheduleOfPayments.map(sop => ({
             pricingVersionId:     pv.id,
             month:                sop.month,
             recommendedBillings:  sop.recommendedBillings ?? null,
@@ -92,14 +98,13 @@ export async function POST(
             proposedIsManual:     sop.proposedIsManual,
             discountPct:          sop.discountPct ?? null,
             premiumPct:           sop.premiumPct ?? null,
-          },
+          })),
         })
       }
 
-      // Copy financial snapshots
-      for (const fs of source.financialSnapshots) {
-        await tx.financialSnapshot.create({
-          data: {
+      if (source.financialSnapshots.length > 0) {
+        await tx.financialSnapshot.createMany({
+          data: source.financialSnapshots.map(fs => ({
             pricingVersionId:     pv.id,
             month:                fs.month ?? null,
             revenueFromBilling:   fs.revenueFromBilling ?? null,
@@ -116,7 +121,7 @@ export async function POST(
             effectiveRatePerHour: fs.effectiveRatePerHour ?? null,
             indiaRate:            fs.indiaRate ?? null,
             usRate:               fs.usRate ?? null,
-          },
+          })),
         })
       }
 
@@ -128,7 +133,7 @@ export async function POST(
           financialSnapshots: { orderBy: { month: 'asc' } },
         },
       })
-    })
+    }, { timeout: 30_000 })
 
     return NextResponse.json(newVersion, { status: 201 })
   } catch (err) {
