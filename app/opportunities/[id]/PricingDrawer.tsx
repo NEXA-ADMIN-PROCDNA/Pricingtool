@@ -138,6 +138,19 @@ export function PricingDrawer({
       return
     }
     const sr = await res.json()
+
+    // Default to 100% utilization → 40 hrs/week, pre-applied across the whole
+    // project window. User can edit utilization or individual cells afterwards.
+    const defaultUtil = 100
+    const hoursPerWeek = 40
+    const weekEntries = weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+
+    await fetch(`/api/pricing-versions/${version.id}/staffing/${sr.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ utilization: defaultUtil, weekEntries }),
+    })
+
     const newRow: StaffRow = {
       id: sr.id,
       rateCardId: rc.id,
@@ -146,16 +159,16 @@ export function PricingDrawer({
       costRatePerHour: rc.costRatePerHour,
       systemBillRatePerHour: rc.billRatePerHour,
       domain: rc.domain ?? null,
-      utilization: null,
+      utilization: defaultUtil,
       effectiveBillRate: rc.billRatePerHour,
       isActive: true,
       isBillable: true,
-      weeklyHours: [],
+      weeklyHours: weekEntries,
     }
     const newRows = [...staffRows, newRow]
     setStaffRows(newRows)
     await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+  }, [version.id, staffRows, weeks, patchVersion])
 
   const removeRow = useCallback(async (srId: string) => {
     const res = await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, { method: 'DELETE' })
@@ -358,9 +371,9 @@ export function PricingDrawer({
         onClick={onClose}
       />
 
-      {/* Centered modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-6xl max-h-[88vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
+      {/* Top-anchored modal — leaves room below for native dropdown menus */}
+      <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 px-4 sm:pt-8 sm:px-8">
+        <div className="w-full max-w-6xl max-h-[80vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
 
           {/* Modal header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 shrink-0">

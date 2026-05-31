@@ -5,11 +5,11 @@ import { fmt, fmtDate } from './utils'
 
 const DOMAIN_LABELS: Record<string, string> = {
   ANALYTICS: 'Analytics',
-  MS: 'MS',
-  DS: 'DS',
-  DESIGN: 'Design',
-  TECH: 'Technology',
-  AUXO: 'AUXO',
+  MS:        'Managed Services',
+  DS:        'Data Science',
+  DESIGN:    'Design',
+  TECH:      'Technology',
+  AUXO:      'Auxo',
 }
 
 function ReadField({ label, value, highlight }: { label: string; value: string | null | undefined; highlight?: boolean }) {

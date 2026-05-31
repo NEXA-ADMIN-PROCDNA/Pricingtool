@@ -14,19 +14,25 @@ export async function PATCH(
     const { srId } = await params
     const { utilization, weekEntries, effectiveBillRate, isActive, isBillable } = await req.json()
 
-    await prisma.$transaction(async (tx) => {
-      await tx.staffingResource.update({
-        where: { id: srId },
-        data: {
-          ...(utilization       !== undefined && { utilization: utilization ?? null }),
-          ...(effectiveBillRate !== undefined && { effectiveBillRate }),
-          ...(isActive          !== undefined && { isActive }),
-          ...(isBillable        !== undefined && { isBillable }),
-        },
-      })
-      if (Array.isArray(weekEntries) && weekEntries.length > 0) {
-        for (const { weekStartDate, hours } of weekEntries) {
-          await tx.staffingWeekEntry.upsert({
+    // Resource update first — atomic by itself.
+    await prisma.staffingResource.update({
+      where: { id: srId },
+      data: {
+        ...(utilization       !== undefined && { utilization: utilization ?? null }),
+        ...(effectiveBillRate !== undefined && { effectiveBillRate }),
+        ...(isActive          !== undefined && { isActive }),
+        ...(isBillable        !== undefined && { isBillable }),
+      },
+    })
+
+    // Week-entry upserts run in parallel, NOT inside an interactive transaction.
+    // Each upsert is atomic on its own, and N can grow large (52+ weeks) — wrapping
+    // them in a $transaction blows past the 5s interactive-tx timeout on the
+    // Supabase transaction-mode pooler.
+    if (Array.isArray(weekEntries) && weekEntries.length > 0) {
+      await Promise.all(
+        weekEntries.map(({ weekStartDate, hours }) =>
+          prisma.staffingWeekEntry.upsert({
             where: {
               staffingResourceId_weekStartDate: {
                 staffingResourceId: srId,
@@ -35,10 +41,10 @@ export async function PATCH(
             },
             update: { hours },
             create: { staffingResourceId: srId, weekStartDate: new Date(weekStartDate), hours },
-          })
-        }
-      }
-    })
+          }),
+        ),
+      )
+    }
 
     return new NextResponse(null, { status: 204 })
   } catch (err) {

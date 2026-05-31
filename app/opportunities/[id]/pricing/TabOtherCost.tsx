@@ -4,11 +4,11 @@ import { fmt } from './utils'
 
 const LOB_OPTIONS = [
   { value: 'ANALYTICS', label: 'Analytics' },
-  { value: 'MS',        label: 'MS' },
-  { value: 'DS',        label: 'DS' },
+  { value: 'AUXO',      label: 'Auxo' },
+  { value: 'DS',        label: 'Data Science' },
   { value: 'DESIGN',    label: 'Design' },
+  { value: 'MS',        label: 'Managed Services' },
   { value: 'TECH',      label: 'Technology' },
-  { value: 'AUXO',      label: 'AUXO' },
 ]
 
 interface Props {
