@@ -642,6 +642,34 @@ export function PricingDrawer({
         </div>
       </div>
 
+      {/* ── Save in-flight overlay (always visible during save) ── */}
+      {saving && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 70,
+          background: 'rgba(10,31,68,0.55)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#fff', padding: '24px 32px',
+            border: '1px solid #D6DCE8', borderRadius: 4,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+            minWidth: 240,
+          }}>
+            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#1E5BB8' }}>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={2} fill="none" strokeDasharray="40 100" strokeLinecap="round" />
+            </svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+              <span style={{
+                fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: '#0A1F44', fontWeight: 600,
+              }}>Saving Pricing</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mark-as-Final confirmation (block or warn) */}
       {markFinalConfirm === 'block' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">

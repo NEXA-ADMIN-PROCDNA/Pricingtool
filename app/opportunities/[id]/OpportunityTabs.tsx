@@ -51,6 +51,7 @@ export function OpportunityTabs({
   type PricingVersion = OpportunityDetail['pricingVersions'][number]
   const [pricingVersions, setPricingVersions] = useState<PricingVersion[]>(opp.pricingVersions)
   const [creatingVersion, setCreatingVersion] = useState(false)
+  const [markingFinal, setMarkingFinal]       = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   async function closeDrawer() {
@@ -99,15 +100,20 @@ export function OpportunityTabs({
   }
 
   async function doMarkAsFinal(versionId: string) {
-    const res = await fetch(`/api/pricing-versions/${versionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isFinal: true }),
-    })
-    if (!res.ok) { toast.error('Failed to mark version as final'); return }
-    setPricingVersions(prev => prev.map(v => ({ ...v, isFinal: v.id === versionId })))
-    if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(oppStage)) {
-      setOppStage('PRICE_LINKED')
+    setMarkingFinal(true)
+    try {
+      const res = await fetch(`/api/pricing-versions/${versionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFinal: true }),
+      })
+      if (!res.ok) { toast.error('Failed to mark version as final'); return }
+      setPricingVersions(prev => prev.map(v => ({ ...v, isFinal: v.id === versionId })))
+      if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(oppStage)) {
+        setOppStage('PRICE_LINKED')
+      }
+    } finally {
+      setMarkingFinal(false)
     }
   }
 
@@ -291,6 +297,34 @@ export function OpportunityTabs({
 
   return (
     <>
+      {/* ── Mark-as-Final in-flight overlay ── */}
+      {markingFinal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(10,31,68,0.55)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#fff', padding: '24px 32px',
+            border: '1px solid #D6DCE8', borderRadius: 4,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+            minWidth: 240,
+          }}>
+            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#1E5BB8' }}>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={2} fill="none" strokeDasharray="40 100" strokeLinecap="round" />
+            </svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+              <span style={{
+                fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+                fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: '#0A1F44', fontWeight: 600,
+              }}>Marking as Final</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className="flex border-b border-slate-200 mb-6 gap-1">
         {TABS.map(t => {

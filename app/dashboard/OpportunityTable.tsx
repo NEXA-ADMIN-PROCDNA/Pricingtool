@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useTransition } from 'react'
 import Link from 'next/link'
 import type { OpportunityRow } from '@/lib/db/opportunities'
 import { OpportunityStatus } from '@prisma/client'
@@ -230,6 +230,20 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
   const [openFilter, setOpenFilter]       = useState<string | null>(null)
   const [popoverPos, setPopoverPos]       = useState({ top: 0, left: 0 })
 
+  // Show a spinner ONLY if a row click takes longer than 400 ms to resolve —
+  // snappy navigations stay flicker-free, slow ones get a clear "loading" cue.
+  const [isPending, startTransition] = useTransition()
+  const [showSpinner, setShowSpinner] = useState(false)
+  useEffect(() => {
+    if (!isPending) { setShowSpinner(false); return }
+    const t = setTimeout(() => setShowSpinner(true), 400)
+    return () => clearTimeout(t)
+  }, [isPending])
+
+  function openOpportunity(opportunityId: string) {
+    startTransition(() => router.push(`/opportunities/${opportunityId}`))
+  }
+
   function openColFilter(key: string, e: React.MouseEvent<HTMLButtonElement>) {
     if (openFilter === key) { setOpenFilter(null); return }
     const rect = e.currentTarget.getBoundingClientRect()
@@ -393,6 +407,33 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
+      {/* ─── Editorial loading overlay (only after 400ms of waiting) ─── */}
+      {showSpinner && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300,
+          background: 'rgba(10,31,68,0.45)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: '#fff', padding: '24px 32px',
+            border: `1px solid ${C.rule}`, borderRadius: 4,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
+            minWidth: 240,
+          }}>
+            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: C.accent }}>
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={2} fill="none" strokeDasharray="40 100" strokeLinecap="round" />
+            </svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 5, height: 5, background: C.accent, display: 'inline-block', transform: 'rotate(45deg)' }} />
+              <span style={{
+                ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                color: C.ink, fontWeight: 600,
+              }}>Loading Opportunity</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Status tabs + clear ─── */}
       <div style={{
         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
@@ -509,7 +550,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
               return (
                 <tr
                   key={row.id}
-                  onClick={() => router.push(`/opportunities/${row.opportunityId}`)}
+                  onClick={() => openOpportunity(row.opportunityId)}
                   style={{ borderBottom: `1px solid ${C.ruleSoft}`, cursor: 'pointer', transition: 'background 120ms' }}
                   onMouseEnter={e => (e.currentTarget.style.background = `${C.accentSoft}55`)}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -518,7 +559,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     <Link
                       href={`/opportunities/${row.opportunityId}`}
-                      onClick={e => e.stopPropagation()}
+                      onClick={e => { e.preventDefault(); e.stopPropagation(); openOpportunity(row.opportunityId) }}
                       style={{ ...MONO, fontSize: 11.5, color: C.inkMuted, letterSpacing: '0.02em', textDecoration: 'none' }}
                     >
                       {row.opportunityId}
