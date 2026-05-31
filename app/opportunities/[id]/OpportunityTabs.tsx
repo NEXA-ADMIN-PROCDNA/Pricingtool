@@ -58,7 +58,16 @@ export function OpportunityTabs({
       const res = await fetch(`/api/pricing-versions/${drawerVersion.id}`)
       if (res.ok) {
         const updated = await res.json() as PricingVersion
-        setPricingVersions(prev => prev.map(v => v.id === updated.id ? updated : v))
+        // If the edited version came back as final, mirror the server's
+        // sibling-unset locally — otherwise the previously-final version
+        // would keep its stale isFinal:true in component state.
+        setPricingVersions(prev => prev.map(v =>
+          v.id === updated.id
+            ? updated
+            : updated.isFinal
+              ? { ...v, isFinal: false }
+              : v
+        ))
       }
     }
     setDrawer(null)

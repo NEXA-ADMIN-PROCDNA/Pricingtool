@@ -27,13 +27,47 @@ function errorPage(title: string, message: string) {
     </div>`)
 }
 
-function successPage(title: string, icon: string, message: string) {
+// Brutalist editorial outcome page — mono eyebrow + big serif declaration +
+// hairline rule + supporting copy. Same palette as the dashboard / clients
+// page. No emoji, no green check, no center-of-the-card vibe.
+type ResultVariant = 'approved' | 'rejected' | 'info'
+
+function resultPage(variant: ResultVariant, title: string, oppId: string, message: string) {
+  const palette = {
+    approved: { accent: '#1E9E5B', title: '#1F6B3C' }, // matches StatusPill WON
+    rejected: { accent: '#C6432F', title: '#8A2A1F' }, // matches StatusPill LOST
+    info:     { accent: '#1E5BB8', title: '#0A1F44' }, // NEXA accent + ink
+  }[variant]
+
   return page(`
-    <div style="text-align:center;">
-      <div style="font-size:44px;margin-bottom:16px;">${icon}</div>
-      <h1 style="margin:0 0 8px;font-size:20px;color:#0A1F44;">${title}</h1>
-      <p style="margin:0;font-size:13px;color:#6B7591;line-height:1.6;">${message}</p>
-    </div>`)
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px;
+                font-family:'IBM Plex Mono','Courier New',monospace;
+                font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;
+                color:#6B7591;font-weight:500;">
+      <span style="display:inline-block;width:5px;height:5px;background:${palette.accent};transform:rotate(45deg);"></span>
+      NEXA · Approval · ${oppId}
+    </div>
+
+    <h1 style="margin:0 0 18px;
+               font-family:'Instrument Serif','Fraunces',Georgia,serif;
+               font-size:46px;font-weight:400;letter-spacing:-0.02em;
+               line-height:1;color:${palette.title};">
+      ${title}
+    </h1>
+
+    <div style="height:3px;background:${palette.accent};width:56px;margin:0 0 20px;"></div>
+
+    <p style="margin:0;font-size:13.5px;line-height:1.55;color:#3A4A6A;">
+      ${message}
+    </p>
+
+    <p style="margin:24px 0 0;
+              font-family:'IBM Plex Mono','Courier News',monospace;
+              font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;
+              color:#9AA3B8;">
+      Decision recorded · You may close this window.
+    </p>
+  `)
 }
 
 function approveConfirmPage(token: string, opportunityName: string, approverName: string) {
@@ -108,7 +142,7 @@ export async function GET(req: NextRequest) {
     const past = s === 'APPROVED'  ? 'already been approved'
                : s === 'WITHDRAWN' ? 'been withdrawn by the requester'
                : 'already been rejected'
-    return successPage('Already Decided', 'ℹ️', `This request has ${past}. No further action is needed.`)
+    return resultPage('info', 'Already Decided.', approval.opportunity.opportunityId, `This request has ${past}. No further action is needed.`)
   }
 
   if (action === 'reject') {
@@ -150,7 +184,7 @@ export async function POST(req: NextRequest) {
     const past = s === 'APPROVED'  ? 'already been approved'
                : s === 'WITHDRAWN' ? 'been withdrawn by the requester'
                : 'already been rejected'
-    return successPage('Already Decided', 'ℹ️', `This request has ${past}. No further action is needed.`)
+    return resultPage('info', 'Already Decided.', approval.opportunity.opportunityId, `This request has ${past}. No further action is needed.`)
   }
 
   if (action === 'approve') {
@@ -172,9 +206,11 @@ export async function POST(req: NextRequest) {
       opportunityName: approval.opportunity.opportunityName,
       approvalType:    approval.approvalType,
     })
-    return successPage(
-      'Approved ✓', '✅',
-      `You have approved the request for <strong>${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
+    return resultPage(
+      'approved',
+      'Approved.',
+      approval.opportunity.opportunityId,
+      `You have approved the request for <strong style="color:#0A1F44;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
     )
   }
 
@@ -198,8 +234,10 @@ export async function POST(req: NextRequest) {
     approvalType:    approval.approvalType,
     reason:          reason || undefined,
   })
-  return successPage(
-    'Rejected', '✕',
-    `You have rejected the request for <strong>${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
+  return resultPage(
+    'rejected',
+    'Rejected.',
+    approval.opportunity.opportunityId,
+    `You have rejected the request for <strong style="color:#0A1F44;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
   )
 }
