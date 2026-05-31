@@ -603,12 +603,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
         }}>
           {ownerInitials}
         </div>
-        <div>
-          <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{ownerName}</div>
-          <div style={{ ...MONO, fontSize: 10, color: C.inkFaint, marginTop: 2, letterSpacing: '0.04em' }}>
-            Automatically set to you
-          </div>
-        </div>
+        <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{ownerName}</div>
       </div>
 
       {/* ── NOTES ────────────────────────────────────────────────────────── */}

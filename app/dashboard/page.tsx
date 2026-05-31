@@ -172,10 +172,6 @@ export default async function DashboardPage({
 
   const banner  = ROLE_BANNER[role] ?? { label: 'BD Tracker', restriction: '' }
 
-  const now     = new Date()
-  const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).toUpperCase()
-  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' IST'
-
   return (
     <MainLayout noPadding>
       {/* ─── Nexa Header ─── */}
@@ -256,8 +252,19 @@ export default async function DashboardPage({
             <span style={{ color: '#8B95B0' }}>{banner.restriction}</span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 22, color: '#8B95B0', letterSpacing: '0.08em' }}>
-          <span>UPDATED {dateStr} · {timeStr}</span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#8B95B0', letterSpacing: '0.08em' }}>
+          <span
+            className="animate-pulse"
+            style={{
+              width: 7, height: 7, borderRadius: 999,
+              background: '#1E9E5B',
+              boxShadow: '0 0 0 3px rgba(30,158,91,0.18)',
+              display: 'inline-block', flexShrink: 0,
+            }}
+          />
+          <span style={{ color: '#7DA6E3', fontWeight: 600 }}>LIVE</span>
+          <span style={{ color: '#56607A' }}>·</span>
+          <span>AUTO-REFRESH ON LOAD</span>
         </div>
       </div>
 

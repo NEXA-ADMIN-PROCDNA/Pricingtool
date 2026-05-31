@@ -1,7 +1,19 @@
 'use client'
+import { useState, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
+import { toast } from 'sonner'
 import type { StaffRow, RateCardItem, ComputedMetrics } from './types'
 import { fmt, fmtRole, weekKey } from './utils'
+
+// LoB display labels — match the LineOfBusiness enum used in rate-card domains
+const LOB_LABELS: Record<string, string> = {
+  ANALYTICS: 'Analytics',
+  TECH:      'Technology',
+  DS:        'Data Science',
+  MS:        'Managed Services',
+  DESIGN:    'Design',
+  AUXO:      'Auxo',
+}
 
 interface Props {
   staffRows: StaffRow[]
@@ -38,6 +50,52 @@ export function TabEfforts({
   toggleRow, toggleStaffBillable, applyUtilization,
   readOnly = false,
 }: Props) {
+  // Cascading add-row state: LoB → Location → Role
+  const [addLob, setAddLob]           = useState('')
+  const [addLocation, setAddLocation] = useState('')
+  const [addRole, setAddRole]         = useState('')
+
+  // Distinct LoBs that actually have at least one active rate card
+  const lobOptions = useMemo(() =>
+    Array.from(new Set(allRateCards.map(rc => rc.domain).filter(Boolean) as string[])).sort()
+  , [allRateCards])
+
+  // Locations available for the chosen LoB
+  const locationOptions = useMemo(() =>
+    addLob
+      ? Array.from(new Set(allRateCards.filter(rc => rc.domain === addLob).map(rc => rc.location))).sort()
+      : []
+  , [allRateCards, addLob])
+
+  // Roles available for the chosen LoB + Location
+  const roleOptions = useMemo(() =>
+    (addLob && addLocation)
+      ? Array.from(new Set(
+          allRateCards
+            .filter(rc => rc.domain === addLob && rc.location === addLocation)
+            .map(rc => rc.jobRole)
+        )).sort()
+      : []
+  , [allRateCards, addLob, addLocation])
+
+  function resetAddForm() {
+    setAddLob(''); setAddLocation(''); setAddRole(''); setShowAddRow(false)
+  }
+
+  function handleAdd() {
+    const rc = allRateCards.find(r =>
+      r.domain   === addLob       &&
+      r.location === addLocation  &&
+      r.jobRole  === addRole
+    )
+    if (!rc) {
+      toast.error('No rate card matches this combination.')
+      return
+    }
+    addRow(rc)
+    resetAddForm()
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-400">
@@ -52,7 +110,7 @@ export function TabEfforts({
             { label: 'Unbilled Hours',  value: `${versionMetrics.unbilledHours.toLocaleString()} h`, color: 'bg-slate-50 border-slate-200 text-slate-500' },
             { label: 'Employee Cost',   value: fmt(versionMetrics.totalCost),                        color: 'bg-slate-50 border-slate-200 text-slate-800' },
             { label: 'Implied Revenue', value: fmt(versionMetrics.proposedBillings),                 color: 'bg-slate-50 border-slate-200 text-slate-800' },
-            { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '—', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
+            { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '0.0%', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
           ].map(({ label, value, color }) => (
             <div key={label} className={`rounded-xl border px-4 py-3 ${color}`}>
               <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-0.5">{label}</p>
@@ -143,11 +201,11 @@ export function TabEfforts({
                     </td>
                     {/* Cost Rate */}
                     <td className="px-3 py-2.5 text-right text-slate-700 whitespace-nowrap">
-                      {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '—'}
+                      {sr.costRatePerHour != null ? `$${sr.costRatePerHour}` : '$0'}
                     </td>
                     {/* Bill Rate (system, read-only) */}
                     <td className={`px-3 py-2.5 text-right whitespace-nowrap ${nonBillable ? 'text-slate-300 line-through' : 'text-slate-500'}`}>
-                      {sysRate != null ? `$${sysRate}` : '—'}
+                      {sysRate != null ? `$${sysRate}` : '$0'}
                     </td>
                     {/* Eff. Rate — editable when not readOnly */}
                     <td className={`px-2 py-2 text-right whitespace-nowrap ${nonBillable ? 'pointer-events-none opacity-30' : ''}`}>
@@ -169,7 +227,7 @@ export function TabEfforts({
                           onClick={() => { if (readOnly) return; setEditRateCell({ srId: sr.id, field: 'eff' }); setEditRateVal(String(effRate ?? sysRate ?? '')) }}
                           className={`rounded px-2 py-1 text-xs font-semibold text-indigo-700 ${readOnly ? 'cursor-default' : 'cursor-pointer hover:bg-indigo-50'}`}
                         >
-                          {effRate != null ? `$${effRate.toFixed(2)}` : <span className="font-normal text-slate-300">{readOnly ? '—' : 'click'}</span>}
+                          {effRate != null ? `$${effRate.toFixed(2)}` : (readOnly ? '$0.00' : <span className="font-normal text-slate-300">click</span>)}
                         </span>
                       )}
                     </td>
@@ -190,12 +248,12 @@ export function TabEfforts({
                         />
                       ) : (
                         <span
-                          onClick={() => { if (readOnly) return; setEditRateCell({ srId: sr.id, field: 'dp' }); setEditRateVal(dp != null ? dp.toFixed(1) : '-') }}
+                          onClick={() => { if (readOnly) return; setEditRateCell({ srId: sr.id, field: 'dp' }); setEditRateVal(dp != null ? dp.toFixed(1) : '0') }}
                           className={`rounded px-2 py-1 text-xs font-semibold ${readOnly ? 'cursor-default' : 'cursor-pointer hover:bg-slate-50'} ${
                             dp == null ? 'text-slate-300' : dp < 0 ? 'text-amber-600' : dp > 0 ? 'text-emerald-600' : 'text-slate-500'
                           }`}
                         >
-                          {dp != null ? `${dp.toFixed(1)}%` : '—'}
+                          {dp != null ? `${dp.toFixed(1)}%` : '0.0%'}
                         </span>
                       )}
                     </td>
@@ -261,7 +319,7 @@ export function TabEfforts({
                     })}
                     {/* Total Cost */}
                     <td className="px-4 py-2.5 text-right font-semibold text-slate-800 whitespace-nowrap">
-                      {sr.isActive && rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">—</span>}
+                      {sr.isActive && rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">$0</span>}
                     </td>
                     {/* Delete */}
                     <td className="px-2 py-2.5">
@@ -309,29 +367,64 @@ export function TabEfforts({
               {/* Add resource row */}
               {!readOnly && <tr className="border-t border-dashed border-slate-200 bg-white">
                 {showAddRow ? (
-                  <>
-                    <td colSpan={4} className="px-4 py-2.5 sticky left-0 bg-white z-10">
+                  <td colSpan={9 + weeks.length + 2} className="px-4 py-3 sticky left-0 bg-white z-10">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* LoB */}
                       <select
                         autoFocus
-                        className="w-full text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                        defaultValue=""
-                        onChange={e => {
-                          const rc = allRateCards.find(r => r.id === e.target.value)
-                          if (rc) { addRow(rc); setShowAddRow(false) }
-                        }}
+                        value={addLob}
+                        onChange={e => { setAddLob(e.target.value); setAddLocation(''); setAddRole('') }}
+                        className="text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 min-w-[140px]"
                       >
-                        <option value="" disabled>Select a role…</option>
-                        {allRateCards.map(rc => (
-                          <option key={rc.id} value={rc.id}>
-                            {fmtRole(rc.jobRole)} — {rc.location === 'INDIA' ? 'India' : 'US'}{rc.domain ? ` · ${rc.domain}` : ''} · $${rc.costRatePerHour}/hr
-                          </option>
+                        <option value="">LoB…</option>
+                        {lobOptions.map(lob => (
+                          <option key={lob} value={lob}>{LOB_LABELS[lob] ?? lob}</option>
                         ))}
                       </select>
-                    </td>
-                    <td colSpan={5 + weeks.length + 2} className="px-4 py-2.5">
-                      <button onClick={() => setShowAddRow(false)} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
-                    </td>
-                  </>
+
+                      {/* Location */}
+                      <select
+                        value={addLocation}
+                        disabled={!addLob}
+                        onChange={e => { setAddLocation(e.target.value); setAddRole('') }}
+                        className="text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 min-w-[120px] disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">{addLob ? 'Location…' : 'Pick LoB first'}</option>
+                        {locationOptions.map(loc => (
+                          <option key={loc} value={loc}>{loc === 'INDIA' ? 'India' : 'US'}</option>
+                        ))}
+                      </select>
+
+                      {/* Role */}
+                      <select
+                        value={addRole}
+                        disabled={!addLocation}
+                        onChange={e => setAddRole(e.target.value)}
+                        className="text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 min-w-[180px] disabled:bg-slate-50 disabled:text-slate-400"
+                      >
+                        <option value="">{addLocation ? 'Role…' : 'Pick Location first'}</option>
+                        {roleOptions.map(role => (
+                          <option key={role} value={role}>{fmtRole(role)}</option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={handleAdd}
+                        disabled={!addLob || !addLocation || !addRole}
+                        className="text-xs font-semibold rounded-lg bg-indigo-600 px-3 py-1.5 text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetAddForm}
+                        className="text-xs text-slate-400 hover:text-slate-600 px-2"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </td>
                 ) : (
                   <td colSpan={9 + weeks.length + 2} className="px-4 py-2.5">
                     <button

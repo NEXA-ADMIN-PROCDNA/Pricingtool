@@ -9,7 +9,6 @@ import { getOpportunityDetail } from '@/lib/db/opportunities'
 import { getUsersForSelect } from '@/lib/db/users'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { StageBadge } from '@/components/ui/StageBadge'
-import { LOBBadge } from '@/components/ui/LOBBadge'
 import { OpportunityTabs } from './OpportunityTabs'
 
 export default async function OpportunityDetailPage({
@@ -57,7 +56,6 @@ export default async function OpportunityDetailPage({
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={opp.status} />
           <StageBadge  stage={opp.stage}   />
-          <LOBBadge    lob={opp.primaryLob} />
         </div>
       </div>
 

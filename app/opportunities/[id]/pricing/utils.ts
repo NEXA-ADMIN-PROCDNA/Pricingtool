@@ -5,7 +5,7 @@ export function fmtRole(r: string) {
 }
 
 export function fmt(n: number | null | undefined) {
-  if (n == null) return '!'
+  if (n == null) return '$0'
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
   return `$${n.toFixed(0)}`

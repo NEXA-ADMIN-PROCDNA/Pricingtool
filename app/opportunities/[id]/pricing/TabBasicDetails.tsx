@@ -99,11 +99,11 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
           {[
             { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
             { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
-            { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '—'), hi: true },
-            { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '—') },
+            { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '0.0%'), hi: true },
+            { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '0.0%') },
             { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
-            { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '—') },
-            { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '—') },
+            { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '0 h') },
+            { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '0%') },
           ].map(({ label, value, hi }) => (
             <div key={label} className={`rounded-xl p-3 ${
               hi ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50'

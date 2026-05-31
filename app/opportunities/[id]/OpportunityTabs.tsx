@@ -6,7 +6,6 @@ import { ApprovalStatus } from '@prisma/client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 import { StageBadge } from '@/components/ui/StageBadge'
-import { LOBBadge } from '@/components/ui/LOBBadge'
 import { PricingDrawer } from './PricingDrawer'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { MultiSelect } from '@/components/ui/MultiSelect'
@@ -285,16 +284,21 @@ export function OpportunityTabs({
     <>
       {/* Tab bar */}
       <div className="flex border-b border-slate-200 mb-6 gap-1">
-        {TABS.map(t => (
+        {TABS.map(t => {
+          const dimmed = tabDimmed(t)
+          return (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            title={tabDimmed(t) ? tabTooltip(t) : undefined}
+            type="button"
+            disabled={dimmed}
+            aria-disabled={dimmed}
+            onClick={() => { if (!dimmed) setTab(t) }}
+            title={dimmed ? tabTooltip(t) : undefined}
             className={`px-5 py-3 text-sm font-semibold transition-all border-b-2 -mb-px ${
-              tab === t
+              tab === t && !dimmed
                 ? 'border-indigo-600 text-indigo-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700'
-            } ${tabDimmed(t) ? 'opacity-40' : ''}`}
+            } ${dimmed ? 'opacity-40 cursor-not-allowed pointer-events-auto' : ''}`}
           >
             {t}
             {t === 'Pricing' && pricingVersions.length > 0 && (
@@ -313,7 +317,8 @@ export function OpportunityTabs({
               </span>
             )}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Tab: Details ─────────────────────────────────────── */}
@@ -380,7 +385,6 @@ export function OpportunityTabs({
                   <option value="WON">Won</option>
                 </select>
                 <StageBadge  stage={oppStage}   />
-                <LOBBadge    lob={opp.primaryLob} />
               </div>
               <p className="mt-2 text-[10px] text-slate-400">You can change the status at any time.</p>
             </div>
