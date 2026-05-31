@@ -60,7 +60,6 @@ export function PricingDrawer({
   })
 
   const [staffRows, setStaffRows]           = useState<StaffRow[]>(() => version.staffingResources.map(toStaffRow))
-  const [versionMetrics, setVersionMetrics] = useState<ComputedMetrics>(() => computeFromRows(version.staffingResources.map(toStaffRow)))
   const [allRateCards, setAllRateCards]     = useState<RateCardItem[]>([])
   const [showAddRow, setShowAddRow]         = useState(false)
   const [editCell, setEditCell]             = useState<{ srId: string; wk: string } | null>(null)
@@ -87,26 +86,27 @@ export function PricingDrawer({
   const [editCostCell, setEditCostCell] = useState<{ id: string; field: 'markup' | 'billed' } | null>(null)
   const [editCostVal, setEditCostVal]   = useState('')
 
-  // ── Patch PricingVersion with computed metrics ───────────────────
-  const patchVersion = useCallback(async (rows: StaffRow[]) => {
-    const m = computeFromRows(rows)
-    setVersionMetrics(m)
+  // ── Dirty tracking — all edits stay local until Save & Close ────
+  // tmp_ prefixed IDs are client-only; on save they get POSTed and assigned
+  // real DB cuids. Existing rows that were edited go into the dirty Sets.
+  const [dirtyStaffIds,   setDirtyStaffIds]   = useState<Set<string>>(() => new Set())
+  const [deletedStaffIds, setDeletedStaffIds] = useState<Set<string>>(() => new Set())
+  const [dirtyCostIds,    setDirtyCostIds]    = useState<Set<string>>(() => new Set())
+  const [deletedCostIds,  setDeletedCostIds]  = useState<Set<string>>(() => new Set())
+  const [saving,          setSaving]          = useState(false)
+  const [discardConfirm,  setDiscardConfirm]  = useState(false)
+  // 'block' = approval in progress, can't mark final. 'warn' = a prior pricing
+  // is already approved (SOW_PENDING / SOW_SUBMITTED) — confirm overrides.
+  const [markFinalConfirm, setMarkFinalConfirm] = useState<'block' | 'warn' | null>(null)
 
-    const res = await fetch(`/api/pricing-versions/${version.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        totalHours:           m.totalHours,
-        totalCost:            m.totalCost,
-        proposedBillings:     m.proposedBillings,
-        grossMarginPct:       m.grossMarginPct,
-        offshorePct:          m.offshorePct,
-        effectiveRatePerHour: m.effectiveRatePerHour,
-        discountPremiumPct:   m.discountPremiumPct,
-      }),
-    })
-    if (!res.ok) toast.error('Auto-save failed — pricing metrics may be out of sync')
-  }, [version.id])
+  // Version metrics recomputed from current local staffRows.
+  const versionMetrics: ComputedMetrics = useMemo(() => computeFromRows(staffRows), [staffRows])
+
+  const isDirty =
+    staffRows.some(r => r.id.startsWith('tmp_')) ||
+    otherCosts.some(c => c.id.startsWith('tmp_')) ||
+    dirtyStaffIds.size > 0  || deletedStaffIds.size > 0 ||
+    dirtyCostIds.size > 0   || deletedCostIds.size > 0
 
   useEffect(() => {
     if (sub === 'Efforts' && allRateCards.length === 0) {
@@ -114,78 +114,53 @@ export function PricingDrawer({
     }
   }, [sub, allRateCards.length])
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   const weeks = useMemo(
     () => getWeekColumns(opp.startDate, opp.endDate),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [String(opp.startDate), String(opp.endDate)]
   )
 
-  // ── Staffing callbacks ───────────────────────────────────────────
-  const addRow = useCallback(async (rc: RateCardItem) => {
-    const res = await fetch(`/api/pricing-versions/${version.id}/staffing`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rateCardId: rc.id }),
-    })
-    if (!res.ok) {
-      toast.error('Failed to add staffing resource')
-      return
-    }
-    const sr = await res.json()
+  // ── All mutations below are LOCAL-ONLY until handleSaveAndClose runs ──
+  // No fetches during editing — fixes the 5s interactive-tx timeout and lets
+  // the user undo by closing without saving.
 
-    // Default to 100% utilization → 40 hrs/week, pre-applied across the whole
-    // project window. User can edit utilization or individual cells afterwards.
-    const defaultUtil = 100
-    const hoursPerWeek = 40
-    const weekEntries = weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+  function newTempId() { return `tmp_${crypto.randomUUID()}` }
 
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${sr.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ utilization: defaultUtil, weekEntries }),
-    })
-
+  // ── Staffing callbacks (local) ───────────────────────────────────
+  const addRow = useCallback((rc: RateCardItem) => {
+    const id = newTempId()
+    const hoursPerWeek = 40 // default 100% utilization
+    const weekEntries  = weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
     const newRow: StaffRow = {
-      id: sr.id,
+      id,
       rateCardId: rc.id,
       resourceDesignation: rc.jobRole,
       location: rc.location,
       costRatePerHour: rc.costRatePerHour,
       systemBillRatePerHour: rc.billRatePerHour,
       domain: rc.domain ?? null,
-      utilization: defaultUtil,
+      utilization: 100,
       effectiveBillRate: rc.billRatePerHour,
       isActive: true,
       isBillable: true,
       weeklyHours: weekEntries,
     }
-    const newRows = [...staffRows, newRow]
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, weeks, patchVersion])
+    setStaffRows(prev => [...prev, newRow])
+  }, [weeks])
 
-  const removeRow = useCallback(async (srId: string) => {
-    const res = await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, { method: 'DELETE' })
-    if (!res.ok) { toast.error('Failed to remove staffing resource'); return }
-    const newRows = staffRows.filter(r => r.id !== srId)
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
-
-  const commitHours = useCallback(async (srId: string, wk: string, val: string) => {
-    const hours = Math.max(0, parseFloat(val) || 0)
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}/hours`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStartDate: wk, hours }),
+  const removeRow = useCallback((srId: string) => {
+    setStaffRows(prev => prev.filter(r => r.id !== srId))
+    if (srId.startsWith('tmp_')) return
+    setDeletedStaffIds(prev => new Set(prev).add(srId))
+    setDirtyStaffIds(prev => {
+      if (!prev.has(srId)) return prev
+      const n = new Set(prev); n.delete(srId); return n
     })
-    const newRows = staffRows.map(r => {
+  }, [])
+
+  const commitHours = useCallback((srId: string, wk: string, val: string) => {
+    const hours = Math.max(0, parseFloat(val) || 0)
+    setStaffRows(prev => prev.map(r => {
       if (r.id !== srId) return r
       const existing = r.weeklyHours.find(w => w.weekStartDate === wk)
       return {
@@ -194,79 +169,56 @@ export function PricingDrawer({
           ? r.weeklyHours.map(w => w.weekStartDate === wk ? { ...w, hours } : w)
           : [...r.weeklyHours, { weekStartDate: wk, hours }],
       }
-    })
-    setStaffRows(newRows)
+    }))
     setEditCell(null)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [])
 
-  const commitEffectiveRate = useCallback(async (srId: string, val: string) => {
+  const commitEffectiveRate = useCallback((srId: string, val: string) => {
+    setEditRateCell(null)
     const eff = parseFloat(val)
-    setEditRateCell(null)
     if (isNaN(eff) || eff < 0) return
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ effectiveBillRate: eff }),
-    })
-    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, effectiveBillRate: eff })
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+    setStaffRows(prev => prev.map(r => r.id === srId ? { ...r, effectiveBillRate: eff } : r))
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [])
 
-  const commitDP = useCallback(async (srId: string, val: string) => {
-    const dp = parseFloat(val)
+  const commitDP = useCallback((srId: string, val: string) => {
     setEditRateCell(null)
+    const dp = parseFloat(val)
     if (isNaN(dp)) return
-    const row = staffRows.find(r => r.id === srId)
-    if (!row) return
-    const sysRate = row.systemBillRatePerHour ?? 0
-    const eff = sysRate * (1 + dp / 100)
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ effectiveBillRate: eff }),
+    setStaffRows(prev => {
+      const row = prev.find(r => r.id === srId)
+      if (!row) return prev
+      const sysRate = row.systemBillRatePerHour ?? 0
+      const eff = sysRate * (1 + dp / 100)
+      return prev.map(r => r.id === srId ? { ...r, effectiveBillRate: eff } : r)
     })
-    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, effectiveBillRate: eff })
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [])
 
-  const toggleRow = useCallback(async (srId: string, isActive: boolean) => {
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive }),
-    })
-    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, isActive })
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+  const toggleRow = useCallback((srId: string, isActive: boolean) => {
+    setStaffRows(prev => prev.map(r => r.id === srId ? { ...r, isActive } : r))
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [])
 
-  const toggleStaffBillable = useCallback(async (srId: string, isBillable: boolean) => {
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isBillable }),
-    })
-    const newRows = staffRows.map(r => r.id !== srId ? r : { ...r, isBillable })
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, patchVersion])
+  const toggleStaffBillable = useCallback((srId: string, isBillable: boolean) => {
+    setStaffRows(prev => prev.map(r => r.id === srId ? { ...r, isBillable } : r))
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [])
 
-  const applyUtilization = useCallback(async (srId: string, util: number | null) => {
+  const applyUtilization = useCallback((srId: string, util: number | null) => {
     const hoursPerWeek = util != null ? Math.round((util / 100) * 40) : 0
-    const weekEntries = util != null
-      ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
-      : []
-
-    await fetch(`/api/pricing-versions/${version.id}/staffing/${srId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ utilization: util, weekEntries }),
-    })
-
-    const newRows = staffRows.map(r => {
+    setStaffRows(prev => prev.map(r => {
       if (r.id !== srId) return r
       return {
         ...r,
@@ -275,92 +227,221 @@ export function PricingDrawer({
           ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
           : r.weeklyHours,
       }
-    })
-    setStaffRows(newRows)
-    await patchVersion(newRows)
-  }, [version.id, staffRows, weeks, patchVersion])
+    }))
+    if (!srId.startsWith('tmp_')) {
+      setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
+    }
+  }, [weeks])
 
-  // ── Other Cost callbacks ─────────────────────────────────────────
-  const addOtherCost = useCallback(async () => {
+  // ── Other Cost callbacks (local) ─────────────────────────────────
+  const addOtherCost = useCallback(() => {
     const amt = parseFloat(newAmount)
     if (!newDesc.trim() || isNaN(amt)) return
     const markupVal = newMarkup !== '' ? parseFloat(newMarkup) : null
-    const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: newDesc.trim(), amount: amt, markupPct: markupVal, lineOfBusiness: newLob || null }),
-    })
-    if (!res.ok) {
-      const j = await res.json().catch(() => ({}))
-      toast.error(j.error ?? 'Failed to add cost item')
-      return
-    }
-    const created = await res.json()
+    const id = newTempId()
     setOtherCosts(prev => [...prev, {
-      id: created.id,
-      description: created.description,
-      amount: Number(created.amount),
-      markupPct: created.markupPct != null ? Number(created.markupPct) : null,
+      id,
+      description: newDesc.trim(),
+      amount: amt,
+      markupPct: markupVal,
       isBillable: true,
-      lineOfBusiness: created.lineOfBusiness ?? null,
+      lineOfBusiness: newLob || null,
     }])
     setNewDesc('')
     setNewAmount('')
     setNewMarkup('')
     setNewLob('')
     setShowAddCost(false)
-  }, [newDesc, newAmount, newMarkup, newLob, opp.opportunityId])
+  }, [newDesc, newAmount, newMarkup, newLob])
 
-  const toggleBillable = useCallback(async (costId: string, billable: boolean) => {
+  const toggleBillable = useCallback((costId: string, billable: boolean) => {
     setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, isBillable: billable } : oc))
-    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isBillable: billable }),
-    })
-  }, [opp.opportunityId])
+    if (!costId.startsWith('tmp_')) {
+      setDirtyCostIds(prev => prev.has(costId) ? prev : new Set(prev).add(costId))
+    }
+  }, [])
 
-  const commitMarkup = useCallback(async (costId: string, val: string) => {
+  const commitMarkup = useCallback((costId: string, val: string) => {
     setEditCostCell(null)
     const pct = val === '' ? null : parseFloat(val)
     if (pct !== null && isNaN(pct)) return
     setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, markupPct: pct } : oc))
-    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ markupPct: pct }),
-    })
-  }, [opp.opportunityId])
+    if (!costId.startsWith('tmp_')) {
+      setDirtyCostIds(prev => prev.has(costId) ? prev : new Set(prev).add(costId))
+    }
+  }, [])
 
-  const commitBilled = useCallback(async (costId: string, val: string) => {
+  const commitBilled = useCallback((costId: string, val: string) => {
     setEditCostCell(null)
     const billed = parseFloat(val)
     if (isNaN(billed)) return
-    const oc = otherCosts.find(r => r.id === costId)
-    if (!oc || oc.amount === 0) return
-    const pct = ((billed / oc.amount) - 1) * 100
-    setOtherCosts(prev => prev.map(r => r.id === costId ? { ...r, markupPct: pct } : r))
-    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ markupPct: pct }),
+    setOtherCosts(prev => {
+      const oc = prev.find(r => r.id === costId)
+      if (!oc || oc.amount === 0) return prev
+      const pct = ((billed / oc.amount) - 1) * 100
+      return prev.map(r => r.id === costId ? { ...r, markupPct: pct } : r)
     })
-  }, [opp.opportunityId, otherCosts])
+    if (!costId.startsWith('tmp_')) {
+      setDirtyCostIds(prev => prev.has(costId) ? prev : new Set(prev).add(costId))
+    }
+  }, [])
 
-  const removeOtherCost = useCallback(async (costId: string) => {
-    const res = await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, { method: 'DELETE' })
-    if (!res.ok) { toast.error('Failed to delete cost item'); return }
+  const removeOtherCost = useCallback((costId: string) => {
     setOtherCosts(prev => prev.filter(oc => oc.id !== costId))
-  }, [opp.opportunityId])
-
-  const updateLob = useCallback(async (costId: string, lineOfBusiness: string | null) => {
-    setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, lineOfBusiness } : oc))
-    await fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${costId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lineOfBusiness }),
+    if (costId.startsWith('tmp_')) return
+    setDeletedCostIds(prev => new Set(prev).add(costId))
+    setDirtyCostIds(prev => {
+      if (!prev.has(costId)) return prev
+      const n = new Set(prev); n.delete(costId); return n
     })
-  }, [opp.opportunityId])
+  }, [])
+
+  const updateLob = useCallback((costId: string, lineOfBusiness: string | null) => {
+    setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, lineOfBusiness } : oc))
+    if (!costId.startsWith('tmp_')) {
+      setDirtyCostIds(prev => prev.has(costId) ? prev : new Set(prev).add(costId))
+    }
+  }, [])
+
+  // ── Aggregate flush to server ────────────────────────────────────
+  // markFinal: also flip this version to isFinal:true in the final metrics PATCH.
+  const handleSaveAndClose = useCallback(async (markFinal: boolean = false) => {
+    if (saving || locked) return
+    setSaving(true)
+    try {
+      // 1. DELETEs (parallel — no inter-dependency)
+      const delOps: Promise<Response>[] = []
+      deletedStaffIds.forEach(id =>
+        delOps.push(fetch(`/api/pricing-versions/${version.id}/staffing/${id}`, { method: 'DELETE' })))
+      deletedCostIds.forEach(id =>
+        delOps.push(fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${id}`, { method: 'DELETE' })))
+
+      // 2. PATCHes for dirty existing rows (parallel)
+      const patchOps: Promise<Response>[] = []
+      dirtyStaffIds.forEach(id => {
+        const row = staffRows.find(r => r.id === id)
+        if (!row) return
+        patchOps.push(fetch(`/api/pricing-versions/${version.id}/staffing/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            utilization:       row.utilization,
+            effectiveBillRate: row.effectiveBillRate,
+            isActive:          row.isActive,
+            isBillable:        row.isBillable,
+            weekEntries:       row.weeklyHours,
+          }),
+        }))
+      })
+      dirtyCostIds.forEach(id => {
+        const cost = otherCosts.find(c => c.id === id)
+        if (!cost) return
+        patchOps.push(fetch(`/api/opportunities/${opp.opportunityId}/other-costs/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            isBillable:     cost.isBillable,
+            markupPct:      cost.markupPct,
+            lineOfBusiness: cost.lineOfBusiness,
+          }),
+        }))
+      })
+
+      await Promise.all([...delOps, ...patchOps])
+
+      // 3. POSTs for new staffing rows (each is POST + PATCH; sequential to
+      //    keep clear error attribution per row).
+      for (const row of staffRows.filter(r => r.id.startsWith('tmp_'))) {
+        if (!row.rateCardId) continue
+        const post = await fetch(`/api/pricing-versions/${version.id}/staffing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rateCardId: row.rateCardId }),
+        })
+        if (!post.ok) throw new Error('Failed to add a staffing resource')
+        const sr = await post.json()
+        await fetch(`/api/pricing-versions/${version.id}/staffing/${sr.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            utilization:       row.utilization,
+            effectiveBillRate: row.effectiveBillRate,
+            isActive:          row.isActive,
+            isBillable:        row.isBillable,
+            weekEntries:       row.weeklyHours,
+          }),
+        })
+      }
+
+      // 4. POSTs for new other costs (parallel — independent)
+      await Promise.all(
+        otherCosts.filter(c => c.id.startsWith('tmp_')).map(cost =>
+          fetch(`/api/opportunities/${opp.opportunityId}/other-costs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description:    cost.description,
+              amount:         cost.amount,
+              markupPct:      cost.markupPct,
+              lineOfBusiness: cost.lineOfBusiness,
+            }),
+          })
+        )
+      )
+
+      // 5. PATCH the version with re-computed metrics
+      const res = await fetch(`/api/pricing-versions/${version.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          totalHours:           versionMetrics.totalHours,
+          totalCost:            versionMetrics.totalCost,
+          proposedBillings:     versionMetrics.proposedBillings,
+          grossMarginPct:       versionMetrics.grossMarginPct,
+          offshorePct:          versionMetrics.offshorePct,
+          effectiveRatePerHour: versionMetrics.effectiveRatePerHour,
+          discountPremiumPct:   versionMetrics.discountPremiumPct,
+          ...(markFinal ? { isFinal: true } : {}),
+        }),
+      })
+      if (!res.ok) throw new Error('Failed to save pricing metrics')
+
+      toast.success(markFinal ? 'Saved & marked as Final' : 'Saved')
+      onClose()
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Save failed — please retry')
+    } finally {
+      setSaving(false)
+    }
+  }, [saving, locked, version.id, opp.opportunityId, deletedStaffIds, deletedCostIds, dirtyStaffIds, dirtyCostIds, staffRows, otherCosts, versionMetrics, onClose])
+
+  // ── Save & Mark Final — gated by stage ───────────────────────────
+  const handleSaveAndMarkFinal = useCallback(() => {
+    if (saving) return
+    if (currentStage === 'APPROVAL_PENDING' || currentStage === 'SOW_REVIEW_PENDING') {
+      setMarkFinalConfirm('block')
+      return
+    }
+    if (currentStage === 'SOW_PENDING' || currentStage === 'SOW_SUBMITTED') {
+      setMarkFinalConfirm('warn')
+      return
+    }
+    // LEAD / PRICE_LINKING_PENDING / PRICE_LINKED — no prior approval to invalidate
+    handleSaveAndClose(true)
+  }, [saving, currentStage, handleSaveAndClose])
+
+  // ── Close — prompt for confirmation if there are unsaved changes ──
+  const requestClose = useCallback(() => {
+    if (isDirty) setDiscardConfirm(true)
+    else onClose()
+  }, [isDirty, onClose])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') requestClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [requestClose])
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -368,7 +449,7 @@ export function PricingDrawer({
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={requestClose}
       />
 
       {/* Top-anchored modal — leaves room below for native dropdown menus */}
@@ -405,18 +486,41 @@ export function PricingDrawer({
                 </span>
               )}
               {!locked && (
-                <button
-                  onClick={async () => { await patchVersion(staffRows); onClose() }}
-                  className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  Save &amp; Close
-                </button>
+                <>
+                  <button
+                    onClick={() => handleSaveAndClose(false)}
+                    disabled={!isDirty || saving}
+                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  >
+                    {saving ? (
+                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-30" />
+                        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    )}
+                    {saving ? 'Saving…' : 'Save & Close'}
+                  </button>
+                  {!version.isFinal && (
+                    <button
+                      onClick={handleSaveAndMarkFinal}
+                      disabled={saving}
+                      title="Save current edits and mark this version as the final pricing"
+                      className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                      Save &amp; Mark as Final
+                    </button>
+                  )}
+                </>
               )}
               <button
-                onClick={onClose}
+                onClick={requestClose}
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
@@ -537,6 +641,90 @@ export function PricingDrawer({
           </div>
         </div>
       </div>
+
+      {/* Mark-as-Final confirmation (block or warn) */}
+      {markFinalConfirm === 'block' && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Approval in progress</h3>
+            </div>
+            <p className="text-sm text-slate-500">
+              You can&apos;t mark a different version as final while an approval is pending. Wait for the approver to decide, or withdraw the existing request first.
+            </p>
+            <div className="mt-5 flex justify-end">
+              <button
+                onClick={() => setMarkFinalConfirm(null)}
+                className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {markFinalConfirm === 'warn' && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Reset pricing approval?</h3>
+            </div>
+            <p className="text-sm text-slate-500">
+              A previous pricing version has already been approved. Marking this version as final will invalidate that approval — the requester will need to submit a fresh approval request.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setMarkFinalConfirm(null)}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setMarkFinalConfirm(null); handleSaveAndClose(true) }}
+                className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
+              >
+                Yes, mark final
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discard-changes confirm */}
+      {discardConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <h3 className="text-base font-bold text-slate-900">Discard unsaved changes?</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              You have edits that haven&apos;t been saved. Closing will discard them.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setDiscardConfirm(false)}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={() => { setDiscardConfirm(false); onClose() }}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
