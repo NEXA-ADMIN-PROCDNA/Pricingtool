@@ -393,7 +393,7 @@ export function OpportunityTabs({
                 <Field label="LOB"          value={primaryLob} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
-                <Field label="Star Connect" value={opp.starConnect ? 'Yes ⭐' : 'No'} />
+                <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
                 <Field label="Next Steps" value={STAGE_NEXT_STEPS[oppStage]} wide />
                 {opp.notes     && <Field label="Notes"      value={opp.notes}     wide />}
               </dl>

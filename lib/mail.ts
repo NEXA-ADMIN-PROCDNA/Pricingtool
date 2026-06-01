@@ -64,7 +64,7 @@ async function sendMail({
 }
 
 // ── Brand helpers ────────────────────────────────────────────────
-const BASE_URL = (process.env.MAIL_BASE_URL ?? 'https://pricingtoolprimero.vercel.app').replace(/\/$/, '')
+const BASE_URL = (process.env.MAIL_BASE_URL ?? 'https://procdnanexa.vercel.app').replace(/\/$/, '')
 
 function wrap(body: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head><body style="margin:0;padding:0;background:#F4F6FB;font-family:'Segoe UI',system-ui,sans-serif;">
@@ -81,7 +81,7 @@ function wrap(body: string): string {
       <!-- Footer -->
       <tr><td style="padding:16px 32px 28px;border-top:1px solid #D6DCE8;">
         <p style="margin:0 0 6px;font-size:11px;color:#9AA3B8;">This is an automated message from NEXA · Business Development &amp; Pricing Tool. Do not reply to this email.</p>
-        <a href="https://pricingtoolprimero.vercel.app" style="font-size:11px;color:#1E5BB8;text-decoration:none;">Open NEXA app →</a>
+        <a href="${BASE_URL}" style="font-size:11px;color:#1E5BB8;text-decoration:none;">Open NEXA app →</a>
       </td></tr>
     </table>
   </td></tr>

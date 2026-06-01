@@ -195,8 +195,8 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   }
 
   function checkDates(start: string, end: string) {
-    if (start && end && new Date(end) < new Date(start)) {
-      setDateError('End date must be on or after start date')
+    if (start && end && new Date(end) <= new Date(start)) {
+      setDateError('End date must be after the start date')
       return false
     }
     setDateError(null)
@@ -474,10 +474,11 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
         </div>
 
         <div>
-          <FieldLabel text="End Date" />
+          <FieldLabel text="End Date" required />
           <input
             name="endDate"
             type="date"
+            required
             style={dateError ? inputErr : inputBase}
             onChange={e => {
               const form = e.currentTarget.form
@@ -491,7 +492,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
 
         {/* STAR Connect — segmented control */}
         <div>
-          <FieldLabel text="STAR Connect Required" />
+          <FieldLabel text="STAR Connect Required?" />
           <div style={{
             display: 'inline-flex',
             border: `1px solid ${C.rule}`,

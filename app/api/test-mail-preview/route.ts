@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { signEmailAction } from '@/lib/approval-tokens'
 
-const BASE_URL = (process.env.MAIL_BASE_URL ?? 'https://pricingtoolprimero.vercel.app').replace(/\/$/, '')
+const BASE_URL = (process.env.MAIL_BASE_URL ?? 'https://procdnanexa.vercel.app').replace(/\/$/, '')
 
 // Dummy IDs — email-action route will return "Not Found" which proves no auth needed
 const DUMMY_APPROVAL_ID = 'test-approval-preview-id'
