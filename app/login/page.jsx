@@ -30,11 +30,19 @@ function LoginForm() {
         <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(0,122,255,0.05)', pointerEvents: 'none' }} />
 
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-          {/* Plain <img> bypasses Next's image optimizer — the dark navy panel
-              + small 34px display occasionally tripped up the optimizer and
-              served the broken-image fallback on first load. */}
-          <img src="/procdna-logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
+          {/* The source PNG has an off-white grid background, so we frame it as
+              a white logo card on the navy panel — reads as an intentional
+              brand mark instead of a tiny half-blended square. */}
+          <div style={{
+            width: 44, height: 44, borderRadius: 10,
+            background: '#fff',
+            display: 'grid', placeItems: 'center',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
+            flexShrink: 0,
+          }}>
+            <img src="/procdna-logo.png" alt="ProcDNA" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+          </div>
           <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
             ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
           </span>
