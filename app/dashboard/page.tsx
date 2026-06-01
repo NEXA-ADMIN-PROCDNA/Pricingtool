@@ -32,9 +32,9 @@ function fmt(n: number) {
 const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
   ADMIN:    { label: 'Admin View',              restriction: 'Full platform access · All data visible' },
   PARTNER:  { label: 'Partner View',            restriction: 'All Opportunities Visible' },
-  ED:       { label: 'Executive Director View', restriction: '-' },
-  DIRECTOR: { label: 'Director View',           restriction: '-' },
-  SEL:      { label: 'SEL View',                restriction: 'Senior Engagement Lead View' },
+  ED:       { label: 'Executive Director View', restriction: ' |' },
+  DIRECTOR: { label: 'Director View',           restriction: ' |' },
+  SEL:      { label: 'Senior Engagement Lead View',                restriction: ' |' },
 }
 
 // Calendar-year fiscal quarter (Jan–Mar = Q1 … Oct–Dec = Q4)
@@ -69,10 +69,6 @@ function NexaWordmark() {
       }}>
         NEXA
       </span>
-      <span style={{
-        display: 'inline-block', width: 7, height: 7,
-        background: C.accent, transform: 'rotate(45deg)', marginTop: -2, flexShrink: 0,
-      }} />
     </div>
   )
 }

@@ -390,7 +390,6 @@ export function OpportunityTabs({
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId} />
                 <Field label="Business Unit" value={opp.client.businessUnit} />
-                <Field label="Opp. Type"    value={opp.opportunityType === 'NEW' ? 'New Business' : 'Existing Client'} />
                 <Field label="LOB"          value={primaryLob} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />

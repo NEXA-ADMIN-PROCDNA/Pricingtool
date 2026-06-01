@@ -3,6 +3,38 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
+// ─── Editorial palette (matches dashboard / clients / new opportunity) ──────
+const C = {
+  bg:         '#F4F6FB',
+  bgSoft:     '#EAEEF6',
+  rule:       '#D6DCE8',
+  ruleSoft:   '#E2E6EE',
+  ink:        '#001E96',
+  inkSoft:    '#3A4A6A',
+  inkMuted:   '#7B7C7F',
+  inkFaint:   '#A5A7AA',
+  accent:     '#005CD9',
+  accentDeep: '#001E96',
+  accentSoft: '#DCE7F5',
+  // Brand secondary
+  won:        '#36A463',
+  wonDeep:    '#1F6B3C',
+  wonSoft:    '#E1F1E9',
+  rejected:   '#D6454A',
+  rejectedDeep:'#8A2A1F',
+  rejectedSoft:'#FBE9E7',
+  withdrawn:  '#7B7C7F',
+  withdrawnSoft:'#EEF0F4',
+}
+
+const MONO: React.CSSProperties = {
+  fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
+}
+
+const SANS: React.CSSProperties = {
+  fontFamily: "var(--font-geist-sans), 'Inter', system-ui, sans-serif",
+}
+
 type PricingSnap = {
   versionNumber: number
   proposedBillings: number | null
@@ -24,7 +56,7 @@ type DocSnap = {
 type ApprovalItem = {
   id: string
   approvalType: 'PRICING' | 'SOW_VERIFICATION'
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
   requestedAt: string
   decidedAt: string | null
   rejectionReason: string | null
@@ -50,39 +82,76 @@ function fmt(n: number | null | undefined) {
   if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
   return `$${n.toFixed(0)}`
 }
-
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
-
 function fmtSize(bytes: number | null) {
-  if (!bytes) return '—'
+  if (!bytes) return ''
   if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`
   if (bytes >= 1_000)     return `${(bytes / 1_000).toFixed(0)} KB`
   return `${bytes} B`
 }
 
+// ─── Atoms ──────────────────────────────────────────────────────────────────
+
 function StatusPill({ status }: { status: ApprovalItem['status'] }) {
-  const cls = {
-    PENDING:  'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-    APPROVED: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
-    REJECTED: 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  const map = {
+    PENDING:   { fg: C.accentDeep,    bg: C.accentSoft,    dot: C.accent,    label: 'Pending' },
+    APPROVED:  { fg: C.wonDeep,       bg: C.wonSoft,       dot: C.won,       label: 'Approved' },
+    REJECTED:  { fg: C.rejectedDeep,  bg: C.rejectedSoft,  dot: C.rejected,  label: 'Rejected' },
+    WITHDRAWN: { fg: C.inkSoft,       bg: C.withdrawnSoft, dot: C.withdrawn, label: 'Withdrawn' },
   }[status]
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{status}</span>
+  return (
+    <span style={{
+      ...SANS,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '2px 9px 2px 8px',
+      borderRadius: 999,
+      background: map.bg,
+      color: map.fg,
+      fontSize: 11, fontWeight: 600,
+      letterSpacing: '0.02em',
+      lineHeight: 1.6,
+      whiteSpace: 'nowrap',
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: 999, background: map.dot, flexShrink: 0 }} />
+      {map.label}
+    </span>
+  )
 }
 
-function TypeBadge({ type }: { type: ApprovalItem['approvalType'] }) {
-  if (type === 'SOW_VERIFICATION') {
-    return (
-      <span className="rounded-full px-2.5 py-1 text-[10px] font-bold bg-violet-50 text-violet-700 ring-1 ring-violet-200">
-        SOW Verification
-      </span>
-    )
-  }
+function MetaItem({ label, value, valueColor = C.ink }: { label: string; value: React.ReactNode; valueColor?: string }) {
   return (
-    <span className="rounded-full px-2.5 py-1 text-[10px] font-bold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200">
-      Pricing
-    </span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+      <span style={{
+        ...MONO, fontSize: 9.5, letterSpacing: '0.14em',
+        textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
+      }}>{label}</span>
+      <span style={{ ...SANS, fontSize: 13, color: valueColor, fontWeight: 500 }}>{value}</span>
+    </div>
+  )
+}
+
+function SectionDivider({ label, count }: { label: string; count?: number }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      padding: '20px 0 12px',
+      borderBottom: `1.5px solid ${C.ink}`,
+      marginBottom: 18,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h2 style={{
+          ...SANS, fontSize: 11, letterSpacing: '0.18em',
+          textTransform: 'uppercase', color: C.ink, fontWeight: 600, margin: 0,
+        }}>{label}</h2>
+        {count !== undefined && (
+          <span style={{ ...MONO, fontSize: 10.5, color: C.inkFaint, letterSpacing: '0.08em' }}>
+            {String(count).padStart(2, '0')}
+          </span>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -93,25 +162,34 @@ function DocRow({ doc }: { doc: DocSnap }) {
   const label  = isPdf ? 'PDF' : isWord ? 'DOC' : 'FILE'
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '8px 0',
+      borderBottom: `1px solid ${C.ruleSoft}`,
+    }}>
       <div style={{
-        width: 30, height: 36, borderRadius: 3, background: color, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 28, height: 34, background: color, flexShrink: 0,
+        display: 'grid', placeItems: 'center', borderRadius: 2,
       }}>
-        <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>{label}</span>
+        <span style={{ color: '#fff', fontSize: 8, fontWeight: 700, letterSpacing: '0.04em' }}>{label}</span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-800 truncate">{doc.fileName}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">
-          v{doc.version} · {fmtSize(doc.fileSizeBytes)} · {fmtDate(doc.uploadedAt)}
-        </p>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ ...SANS, fontSize: 12.5, color: C.ink, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {doc.fileName}
+        </div>
+        <div style={{ ...MONO, fontSize: 10, color: C.inkFaint, marginTop: 2, letterSpacing: '0.04em' }}>
+          V{doc.version} · {fmtSize(doc.fileSizeBytes)} · {fmtDate(doc.uploadedAt)}
+        </div>
       </div>
       {doc.signedUrl && (
         <a
-          href={doc.signedUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 px-2.5 py-1 border border-blue-100 rounded bg-blue-50 hover:bg-blue-100 transition-colors whitespace-nowrap"
+          href={doc.signedUrl} target="_blank" rel="noopener noreferrer"
+          style={{
+            ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+            color: C.accent, textDecoration: 'none', fontWeight: 600,
+            padding: '5px 10px', border: `1px solid ${C.rule}`, background: '#fff',
+            whiteSpace: 'nowrap',
+          }}
         >
           Download
         </a>
@@ -120,52 +198,112 @@ function DocRow({ doc }: { doc: DocSnap }) {
   )
 }
 
-function SowVerificationPanel({ opp }: { opp: ApprovalItem['opportunity'] }) {
+function SowEvidence({ opp }: { opp: ApprovalItem['opportunity'] }) {
   return (
-    <div className="rounded-xl border border-violet-100 bg-violet-50/30 px-4 py-3 space-y-3">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-500">
-        Verification Evidence
-      </p>
+    <div style={{
+      marginTop: 16, padding: '14px 16px',
+      background: C.bgSoft, border: `1px solid ${C.rule}`, borderRadius: 4,
+    }}>
+      <div style={{
+        ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+        color: C.inkMuted, fontWeight: 500, marginBottom: 12,
+      }}>Verification Evidence</div>
 
-      {/* Pre-contract */}
-      <div className="flex items-center gap-2">
+      {/* Pre-contract agreement */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <div style={{
-          width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-          background: opp.preContractAgreed ? '#2563EB' : '#E2E8F0',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+          background: opp.preContractAgreed ? C.accent : '#fff',
+          border: `1px solid ${opp.preContractAgreed ? C.accent : C.rule}`,
+          display: 'grid', placeItems: 'center',
         }}>
           {opp.preContractAgreed && (
-            <svg viewBox="0 0 12 10" fill="none" style={{ width: 9, height: 7 }}>
+            <svg viewBox="0 0 12 10" fill="none" style={{ width: 8, height: 7 }}>
               <path d="M1 5l3.5 3.5L11 1" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
         </div>
-        <span className="text-xs text-slate-700">
-          Pre-contract agreement:{' '}
-          <span className={`font-semibold ${opp.preContractAgreed ? 'text-emerald-700' : 'text-slate-400'}`}>
-            {opp.preContractAgreed ? 'Agreed' : 'Not agreed'}
+        <span style={{ ...SANS, fontSize: 12.5, color: C.inkSoft }}>
+          Pre-contract agreement
+          <span style={{ color: opp.preContractAgreed ? C.wonDeep : C.inkFaint, fontWeight: 600, marginLeft: 6 }}>
+            {opp.preContractAgreed ? '· Agreed' : '· Not agreed'}
           </span>
         </span>
       </div>
 
-      {/* SoW documents */}
-      <div>
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-          Statement of Work {opp.sowDocuments.length > 0 ? `(${opp.sowDocuments.length})` : '— none uploaded'}
-        </p>
-        {opp.sowDocuments.map(doc => <DocRow key={doc.id} doc={doc} />)}
+      {/* SOW documents */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{
+          ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: C.inkMuted, fontWeight: 500, marginBottom: 6,
+        }}>
+          Statement of Work {opp.sowDocuments.length > 0 ? `· ${opp.sowDocuments.length}` : '· none uploaded'}
+        </div>
+        {opp.sowDocuments.map(d => <DocRow key={d.id} doc={d} />)}
       </div>
 
       {/* PO documents */}
       <div>
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-          Purchase Order {opp.poDocuments.length > 0 ? `(${opp.poDocuments.length})` : '— none uploaded'}
-        </p>
-        {opp.poDocuments.map(doc => <DocRow key={doc.id} doc={doc} />)}
+        <div style={{
+          ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: C.inkMuted, fontWeight: 500, marginBottom: 6,
+        }}>
+          Purchase Order {opp.poDocuments.length > 0 ? `· ${opp.poDocuments.length}` : '· none uploaded'}
+        </div>
+        {opp.poDocuments.map(d => <DocRow key={d.id} doc={d} />)}
       </div>
     </div>
   )
 }
+
+function PricingSnap({ pv }: { pv: PricingSnap }) {
+  const cells: [string, string][] = [
+    ['Proposed Billings', fmt(pv.proposedBillings != null ? Number(pv.proposedBillings) : null)],
+    ['Gross Margin',      pv.grossMarginPct      != null ? `${Number(pv.grossMarginPct).toFixed(1)}%`        : '—'],
+    ['Total Hours',       pv.totalHours          != null ? `${Number(pv.totalHours).toLocaleString()} h`     : '—'],
+    ['D / P',             pv.discountPremiumPct  != null
+      ? `${Number(pv.discountPremiumPct) >= 0 ? '+' : ''}${Number(pv.discountPremiumPct).toFixed(1)}%`
+      : '—'],
+  ]
+  return (
+    <div style={{
+      marginTop: 16, padding: '14px 16px',
+      background: C.bgSoft, border: `1px solid ${C.rule}`, borderRadius: 4,
+    }}>
+      <div style={{
+        ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+        color: C.inkMuted, fontWeight: 500, marginBottom: 12,
+        display: 'flex', alignItems: 'baseline', gap: 8,
+      }}>
+        <span>Pricing Snapshot</span>
+        <span style={{ color: C.inkFaint }}>· V{pv.versionNumber}</span>
+      </div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 0,
+        borderTop: `1px solid ${C.rule}`,
+      }}>
+        {cells.map(([label, value], i) => (
+          <div key={label} style={{
+            padding: '10px 12px',
+            borderRight: i < 3 ? `1px solid ${C.rule}` : 'none',
+          }}>
+            <div style={{
+              ...MONO, fontSize: 9.5, letterSpacing: '0.14em',
+              textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
+            }}>{label}</div>
+            <div style={{
+              ...SANS, fontSize: 16, color: C.ink, fontWeight: 500,
+              marginTop: 4, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em',
+            }}>{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Card ───────────────────────────────────────────────────────────────────
 
 function ApprovalCard({
   item, onApprove, onReject,
@@ -177,16 +315,17 @@ function ApprovalCard({
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason]       = useState('')
   const [loading, setLoading]     = useState(false)
+
   const pv = item.opportunity.pricingVersions[0] ?? null
   const isPending = item.status === 'PENDING'
-  const isSow = item.approvalType === 'SOW_VERIFICATION'
+  const isSow     = item.approvalType === 'SOW_VERIFICATION'
+  const typeLabel = isSow ? 'SoW Verification' : 'Pricing Approval'
 
   async function handleApprove() {
     setLoading(true)
     await onApprove(item.id)
     setLoading(false)
   }
-
   async function handleReject() {
     setLoading(true)
     await onReject(item.id, reason)
@@ -196,152 +335,212 @@ function ApprovalCard({
   }
 
   return (
-    <div className={`rounded-2xl border bg-white shadow-sm overflow-hidden ${
-      isPending ? 'border-amber-200 ring-1 ring-amber-100' : 'border-slate-200'
-    }`}>
-      {/* Header */}
-      <div className={`px-5 py-3 flex items-center justify-between gap-3 ${isPending ? 'bg-amber-50' : 'bg-slate-50'}`}>
-        <div className="flex items-center gap-2 min-w-0">
-          {isPending && <span className="flex h-2 w-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />}
-          <Link
-            href={`/opportunities/${item.opportunity.opportunityId}`}
-            className="text-sm font-bold text-slate-800 hover:text-indigo-600 transition-colors truncate"
-          >
-            {item.opportunity.opportunityId} · {item.opportunity.opportunityName}
-          </Link>
+    <div style={{
+      background: '#fff',
+      border: `1px solid ${C.inkMuted}`,
+      borderTop: `3px solid ${C.ink}`,
+      boxShadow: `0 1px 0 ${C.rule}, 4px 4px 0 -1px ${C.bgSoft}`,
+      padding: '18px 20px 20px',
+    }}>
+      {/* TYPE eyebrow + STATUS pill */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, marginBottom: 10,
+      }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          ...MONO, fontSize: 13.5,
+          letterSpacing: '0.18em', textTransform: 'uppercase',
+          color: C.accent, fontWeight: 600,
+        }}>
+          <span style={{
+            width: 6, height: 6, background: C.accent,
+            display: 'inline-block', transform: 'rotate(45deg)',
+          }} />
+          {typeLabel}
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <TypeBadge type={item.approvalType} />
-          <StatusPill status={item.status} />
-        </div>
+        <StatusPill status={item.status} />
       </div>
 
-      {/* Body */}
-      <div className="px-5 py-4 space-y-4">
-        {/* Meta */}
-        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
-          <span><span className="text-slate-400">Client:</span> <span className="font-semibold text-slate-700">{item.opportunity.client.name}</span></span>
-          <span><span className="text-slate-400">Period:</span> <span className="font-semibold text-slate-700">{fmtDate(item.opportunity.startDate)} – {fmtDate(item.opportunity.endDate)}</span></span>
-          <span>
-            <span className="text-slate-400">Requested by:</span> <span className="font-semibold text-slate-700">{item.requestedBy.name}</span> <span className="text-slate-400">({item.requestedBy.role})</span>
-            {item.pricingVersionNumber != null && (
-              <span className="ml-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600 ring-1 ring-indigo-200">V{item.pricingVersionNumber}</span>
-            )}
-          </span>
-          <span><span className="text-slate-400">On:</span> <span className="font-semibold text-slate-700">{fmtDate(item.requestedAt)}</span></span>
-          {item.decidedAt && (
-            <span><span className="text-slate-400">Decided:</span> <span className="font-semibold text-slate-700">{fmtDate(item.decidedAt)}</span></span>
+      {/* Opportunity name + BD ID */}
+      <Link
+        href={`/opportunities/${item.opportunity.opportunityId}`}
+        style={{
+          ...SANS, fontSize: 19, fontWeight: 600,
+          color: C.ink, textDecoration: 'none',
+          letterSpacing: '-0.01em', lineHeight: 1.25,
+          display: 'block',
+        }}
+        className="hover:underline decoration-from-font"
+      >
+        {item.opportunity.opportunityName}
+      </Link>
+      <div style={{ ...MONO, fontSize: 10.5, color: C.inkMuted, letterSpacing: '0.08em', marginTop: 4 }}>
+        {item.opportunity.opportunityId}
+        {item.pricingVersionNumber != null && (
+          <> · <span style={{ color: C.accent, fontWeight: 600 }}>V{item.pricingVersionNumber}</span></>
+        )}
+      </div>
+
+      {/* META strip */}
+      <div style={{
+        marginTop: 16, paddingTop: 14, paddingBottom: 14,
+        borderTop: `1px solid ${C.rule}`, borderBottom: `1px solid ${C.rule}`,
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 18,
+      }}>
+        <MetaItem label="Client"        value={item.opportunity.client.name} />
+        <MetaItem label="Period"        value={`${fmtDate(item.opportunity.startDate)} → ${fmtDate(item.opportunity.endDate)}`} />
+        <MetaItem label="Requested by"  value={<>{item.requestedBy.name} <span style={{ color: C.inkFaint, fontWeight: 400 }}>· {item.requestedBy.role}</span></>} />
+        <MetaItem label="Submitted"     value={fmtDate(item.requestedAt)} />
+        {item.decidedAt && <MetaItem label="Decided" value={fmtDate(item.decidedAt)} />}
+      </div>
+
+      {/* Business Justification */}
+      {item.businessJustification && (
+        <div style={{
+          marginTop: 16, padding: '12px 14px',
+          background: C.bgSoft, border: `1px solid ${C.rule}`, borderRadius: 4,
+        }}>
+          <div style={{
+            ...MONO, fontSize: 10, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
+            marginBottom: 6,
+          }}>Business Justification</div>
+          <div style={{ ...SANS, fontSize: 13, color: C.inkSoft, lineHeight: 1.55 }}>
+            {item.businessJustification}
+          </div>
+        </div>
+      )}
+
+      {/* SOW evidence */}
+      {isSow && <SowEvidence opp={item.opportunity} />}
+
+      {/* Pricing snapshot */}
+      {!isSow && pv && <PricingSnap pv={pv} />}
+      {!isSow && !pv && (
+        <div style={{
+          marginTop: 16, padding: '14px 16px',
+          border: `1px dashed ${C.rule}`,
+          ...MONO, fontSize: 11, color: C.inkFaint, letterSpacing: '0.04em',
+        }}>
+          No final pricing version set on this opportunity.
+        </div>
+      )}
+
+      {/* Rejection reason */}
+      {item.status === 'REJECTED' && item.rejectionReason && (
+        <div style={{
+          marginTop: 16, padding: '12px 14px',
+          background: C.rejectedSoft, borderLeft: `3px solid ${C.rejected}`, borderRadius: 0,
+        }}>
+          <div style={{
+            ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
+            color: C.rejectedDeep, fontWeight: 500, marginBottom: 6,
+          }}>Rejection Reason</div>
+          <div style={{ ...SANS, fontSize: 13, color: C.rejectedDeep, lineHeight: 1.55 }}>
+            {item.rejectionReason}
+          </div>
+        </div>
+      )}
+
+      {/* ACTIONS */}
+      {isPending && (
+        <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+          {rejecting ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <textarea
+                rows={2}
+                placeholder="Reason for rejection (optional)…"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                style={{
+                  ...SANS,
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '10px 12px',
+                  border: `1px solid ${C.rejected}`,
+                  borderRadius: 2,
+                  fontSize: 13, color: C.ink,
+                  outline: 'none', resize: 'none',
+                  background: '#fff',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={handleReject} disabled={loading}
+                  style={{
+                    ...MONO, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase',
+                    padding: '10px 18px', background: C.rejected, color: '#fff',
+                    border: `1px solid ${C.rejectedDeep}`, fontWeight: 600,
+                    cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.55 : 1,
+                  }}>
+                  {loading ? 'Rejecting…' : 'Confirm Reject'}
+                </button>
+                <button onClick={() => { setRejecting(false); setReason('') }} disabled={loading}
+                  style={{
+                    ...MONO, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase',
+                    padding: '10px 16px', background: '#fff', color: C.inkMuted,
+                    border: `1px solid ${C.rule}`, fontWeight: 600,
+                    cursor: 'pointer',
+                  }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button onClick={handleApprove} disabled={loading}
+                style={{
+                  ...MONO, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase',
+                  padding: '10px 22px', background: C.won, color: '#fff',
+                  border: `1px solid ${C.wonDeep}`, fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.55 : 1,
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}
+                     style={{ width: 12, height: 12 }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                {loading ? 'Approving…' : isSow ? 'Verify & Mark Won' : 'Approve'}
+              </button>
+              <button onClick={() => setRejecting(true)} disabled={loading}
+                style={{
+                  ...MONO, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase',
+                  padding: '10px 18px', background: '#fff', color: C.rejectedDeep,
+                  border: `1px solid ${C.rejected}`, fontWeight: 600,
+                  cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.55 : 1,
+                }}>
+                Reject
+              </button>
+              <Link
+                href={`/opportunities/${item.opportunity.opportunityId}`}
+                style={{
+                  ...MONO, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+                  color: C.accent, textDecoration: 'none', fontWeight: 600,
+                  marginLeft: 'auto',
+                }}>
+                View Opportunity →
+              </Link>
+            </div>
           )}
         </div>
+      )}
 
-        {/* Business Justification */}
-        {item.businessJustification && (
-          <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Business Justification</p>
-            <p className="text-xs text-slate-700 leading-relaxed">{item.businessJustification}</p>
-          </div>
-        )}
-
-        {/* SOW Verification panel */}
-        {isSow && <SowVerificationPanel opp={item.opportunity} />}
-
-        {/* Pricing panel (only for PRICING type) */}
-        {!isSow && pv && (
-          <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-500 mb-2">
-              Final Pricing · v{pv.versionNumber}
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4 text-xs">
-              {[
-                ['Proposed Billings', fmt(pv.proposedBillings != null ? Number(pv.proposedBillings) : null)],
-                ['Gross Margin',      pv.grossMarginPct   != null ? `${Number(pv.grossMarginPct).toFixed(1)}%`   : '—'],
-                ['Total Hours',       pv.totalHours       != null ? `${Number(pv.totalHours).toLocaleString()} h` : '—'],
-                ['D/P',               pv.discountPremiumPct != null ? `${Number(pv.discountPremiumPct) >= 0 ? '+' : ''}${Number(pv.discountPremiumPct).toFixed(1)}%` : '—'],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <p className="text-slate-400">{label}</p>
-                  <p className="font-semibold text-slate-800">{value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!isSow && !pv && (
-          <div className="rounded-xl border border-dashed border-slate-200 px-4 py-3 text-xs text-slate-400 italic">
-            No final pricing version set on this opportunity.
-          </div>
-        )}
-
-        {/* Rejection reason */}
-        {item.status === 'REJECTED' && item.rejectionReason && (
-          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-700">
-            <span className="font-semibold">Rejection reason: </span>{item.rejectionReason}
-          </div>
-        )}
-
-        {/* Actions */}
-        {isPending && (
-          <div className="pt-1">
-            {rejecting ? (
-              <div className="space-y-2">
-                <textarea
-                  rows={2}
-                  placeholder="Reason for rejection (optional)…"
-                  value={reason}
-                  onChange={e => setReason(e.target.value)}
-                  className="w-full rounded-xl border border-red-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 resize-none"
-                />
-                <div className="flex gap-2">
-                  <button onClick={handleReject} disabled={loading}
-                    className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors">
-                    {loading ? 'Rejecting…' : 'Confirm Reject'}
-                  </button>
-                  <button onClick={() => { setRejecting(false); setReason('') }} disabled={loading}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={handleApprove} disabled={loading}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  {loading ? 'Approving…' : isSow ? 'Verify & Mark Won' : 'Approve'}
-                </button>
-                <button onClick={() => setRejecting(true)} disabled={loading}
-                  className="flex items-center gap-1.5 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Reject
-                </button>
-                <Link
-                  href={`/opportunities/${item.opportunity.opportunityId}`}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors ml-auto"
-                >
-                  View Opportunity →
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!isPending && (
-          <div className="flex justify-end">
-            <Link href={`/opportunities/${item.opportunity.opportunityId}`}
-              className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
-              View Opportunity →
-            </Link>
-          </div>
-        )}
-      </div>
+      {!isPending && (
+        <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end' }}>
+          <Link
+            href={`/opportunities/${item.opportunity.opportunityId}`}
+            style={{
+              ...MONO, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
+              color: C.accent, textDecoration: 'none', fontWeight: 600,
+            }}>
+            View Opportunity →
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
+
+// ─── Page ───────────────────────────────────────────────────────────────────
 
 export function ApprovalsInbox() {
   const [items, setItems]     = useState<ApprovalItem[]>([])
@@ -386,60 +585,148 @@ export function ApprovalsInbox() {
   const pending = items.filter(a => a.status === 'PENDING')
   const decided = items.filter(a => a.status !== 'PENDING')
 
-  if (loading) {
-    return <div className="flex items-center justify-center py-24 text-slate-400 text-sm">Loading approvals…</div>
-  }
-
-  if (error) {
-    return <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
-  }
-
   return (
-    <div className="max-w-3xl space-y-8">
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Pending Your Decision</h2>
-          {pending.length > 0 && (
-            <span className="rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5">
-              {pending.length}
-            </span>
-          )}
-        </div>
-        {pending.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5 text-emerald-500">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-            </div>
-            <p className="text-sm font-semibold text-slate-600">All clear</p>
-            <p className="text-xs text-slate-400 mt-1">No approvals waiting for your decision.</p>
+    <>
+      {/* ── Editorial header (matches Clients / New Opportunity) ── */}
+      <header
+        style={{
+          background: C.bg,
+          borderBottom: `1px solid ${C.rule}`,
+          padding: '22px 44px 18px',
+          flexShrink: 0,
+        }}
+        className="flex items-center justify-between gap-6"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{
+            ...MONO, fontSize: 10.5, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{
+              width: 5, height: 5, background: C.accent,
+              display: 'inline-block', transform: 'rotate(45deg)',
+            }} />
+            NEXA · Approvals Inbox
           </div>
-        ) : (
-          <div className="space-y-4">
-            {pending.map(item => (
-              <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
-            ))}
+          <h1 style={{
+            ...SANS, fontSize: 28, fontWeight: 600,
+            color: C.ink, letterSpacing: '-0.015em',
+            lineHeight: 1.1, margin: 0,
+          }}>Approvals</h1>
+        </div>
+      </header>
+
+      <div style={{ padding: '0 44px 32px' }}>
+        {/* ── KPI strip ── */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+          borderTop: `1px solid ${C.rule}`, borderBottom: `1px solid ${C.rule}`,
+          padding: '20px 0', marginTop: 0,
+        }}>
+          {[
+            { label: 'Pending',  value: pending.length },
+            { label: 'Decided',  value: decided.length },
+            { label: 'Total',    value: items.length },
+          ].map((it, i) => (
+            <div key={it.label} style={{
+              padding: '0 36px',
+              borderRight: i < 2 ? `1px solid ${C.rule}` : 'none',
+              display: 'flex', flexDirection: 'column', gap: 6,
+            }}>
+              <div style={{
+                ...MONO, fontSize: 11, letterSpacing: '0.16em',
+                textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
+              }}>{it.label}</div>
+              <div style={{
+                ...SANS, fontSize: 38, fontWeight: 500,
+                color: it.label === 'Pending' && it.value > 0 ? C.accent : C.ink,
+                lineHeight: 1, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em',
+              }}>{String(it.value).padStart(2, '0')}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Loading / error states ── */}
+        {loading && (
+          <div style={{
+            ...MONO, fontSize: 11, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: C.inkFaint,
+            textAlign: 'center', padding: '80px 0',
+          }}>
+            Loading approvals…
           </div>
         )}
+        {error && (
+          <div style={{
+            marginTop: 24, padding: '12px 14px',
+            background: C.rejectedSoft, border: `1px solid ${C.rejected}`, borderRadius: 2,
+            ...SANS, fontSize: 13, color: C.rejectedDeep,
+          }}>{error}</div>
+        )}
+
+        {/* ── Pending section ── */}
+        {!loading && !error && (
+          <>
+            <SectionDivider label="Pending Decision" count={pending.length} />
+
+            {pending.length === 0 ? (
+              <div style={{
+                padding: '60px 0',
+                textAlign: 'center',
+              }}>
+                <div style={{
+                  ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                  color: C.inkMuted, fontWeight: 500, marginBottom: 8,
+                }}>NEXA · Inbox</div>
+                <div style={{
+                  ...SANS, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.01em',
+                  marginBottom: 6,
+                }}>All clear.</div>
+                <div style={{ ...SANS, fontSize: 13, color: C.inkMuted }}>
+                  No approvals awaiting your decision.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {pending.map(item => (
+                  <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                ))}
+              </div>
+            )}
+
+            {/* ── Decided section ── */}
+            {decided.length > 0 && (
+              <>
+                <SectionDivider label="Decision History" count={decided.length} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  {decided.map(item => (
+                    <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ── Truly empty ── */}
+            {items.length === 0 && !loading && (
+              <div style={{
+                padding: '80px 0', textAlign: 'center',
+              }}>
+                <div style={{
+                  ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                  color: C.inkMuted, fontWeight: 500, marginBottom: 8,
+                }}>NEXA · Inbox</div>
+                <div style={{ ...SANS, fontSize: 22, fontWeight: 600, color: C.ink, marginBottom: 6 }}>
+                  No requests yet.
+                </div>
+                <div style={{ ...SANS, fontSize: 13, color: C.inkMuted }}>
+                  Approval requests assigned to you will appear here.
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      {decided.length > 0 && (
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-4">Decision History</h2>
-          <div className="space-y-3">
-            {decided.map(item => (
-              <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center">
-          <p className="text-slate-400 text-sm">No approval requests assigned to you yet.</p>
-        </div>
-      )}
-    </div>
+    </>
   )
 }

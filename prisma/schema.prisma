@@ -26,11 +26,6 @@ enum UserRole {
   ADMIN
 }
 
-enum OpportunityType {
-  NEW
-  EXISTING
-}
-
 enum LineOfBusiness {
   TECH
   ANALYTICS
@@ -210,7 +205,6 @@ model Opportunity {
   clientId          String
   client            Client            @relation(fields: [clientId], references: [id])
   opportunityName   String
-  opportunityType   OpportunityType   @default(NEW)
   primaryLob        LineOfBusiness?
   businessUnit      String?
   startDate         DateTime

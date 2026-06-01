@@ -51,7 +51,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
 
   const headers = [
     'Project Code', 'Project Name', 'Project Description', 'Client Organization',
-    'Is Client New?', 'Project Start Date', 'Project End Date',
+    'Project Start Date', 'Project End Date',
     'Account Manager', 'Account Manager Email',
     'Client Stakeholder Name', 'Client Stakeholder Email',
     'Signed Project Budget ($)', 'Estimated Total Hours', 'Discount / Premium %',
@@ -68,7 +68,6 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
     const poc = opp.client.pocs[0]      ?? null
     return [
       opp.opportunityId, opp.opportunityName, opp.notes ?? '', opp.client.name,
-      opp.opportunityType === 'NEW' ? 'Yes' : 'No',
       fmt(opp.startDate), fmt(opp.endDate),
       opp.owner.name, opp.owner.email,
       poc?.name ?? '', poc?.email ?? '',
@@ -83,7 +82,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
 
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
   ws['!cols'] = [
-    { wch: 14 }, { wch: 30 }, { wch: 40 }, { wch: 25 }, { wch: 14 },
+    { wch: 14 }, { wch: 30 }, { wch: 40 }, { wch: 25 },
     { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 28 }, { wch: 22 },
     { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
     { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },

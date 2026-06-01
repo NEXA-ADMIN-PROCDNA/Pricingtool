@@ -213,7 +213,7 @@ export function ClientsBrowser({ clients }: { clients: ClientRow[] }) {
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 140)} // give the dropdown click time to register
-            placeholder="Search clients — name, ID, industry, region, business unit…"
+            placeholder="Search Clients"
             style={{
               width: '100%', boxSizing: 'border-box',
               padding: '11px 38px 11px 38px',

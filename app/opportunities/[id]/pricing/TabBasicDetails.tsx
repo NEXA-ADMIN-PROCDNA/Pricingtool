@@ -58,7 +58,6 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
         </p>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 opacity-75">
           <ReadField label="Client Name"      value={opp.client.name} />
-          <ReadField label="Opportunity Type" value={opp.opportunityType === 'NEW' ? 'New Business' : 'Existing Client'} />
           <ReadField label="Opportunity Name" value={opp.opportunityName} />
           <ReadField label="Start Date"       value={new Date(opp.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />
           <ReadField label="End Date"         value={new Date(opp.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { prisma } from '@/lib/prisma'
 import { getOpportunities } from '@/lib/db/opportunities'
-import { OpportunityStage, OpportunityType } from '@prisma/client'
+import { OpportunityStage } from '@prisma/client'
 import { apiError } from '@/lib/errors'
 
 // New numbering scheme: OPP-YY-NNNN, where YY is the 2-digit creation year
@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
     const {
       clientId,
       opportunityName,
-      opportunityType,
       businessUnit,
       stage,
       startDate,
@@ -76,7 +75,6 @@ export async function POST(req: NextRequest) {
         opportunityId,
         clientId,
         opportunityName,
-        opportunityType:  (opportunityType as OpportunityType) ?? 'NEW',
         businessUnit:     businessUnit?.trim() || null,
         stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,

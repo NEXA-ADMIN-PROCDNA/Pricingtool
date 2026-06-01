@@ -455,13 +455,6 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
       {/* ── OPPORTUNITY DETAILS ──────────────────────────────────────────── */}
       <SectionHeader label="Opportunity Details" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <div>
-          <FieldLabel text="Opportunity Type" required />
-          <select name="opportunityType" required style={inputBase} {...focusHandlers}>
-            <option value="NEW">New Opportunity</option>
-            <option value="EXISTING">Existing Client</option>
-          </select>
-        </div>
 
         <div>
           <FieldLabel text="Opportunity Name" required />
