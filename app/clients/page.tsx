@@ -31,7 +31,6 @@ const SERIF: React.CSSProperties = {
 
 function KPIStrip({ clients }: { clients: ClientRow[] }) {
   const totalOpps = clients.reduce((s, c) => s + c._count.opportunities, 0)
-  const avgOpps   = clients.length > 0 ? (totalOpps / clients.length).toFixed(1) : '0'
 
   const items = [
     { label: 'Total Clients',       value: String(clients.length) },
@@ -72,10 +71,6 @@ function KPIStrip({ clients }: { clients: ClientRow[] }) {
             lineHeight: 1,
             fontVariantNumeric: 'tabular-nums',
           }}>{it.value}</div>
-
-          <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, color: C.inkMuted }}>
-            {it.sub}
-          </div>
         </div>
       ))}
     </div>
