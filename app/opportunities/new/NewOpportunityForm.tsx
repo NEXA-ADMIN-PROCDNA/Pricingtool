@@ -600,16 +600,6 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
         <div style={{ fontSize: 14, color: C.ink, fontWeight: 500 }}>{ownerName}</div>
       </div>
 
-      {/* ── NOTES ────────────────────────────────────────────────────────── */}
-      <SectionHeader label="Notes" />
-      <textarea
-        name="notes"
-        rows={4}
-        placeholder="Any additional context…"
-        style={{ ...inputBase, resize: 'none', minHeight: 92 }}
-        {...focusHandlers}
-      />
-
       {/* ── ACTIONS ──────────────────────────────────────────────────────── */}
       <div style={{
         marginTop: 36,

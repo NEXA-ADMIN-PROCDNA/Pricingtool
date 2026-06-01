@@ -390,20 +390,12 @@ export function OpportunityTabs({
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId} />
                 <Field label="Business Unit" value={opp.client.businessUnit} />
+                <Field label="Owner"        value={opp.owner.name} />
                 <Field label="LOB"          value={primaryLob} />
+                <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
-                <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
                 <Field label="Next Steps" value={STAGE_NEXT_STEPS[oppStage]} wide />
-                {opp.notes     && <Field label="Notes"      value={opp.notes}     wide />}
-              </dl>
-            </div>
-
-            {/* Team */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Team</h2>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                <Field label="Owner" value={opp.owner.name} />
               </dl>
             </div>
 
@@ -1313,12 +1305,6 @@ export function OpportunityTabs({
                 <p className="mt-1.5 text-xs text-red-500">{commentError}</p>
               )}
             </div>
-          </div>
-
-          {/* SOW / Documents placeholder */}
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">SOW Documents</p>
-            <p className="text-sm text-slate-400">Document upload coming soon.</p>
           </div>
         </div>
       )}

@@ -218,7 +218,6 @@ model Opportunity {
   probability          Int?                              // win probability 1–100
   ownerId              String
   owner                User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
-  notes                String?           @db.Text
   isActive             Boolean           @default(true)
   createdAt            DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime          @updatedAt @db.Timestamptz(3)
