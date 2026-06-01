@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import { getOpportunities } from '@/lib/db/opportunities'
 import { OpportunityStage } from '@prisma/client'
@@ -27,7 +27,7 @@ async function nextOpportunityId(): Promise<string> {
 }
 
 export async function GET(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
 
   const userId = token.id as string | undefined
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({ req })
+    const token = await getAuthToken(req)
     const ownerId = token?.id as string | undefined
     if (!ownerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

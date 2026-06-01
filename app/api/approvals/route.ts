@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import { getSignedUrl, SOW_BUCKET, PO_BUCKET } from '@/lib/supabase'
 import { apiError } from '@/lib/errors'
 
 export async function GET(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
 
   const userId  = token.id as string

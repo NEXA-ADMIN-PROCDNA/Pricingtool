@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import * as XLSX from 'xlsx'
 import { apiError } from '@/lib/errors'
 
@@ -18,7 +18,7 @@ export interface ParsedRateCardRow {
 }
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
   if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 

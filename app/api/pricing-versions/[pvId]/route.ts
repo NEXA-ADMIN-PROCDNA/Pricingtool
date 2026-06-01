@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
 import { LineOfBusiness } from '@prisma/client'
@@ -56,7 +56,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
 
   try {
@@ -73,7 +73,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> },
 ) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
 
   const { pvId } = await params
@@ -101,7 +101,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ pvId: string }> }
 ) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
 
   try {

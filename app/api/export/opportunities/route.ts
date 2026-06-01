@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import * as XLSX from 'xlsx'
 import { ClientSecretCredential } from '@azure/identity'
@@ -95,7 +95,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
 
 // GET — download xlsx directly to browser
 export async function GET(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
   if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
 
 // POST — overwrite the shared SharePoint xlsx in place
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
   if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 

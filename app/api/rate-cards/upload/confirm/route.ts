@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
 import type { ParsedRateCardRow } from '../route'
 
 export async function POST(req: NextRequest) {
-  const token = await getToken({ req })
+  const token = await getAuthToken(req)
   if (!token) return apiError('UNAUTHORIZED')
   if ((token.role as string) !== 'ADMIN') return apiError('ADMIN_ONLY')
 
