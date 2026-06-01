@@ -550,7 +550,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
               {...focusHandlers}
             />
           </div>
-          <FieldHint text="Used in pipeline when no final pricing exists. Weighted by probability." />
+          <FieldHint text=" " />
         </div>
 
         <div>
