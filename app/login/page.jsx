@@ -26,7 +26,7 @@ function LoginForm() {
     <div style={{ display: 'flex', width: 860, minHeight: 520, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 40px rgba(11,28,61,0.12)' }}>
 
       {/* ── Left panel ── */}
-      <div style={{ flex: 1.1, background: '#0B1C3D', padding: '48px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ flex: 1.1, background: '#0B1C3D', padding: '48px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 56, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(0,122,255,0.08)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(0,122,255,0.05)', pointerEvents: 'none' }} />
 
@@ -50,43 +50,49 @@ function LoginForm() {
         </div>
 
         {/* Headline — NEXA acronym expansion, one letter per line. The
-            capital that opens each word is bumped to ~1.5× and tinted to the
-            brand highlight; the rest of the word follows on the same row in
-            the regular white serif. */}
+            capitals N, E, X, A all sit in the same vertical column; the
+            lowercase "e" of eXpense hangs into a small left margin so the
+            X stays aligned with the other capitals. */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           {(() => {
-            const rowStyle = {
-              fontFamily: serif,
-              fontSize: 26,
-              color: '#fff',
-              lineHeight: 1.05,
-              fontWeight: 400,
-              letterSpacing: '0.3px',
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 4,
-            }
             const bigStyle = {
               fontSize: '1.55em',
               color: '#4D9EFF',
               fontWeight: 500,
               lineHeight: 1,
             }
-            const tail = '#fff'
             return (
-              <h1 style={{ margin: 0, padding: 0 }}>
-                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
-                  <span style={bigStyle}>N</span><span style={{ color: tail }}>ew</span>
-                </span>
-                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
-                  <span style={bigStyle}>E</span><span style={{ color: tail }}>ngagement&nbsp;and</span>
-                </span>
-                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
-                  <span style={{ color: tail }}>e</span><span style={bigStyle}>X</span><span style={{ color: tail }}>pense</span>
-                </span>
-                <span style={{ ...rowStyle, display: 'block' }}>
-                  <span style={bigStyle}>A</span><span style={{ color: tail }}>ccruals</span>
-                </span>
+              <h1 style={{
+                margin: 0, padding: 0,
+                display: 'grid',
+                gridTemplateColumns: 'auto auto', // [prefix col][main col w/ capital]
+                columnGap: 0,
+                rowGap: 8,
+                alignItems: 'baseline',
+                justifyContent: 'start',
+                fontFamily: serif,
+                fontSize: 26,
+                color: '#fff',
+                lineHeight: 1.05,
+                fontWeight: 400,
+                letterSpacing: '0.3px',
+              }}>
+                {/* N ew */}
+                <span aria-hidden="true" />
+                <span><span style={bigStyle}>N</span>ew</span>
+
+                {/* E ngagement and */}
+                <span aria-hidden="true" />
+                <span><span style={bigStyle}>E</span>ngagement&nbsp;and</span>
+
+                {/* e Xpense — 'e' hangs in the prefix column so the X stays
+                    collinear with N / E / A in the main column. */}
+                <span style={{ justifySelf: 'end', color: '#fff' }}>e</span>
+                <span><span style={bigStyle}>X</span>pense</span>
+
+                {/* A ccruals */}
+                <span aria-hidden="true" />
+                <span><span style={bigStyle}>A</span>ccruals</span>
               </h1>
             )
           })()}

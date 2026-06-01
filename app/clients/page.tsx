@@ -34,8 +34,8 @@ function KPIStrip({ clients }: { clients: ClientRow[] }) {
   const avgOpps   = clients.length > 0 ? (totalOpps / clients.length).toFixed(1) : '0'
 
   const items = [
-    { label: 'Total Clients',       value: String(clients.length), sub: 'in master registry' },
-    { label: 'Total Opportunities', value: String(totalOpps),      sub: `${avgOpps} avg. deals/client` },
+    { label: 'Total Clients',       value: String(clients.length) },
+    { label: 'Total Opportunities', value: String(totalOpps) },
   ]
 
   return (

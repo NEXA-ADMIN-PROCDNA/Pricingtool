@@ -125,33 +125,17 @@ export function Sidebar() {
 
         {/* Expanded: Nexa wordmark */}
         <div className={`transition-all duration-150 overflow-hidden whitespace-nowrap ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1 }}>
-            <span style={{
-              fontFamily: "'Playfair Display', 'Georgia', serif",
-              fontWeight: 800,
-              fontSize: 18,
-              letterSpacing: '0.18em',
-              color: '#F4F6FB',
-              lineHeight: 1,
-              textTransform: 'uppercase',
-            }}>
-              NEXA
-            </span>
-            <span style={{
-              display: 'inline-block', width: 5, height: 5,
-              background: C.accent, transform: 'rotate(45deg)',
-              marginTop: -1, flexShrink: 0,
-            }} />
-          </div>
-          <div style={{
-            fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
-            fontSize: 9,
-            letterSpacing: '0.20em',
+          <span style={{
+            fontFamily: "'Playfair Display', 'Georgia', serif",
+            fontWeight: 800,
+            fontSize: 18,
+            letterSpacing: '0.18em',
+            color: '#F4F6FB',
+            lineHeight: 1,
             textTransform: 'uppercase',
-            color: '#7B7C7F',
-            fontWeight: 500,
-            marginTop: 4,
-          }}>Pricing Tool</div>
+          }}>
+            NEXA
+          </span>
         </div>
 
         {/* Pin button — thumbtack icon */}

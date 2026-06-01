@@ -62,7 +62,7 @@ export function SearchBar() {
         type="text"
         value={value}
         onChange={e => setValue(e.target.value)}
-        placeholder="Search Opportunities OR Clients"
+        placeholder="Search Opportunities"
         style={{
           flex: 1,
           border: 'none',

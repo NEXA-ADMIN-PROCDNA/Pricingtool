@@ -5,14 +5,25 @@ import { getOpportunities } from '@/lib/db/opportunities'
 import { OpportunityStage, OpportunityType } from '@prisma/client'
 import { apiError } from '@/lib/errors'
 
+// New numbering scheme: OPP-YY-NNNN, where YY is the 2-digit creation year
+// (sourced from JS Date at insert time — the row's createdAt is stamped in the
+// same transaction so the two always agree). NNNN resets each calendar year.
+// Old BD-NNN rows are left untouched; the startsWith filter ignores them when
+// computing the next number in the current year.
 async function nextOpportunityId(): Promise<string> {
+  const yy     = String(new Date().getFullYear() % 100).padStart(2, '0')
+  const prefix = `OPP-${yy}-`
+
   const last = await prisma.opportunity.findFirst({
+    where:   { opportunityId: { startsWith: prefix } },
     orderBy: { opportunityId: 'desc' },
-    select: { opportunityId: true },
+    select:  { opportunityId: true },
   })
-  if (!last) return 'BD-001'
-  const n = parseInt(last.opportunityId.replace('BD-', ''), 10)
-  return `BD-${String(n + 1).padStart(3, '0')}`
+
+  if (!last) return `${prefix}0001`
+
+  const n = parseInt(last.opportunityId.slice(prefix.length), 10)
+  return `${prefix}${String(n + 1).padStart(4, '0')}`
 }
 
 export async function GET(req: NextRequest) {
