@@ -43,8 +43,8 @@ function NexaWordmark() {
       <Image
         src="/procdna-logo.png"
         alt="ProcDNA"
-        width={34}
-        height={34}
+        width={51}
+        height={51}
         style={{ borderRadius: 6, objectFit: 'contain', flexShrink: 0 }}
       />
       <span style={{

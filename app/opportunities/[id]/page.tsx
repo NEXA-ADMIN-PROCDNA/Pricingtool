@@ -43,11 +43,6 @@ export default async function OpportunityDetailPage({
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{opp.opportunityName}</h1>
-            {opp.starConnect && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-                ⭐ Star Connect
-              </span>
-            )}
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {opp.client.name} · {opp.opportunityId} · Owner: {opp.owner.name}

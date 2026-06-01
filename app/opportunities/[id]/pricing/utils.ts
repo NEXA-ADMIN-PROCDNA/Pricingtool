@@ -50,7 +50,9 @@ export function getWeekColumns(start: string | Date, end: string | Date): Date[]
   s.setHours(0, 0, 0, 0)
   const e = new Date(end)
   let cur = new Date(s)
-  while (cur <= e && weeks.length < 52) {
+  // Cap at 520 weeks (~10 years) as a safety against accidental end-date typos.
+  // Real-world projects terminate via the cur <= e check well before this.
+  while (cur <= e && weeks.length < 520) {
     weeks.push(new Date(cur))
     cur.setDate(cur.getDate() + 7)
   }
