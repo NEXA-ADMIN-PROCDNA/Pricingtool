@@ -8,7 +8,7 @@ import { useSession, signOut } from 'next-auth/react'
 
 const C = {
   ink:       '#111111',
-  accent:    '#1E5BB8',
+  accent:    '#005CD9',
   accentDeep:'#333333',
   iconMuted: '#888888',
   iconActive: '#F4F6FB',
@@ -148,7 +148,7 @@ export function Sidebar() {
             fontSize: 9,
             letterSpacing: '0.20em',
             textTransform: 'uppercase',
-            color: '#6B7591',
+            color: '#7B7C7F',
             fontWeight: 500,
             marginTop: 4,
           }}>Pricing Tool</div>
@@ -161,7 +161,7 @@ export function Sidebar() {
             isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
           style={{
-            color: pinned ? C.accent : '#9AA3B8',
+            color: pinned ? C.accent : '#A5A7AA',
             background: pinned ? 'rgba(30,91,184,0.14)' : 'transparent',
           }}
           aria-label={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
@@ -269,20 +269,20 @@ export function Sidebar() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: '#F4F6FB' }}>{name}</p>
-                <p className="text-xs truncate" style={{ color: '#6B7591' }}>{email}</p>
+                <p className="text-xs truncate" style={{ color: '#7B7C7F' }}>{email}</p>
               </div>
             </div>
             <div
               className="flex items-center justify-between py-2 text-xs"
               style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
             >
-              <span style={{ color: '#6B7591' }}>Role</span>
+              <span style={{ color: '#7B7C7F' }}>Role</span>
               <span className="font-medium" style={{ color: '#7DA6E3' }}>{role}</span>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
               className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.12)', color: '#9AA3B8' }}
+              style={{ border: '1px solid rgba(255,255,255,0.12)', color: '#A5A7AA' }}
             >
               Sign out
             </button>
@@ -305,12 +305,12 @@ export function Sidebar() {
           </div>
           <div className={`min-w-0 flex-1 transition-all duration-150 ${isOpen ? 'opacity-100' : 'opacity-0 w-0'}`}>
             <p className="truncate text-xs font-semibold whitespace-nowrap" style={{ color: '#F4F6FB' }}>{name}</p>
-            <p className="text-[10px] whitespace-nowrap" style={{ color: '#6B7591' }}>{role}</p>
+            <p className="text-[10px] whitespace-nowrap" style={{ color: '#7B7C7F' }}>{role}</p>
           </div>
           <svg
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
             className={`w-3 h-3 shrink-0 transition-all duration-150 ${isOpen ? 'opacity-100' : 'opacity-0'} ${sessionOpen ? 'rotate-180' : ''}`}
-            style={{ color: '#6B7591' }}
+            style={{ color: '#7B7C7F' }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
           </svg>

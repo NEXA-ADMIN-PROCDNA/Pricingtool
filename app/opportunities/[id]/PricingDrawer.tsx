@@ -655,15 +655,15 @@ export function PricingDrawer({
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
             minWidth: 240,
           }}>
-            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#1E5BB8' }}>
+            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#005CD9' }}>
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={2} fill="none" strokeDasharray="40 100" strokeLinecap="round" />
             </svg>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+              <span style={{ width: 5, height: 5, background: '#005CD9', display: 'inline-block', transform: 'rotate(45deg)' }} />
               <span style={{
                 fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                 fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
-                color: '#0A1F44', fontWeight: 600,
+                color: '#001E96', fontWeight: 600,
               }}>Saving Pricing</span>
             </div>
           </div>

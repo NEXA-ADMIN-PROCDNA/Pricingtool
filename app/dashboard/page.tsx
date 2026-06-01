@@ -16,10 +16,10 @@ const C = {
   bg:       '#F4F6FB',
   bgSoft:   '#EAEEF6',
   rule:     '#D6DCE8',
-  ink:      '#0A1F44',
-  inkMuted: '#6B7591',
-  inkFaint: '#9AA3B8',
-  accent:   '#1E5BB8',
+  ink:      '#001E96',
+  inkMuted: '#7B7C7F',
+  inkFaint: '#A5A7AA',
+  accent:   '#005CD9',
 }
 
 function fmt(n: number) {
@@ -191,7 +191,7 @@ export default async function DashboardPage({
               letterSpacing: '-0.01em',
               lineHeight: 1.2,
               maxWidth: 340,
-            }}>Your one stop solution for tracking Opportunities</div>
+            }}>The nexus of every engagement</div>
           </div>
         </div>
 
@@ -219,7 +219,7 @@ export default async function DashboardPage({
               display: 'inline-flex', alignItems: 'center', gap: 8,
               padding: '10px 16px', borderRadius: 4,
               border: '1px solid #1A4FA0',
-              background: '#2563EB', color: '#F4F6FB',
+              background: '#005CD9', color: '#F4F6FB',
               fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 13, fontWeight: 500,
               textDecoration: 'none', whiteSpace: 'nowrap',
@@ -238,7 +238,7 @@ export default async function DashboardPage({
         fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
         fontSize: 10.5, letterSpacing: '0.02em',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid #143E80', flexShrink: 0,
+        borderBottom: '1px solid #001E96', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
           <span style={{
@@ -257,7 +257,7 @@ export default async function DashboardPage({
             className="animate-pulse"
             style={{
               width: 7, height: 7, borderRadius: 999,
-              background: '#1E9E5B',
+              background: '#36A463',
               boxShadow: '0 0 0 3px rgba(30,158,91,0.18)',
               display: 'inline-block', flexShrink: 0,
             }}

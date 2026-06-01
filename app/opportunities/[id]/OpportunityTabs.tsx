@@ -325,15 +325,15 @@ export function OpportunityTabs({
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
             minWidth: 240,
           }}>
-            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#1E5BB8' }}>
+            <svg className="animate-spin" viewBox="0 0 24 24" width={26} height={26} style={{ color: '#005CD9' }}>
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={2} fill="none" strokeDasharray="40 100" strokeLinecap="round" />
             </svg>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+              <span style={{ width: 5, height: 5, background: '#005CD9', display: 'inline-block', transform: 'rotate(45deg)' }} />
               <span style={{
                 fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                 fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
-                color: '#0A1F44', fontWeight: 600,
+                color: '#001E96', fontWeight: 600,
               }}>Marking as Final</span>
             </div>
           </div>
@@ -506,7 +506,7 @@ export function OpportunityTabs({
                 <div>
                   {isPricingPending && (
                     <>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#001E96', marginBottom: 6 }}>
                         Pricing approval in progress
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
@@ -516,7 +516,7 @@ export function OpportunityTabs({
                   )}
                   {isSowVerifyPending && (
                     <>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#001E96', marginBottom: 6 }}>
                         SOW verification in progress
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
@@ -526,7 +526,7 @@ export function OpportunityTabs({
                   )}
                   {!isBlocked && (
                     <>
-                      <p style={{ fontSize: 15, fontWeight: 700, color: '#0A1F44', marginBottom: 6 }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#001E96', marginBottom: 6 }}>
                         This will reset the pricing approval
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
@@ -766,27 +766,27 @@ export function OpportunityTabs({
                       display: 'inline-flex', alignItems: 'center', gap: 8,
                       fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                       fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
-                      color: '#6B7591', fontWeight: 500, marginBottom: 14,
+                      color: '#7B7C7F', fontWeight: 500, marginBottom: 14,
                     }}>
-                      <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                      <span style={{ width: 5, height: 5, background: '#005CD9', display: 'inline-block', transform: 'rotate(45deg)' }} />
                       NEXA · Confirmation
                     </div>
 
                     <h3 style={{
-                      fontSize: 18, fontWeight: 600, color: '#0A1F44',
+                      fontSize: 18, fontWeight: 600, color: '#001E96',
                       margin: '0 0 10px', letterSpacing: '-0.01em', lineHeight: 1.25,
                     }}>
                       Submit pricing approval request
                     </h3>
 
                     <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
-                      An approval request for <strong style={{ color: '#0A1F44' }}>{opp.opportunityName}</strong>
+                      An approval request for <strong style={{ color: '#001E96' }}>{opp.opportunityName}</strong>
                       {' '}
-                      (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opp.opportunityId}</span>)
-                      {' '}will be issued to <strong style={{ color: '#0A1F44' }}>{name}</strong> for review.
+                      (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#7B7C7F', fontSize: 12 }}>{opp.opportunityId}</span>)
+                      {' '}will be issued to <strong style={{ color: '#001E96' }}>{name}</strong> for review.
                     </p>
 
-                    <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 0' }}>
+                    <p style={{ fontSize: 12.5, color: '#7B7C7F', lineHeight: 1.55, margin: '8px 0 0' }}>
                       On approval, the opportunity advances to SOW preparation. If declined, the request will be returned
                       for revision and resubmission.
                     </p>
@@ -801,10 +801,10 @@ export function OpportunityTabs({
                         <span style={{
                           fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                           fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase',
-                          color: '#1E5BB8', fontWeight: 600,
+                          color: '#005CD9', fontWeight: 600,
                         }}>For Review</span>
                         <span style={{ color: '#D6DCE8' }}>·</span>
-                        <span>Pricing <strong style={{ color: '#0A1F44' }}>V{finalV.versionNumber}</strong> (marked Final)</span>
+                        <span>Pricing <strong style={{ color: '#001E96' }}>V{finalV.versionNumber}</strong> (marked Final)</span>
                       </div>
                     )}
                     {!finalV && (
@@ -826,11 +826,11 @@ export function OpportunityTabs({
                       <div style={{
                         marginTop: 10,
                         fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
-                        fontSize: 11, color: '#6B7591', letterSpacing: '0.04em',
+                        fontSize: 11, color: '#7B7C7F', letterSpacing: '0.04em',
                       }}>
                         <span style={{ textTransform: 'uppercase', letterSpacing: '0.14em', fontSize: 10 }}>CC</span>
                         {' · '}
-                        <span style={{ color: '#0A1F44' }}>{ccNames.join(', ')}</span>
+                        <span style={{ color: '#001E96' }}>{ccNames.join(', ')}</span>
                       </div>
                     )}
 
@@ -842,7 +842,7 @@ export function OpportunityTabs({
                       }}>
                         <div style={{
                           fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
-                          fontSize: 10, color: '#6B7591', textTransform: 'uppercase',
+                          fontSize: 10, color: '#7B7C7F', textTransform: 'uppercase',
                           letterSpacing: '0.14em', fontWeight: 500, marginBottom: 6,
                         }}>Business Justification</div>
                         {businessJustification}
@@ -850,7 +850,7 @@ export function OpportunityTabs({
                     )}
                   </div>
                   {approvalError && (
-                    <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{approvalError}</p>
+                    <p style={{ fontSize: 12, color: '#D6454A', marginBottom: 12 }}>{approvalError}</p>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                     <button
@@ -870,7 +870,7 @@ export function OpportunityTabs({
                       style={{
                         padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
                         background: approvalLoading ? '#E2E6EE' : '#4F46E5',
-                        color: approvalLoading ? '#9AA3B8' : '#fff',
+                        color: approvalLoading ? '#A5A7AA' : '#fff',
                         border: 'none', cursor: approvalLoading ? 'not-allowed' : 'pointer',
                       }}
                     >
@@ -1157,7 +1157,7 @@ export function OpportunityTabs({
               <div style={{
                 padding: '18px 18px 16px',
                 border: '1px solid #D6DCE8',
-                borderLeft: '3px solid #C6432F',
+                borderLeft: '3px solid #D6454A',
                 background: '#fff',
                 borderRadius: 4,
               }}>
@@ -1166,14 +1166,14 @@ export function OpportunityTabs({
                   display: 'inline-flex', alignItems: 'center', gap: 8,
                   fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                   fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
-                  color: '#6B7591', fontWeight: 500, marginBottom: 12,
+                  color: '#7B7C7F', fontWeight: 500, marginBottom: 12,
                 }}>
-                  <span style={{ width: 5, height: 5, background: '#C6432F', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                  <span style={{ width: 5, height: 5, background: '#D6454A', display: 'inline-block', transform: 'rotate(45deg)' }} />
                   NEXA · Confirmation · Irreversible
                 </div>
 
                 <h4 style={{
-                  fontSize: 16, fontWeight: 600, color: '#0A1F44',
+                  fontSize: 16, fontWeight: 600, color: '#001E96',
                   margin: '0 0 8px', letterSpacing: '-0.01em', lineHeight: 1.25,
                 }}>
                   Confirm project code generation
@@ -1181,11 +1181,11 @@ export function OpportunityTabs({
 
                 <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
                   Confirming will instruct the Finance team to generate a project code for
-                  {' '}<strong style={{ color: '#0A1F44' }}>{opp.opportunityName}</strong>
-                  {' '}(<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opp.opportunityId}</span>).
+                  {' '}<strong style={{ color: '#001E96' }}>{opp.opportunityName}</strong>
+                  {' '}(<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#7B7C7F', fontSize: 12 }}>{opp.opportunityId}</span>).
                 </p>
 
-                <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 14px' }}>
+                <p style={{ fontSize: 12.5, color: '#7B7C7F', lineHeight: 1.55, margin: '8px 0 14px' }}>
                   A signed Statement of Work, Purchase Order or pre-contract agreement must subsequently be
                   uploaded to formalise the engagement before resources can be allocated. This action cannot be reversed.
                 </p>
@@ -1198,8 +1198,8 @@ export function OpportunityTabs({
                       fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                       fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
                       padding: '8px 16px', borderRadius: 4,
-                      background: projectCodeSaving ? '#E2E6EE' : '#C6432F',
-                      color: projectCodeSaving ? '#9AA3B8' : '#fff',
+                      background: projectCodeSaving ? '#E2E6EE' : '#D6454A',
+                      color: projectCodeSaving ? '#A5A7AA' : '#fff',
                       border: 'none', fontWeight: 600,
                       cursor: projectCodeSaving ? 'not-allowed' : 'pointer',
                     }}
@@ -1213,7 +1213,7 @@ export function OpportunityTabs({
                       fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                       fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
                       padding: '8px 16px', borderRadius: 4,
-                      background: '#fff', color: '#6B7591',
+                      background: '#fff', color: '#7B7C7F',
                       border: '1px solid #D6DCE8', fontWeight: 600,
                       cursor: projectCodeSaving ? 'not-allowed' : 'pointer',
                     }}

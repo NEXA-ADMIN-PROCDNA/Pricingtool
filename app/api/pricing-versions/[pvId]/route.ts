@@ -4,11 +4,31 @@ import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
 import { LineOfBusiness } from '@prisma/client'
 
-const VALID_LOBS = new Set<string>(Object.values(LineOfBusiness))
+// Maps free-text staffing.domain values to the LineOfBusiness enum.
+// Excel uploads occasionally store friendly labels ("Analytics", "Technology",
+// "Data Science") instead of canonical enum strings; we accept both forms
+// case-insensitively so the autofill works regardless of upload format.
+function normalizeLob(raw: string | null | undefined): LineOfBusiness | null {
+  if (!raw) return null
+  const key = raw.trim().toUpperCase()
+  switch (key) {
+    case 'ANALYTICS':        return 'ANALYTICS'
+    case 'TECH':
+    case 'TECHNOLOGY':       return 'TECH'
+    case 'MS':
+    case 'MANAGED SERVICES': return 'MS'
+    case 'DS':
+    case 'DATA SCIENCE':     return 'DS'
+    case 'DESIGN':           return 'DESIGN'
+    case 'AUXO':             return 'AUXO'
+    default:                 return null
+  }
+}
 
 // Revenue-weighted majority domain across staffing (effectiveBillRate × totalHours),
 // falling back to hours if rate is 0 so zero-rate rows still count. Matches the UI
-// "LoB Revenue Mix" badge in TabBasicDetails.
+// "LoB Revenue Mix" badge in TabBasicDetails. Domain strings are normalized to the
+// LineOfBusiness enum before tallying so friendly-label upload formats still resolve.
 async function computeMajorityLob(pvId: string): Promise<LineOfBusiness | null> {
   const staffing = await prisma.staffingResource.findMany({
     where:   { pricingVersionId: pvId },
@@ -18,18 +38,18 @@ async function computeMajorityLob(pvId: string): Promise<LineOfBusiness | null> 
       weeklyHours: { select: { hours: true } },
     },
   })
-  const tally: Record<string, number> = {}
+  const tally: Partial<Record<LineOfBusiness, number>> = {}
   for (const r of staffing) {
-    if (!r.domain) continue
+    const lob = normalizeLob(r.domain)
+    if (!lob) continue
     const totalHrs = r.weeklyHours.reduce((s, w) => s + Number(w.hours ?? 0), 0)
     if (totalHrs <= 0) continue
     const effRate = Number(r.effectiveBillRate ?? 0)
     const weight  = effRate > 0 ? effRate * totalHrs : totalHrs
-    tally[r.domain] = (tally[r.domain] ?? 0) + weight
+    tally[lob] = (tally[lob] ?? 0) + weight
   }
-  const top = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]
-  if (!top) return null
-  return VALID_LOBS.has(top[0]) ? (top[0] as LineOfBusiness) : null
+  const top = Object.entries(tally).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]
+  return top ? (top[0] as LineOfBusiness) : null
 }
 
 export async function DELETE(

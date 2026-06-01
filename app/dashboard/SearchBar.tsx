@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 const C = {
   rule:     '#D6DCE8',
   bgSoft:   '#EAEEF6',
-  inkMuted: '#6B7591',
+  inkMuted: '#7B7C7F',
 }
 
 export function SearchBar() {
@@ -70,7 +70,7 @@ export function SearchBar() {
           background: 'transparent',
           fontFamily: 'inherit',
           fontSize: 'inherit',
-          color: '#0A1F44',
+          color: '#001E96',
           minWidth: 0,
         }}
       />

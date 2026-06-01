@@ -12,12 +12,12 @@ const C = {
   bgSoft:     '#EAEEF6',
   rule:       '#D6DCE8',
   ruleSoft:   '#E2E6EE',
-  ink:        '#0A1F44',
+  ink:        '#001E96',
   inkSoft:    '#3A4A6A',
-  inkMuted:   '#6B7591',
-  inkFaint:   '#9AA3B8',
-  accent:     '#1E5BB8',
-  accentDeep: '#143E80',
+  inkMuted:   '#7B7C7F',
+  inkFaint:   '#A5A7AA',
+  accent:     '#005CD9',
+  accentDeep: '#001E96',
   accentSoft: '#DCE7F5',
 }
 
@@ -99,7 +99,7 @@ function ClientCard({ client }: { client: ClientRow }) {
         display: 'block',
         transition: 'border-color 120ms, background 120ms, box-shadow 120ms, transform 120ms',
       }}
-      className="hover:border-[#1E5BB8] hover:bg-[#FAFBFE] hover:[border-top-color:#1E5BB8] hover:-translate-y-0.5"
+      className="hover:border-[#005CD9] hover:bg-[#FAFBFE] hover:[border-top-color:#005CD9] hover:-translate-y-0.5"
     >
       {/* Card header — ID + Industry */}
       <div style={{

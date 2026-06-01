@@ -22,7 +22,7 @@ export function MainLayout({
             className="flex items-center justify-between px-8 py-4 shrink-0 bg-white"
             style={{ borderBottom: '1px solid #D6DCE8' }}
           >
-            <h1 className="text-xl font-bold" style={{ color: '#0A1F44' }}>{title}</h1>
+            <h1 className="text-xl font-bold" style={{ color: '#001E96' }}>{title}</h1>
             {action}
           </header>
         )}

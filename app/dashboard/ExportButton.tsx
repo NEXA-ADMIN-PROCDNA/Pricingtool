@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 const C = {
   rule:     '#D6DCE8',
   bg:       '#F4F6FB',
-  inkMuted: '#6B7591',
+  inkMuted: '#7B7C7F',
 }
 
 export function ExportButton() {

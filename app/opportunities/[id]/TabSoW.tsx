@@ -166,8 +166,8 @@ function DocUploadSection({
 
   return (
     <div>
-      <p style={{ fontSize: 13, fontWeight: 600, color: '#0A1F44', letterSpacing: '-0.01em' }}>{title}</p>
-      <p style={{ fontSize: 12, color: '#6B7591', marginTop: 2 }}>{description}</p>
+      <p style={{ fontSize: 13, fontWeight: 600, color: '#001E96', letterSpacing: '-0.01em' }}>{title}</p>
+      <p style={{ fontSize: 12, color: '#7B7C7F', marginTop: 2 }}>{description}</p>
 
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -176,7 +176,7 @@ function DocUploadSection({
         onClick={() => inputRef.current?.click()}
         style={{
           marginTop: 16,
-          border: `2px dashed ${dragOver ? '#2563EB' : '#D6DCE8'}`,
+          border: `2px dashed ${dragOver ? '#005CD9' : '#D6DCE8'}`,
           borderRadius: 10, padding: '28px 24px', textAlign: 'center',
           cursor: uploading ? 'not-allowed' : 'pointer',
           background: dragOver ? '#EBF2FF' : '#F9FAFB',
@@ -190,26 +190,26 @@ function DocUploadSection({
           disabled={uploading}
         />
         {uploading ? (
-          <p style={{ fontSize: 13, color: '#6B7591' }}>Uploading…</p>
+          <p style={{ fontSize: 13, color: '#7B7C7F' }}>Uploading…</p>
         ) : (
           <>
-            <svg viewBox="0 0 24 24" fill="none" stroke="#9AA3B8" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
+            <svg viewBox="0 0 24 24" fill="none" stroke="#A5A7AA" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"
               style={{ width: 32, height: 32, margin: '0 auto 10px' }}>
               <path d="M12 16V4m0 0L8 8m4-4 4 4M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2" />
             </svg>
             <p style={{ fontSize: 13, color: '#3A4A6A', fontWeight: 500 }}>
-              Drop file here or <span style={{ color: '#2563EB' }}>browse</span>
+              Drop file here or <span style={{ color: '#005CD9' }}>browse</span>
             </p>
-            <p style={{ fontSize: 11, color: '#9AA3B8', marginTop: 4 }}>PDF · DOC · DOCX · XLS · XLSX · PNG · JPG</p>
+            <p style={{ fontSize: 11, color: '#A5A7AA', marginTop: 4 }}>PDF · DOC · DOCX · XLS · XLSX · PNG · JPG</p>
           </>
         )}
       </div>
 
-      {error && <p style={{ fontSize: 12, color: '#C6432F', marginTop: 10 }}>{error}</p>}
+      {error && <p style={{ fontSize: 12, color: '#D6454A', marginTop: 10 }}>{error}</p>}
 
       {docs && docs.length > 0 && (
         <div style={{ marginTop: 20 }}>
-          <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#9AA3B8', marginBottom: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A5A7AA', marginBottom: 10 }}>
             Uploaded Documents
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -221,24 +221,24 @@ function DocUploadSection({
               }}>
                 <FileIcon mime={doc.mimeType} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: '#0A1F44', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#001E96', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {doc.fileName}
                   </p>
-                  <p style={{ fontSize: 11, color: '#9AA3B8', marginTop: 2 }}>
+                  <p style={{ fontSize: 11, color: '#A5A7AA', marginTop: 2 }}>
                     v{doc.version} · {fmtSize(doc.fileSizeBytes)} · {fmtDate(doc.uploadedAt)}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   {doc.signedUrl && (
                     <a href={doc.signedUrl} target="_blank" rel="noopener noreferrer" style={{
-                      fontSize: 12, color: '#2563EB', fontWeight: 500,
+                      fontSize: 12, color: '#005CD9', fontWeight: 500,
                       textDecoration: 'none', padding: '4px 10px',
                       border: '1px solid #DCE7F5', borderRadius: 4, background: '#F0F5FF',
                     }}>Download</a>
                   )}
                   <button onClick={() => deleteDoc(doc.id)} title="Remove" style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#C6432F', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center',
+                    color: '#D6454A', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center',
                   }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
                       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
@@ -252,7 +252,7 @@ function DocUploadSection({
       )}
 
       {docs && docs.length === 0 && (
-        <p style={{ fontSize: 12, color: '#9AA3B8', marginTop: 16, textAlign: 'center' }}>
+        <p style={{ fontSize: 12, color: '#A5A7AA', marginTop: 16, textAlign: 'center' }}>
           No documents uploaded yet.
         </p>
       )}
@@ -360,33 +360,33 @@ export function TabSoW({
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 fontFamily: "var(--font-plex-mono), 'Courier New', monospace",
                 fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
-                color: '#6B7591', fontWeight: 500, marginBottom: 14,
+                color: '#7B7C7F', fontWeight: 500, marginBottom: 14,
               }}>
-                <span style={{ width: 5, height: 5, background: '#1E5BB8', display: 'inline-block', transform: 'rotate(45deg)' }} />
+                <span style={{ width: 5, height: 5, background: '#005CD9', display: 'inline-block', transform: 'rotate(45deg)' }} />
                 NEXA · Confirmation
               </div>
 
               <h3 style={{
-                fontSize: 18, fontWeight: 600, color: '#0A1F44',
+                fontSize: 18, fontWeight: 600, color: '#001E96',
                 margin: '0 0 10px', letterSpacing: '-0.01em', lineHeight: 1.25,
               }}>
                 Submit SoW &amp; PO verification request
               </h3>
 
               <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6, margin: 0 }}>
-                A verification request for <strong style={{ color: '#0A1F44' }}>{opportunityName}</strong>
+                A verification request for <strong style={{ color: '#001E96' }}>{opportunityName}</strong>
                 {' '}
-                (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#6B7591', fontSize: 12 }}>{opportunityId}</span>)
-                {' '}will be issued to <strong style={{ color: '#0A1F44' }}>{approverName}</strong> for review.
+                (<span style={{ fontFamily: "var(--font-plex-mono), 'Courier New', monospace", color: '#7B7C7F', fontSize: 12 }}>{opportunityId}</span>)
+                {' '}will be issued to <strong style={{ color: '#001E96' }}>{approverName}</strong> for review.
               </p>
 
-              <p style={{ fontSize: 12.5, color: '#6B7591', lineHeight: 1.55, margin: '8px 0 0' }}>
+              <p style={{ fontSize: 12.5, color: '#7B7C7F', lineHeight: 1.55, margin: '8px 0 0' }}>
                 On approval, the opportunity will be marked Won and routed to project code generation.
                 If returned, supporting documents may be updated and the request resubmitted.
               </p>
             </div>
             {submitError && (
-              <p style={{ fontSize: 12, color: '#C6432F', marginBottom: 12 }}>{submitError}</p>
+              <p style={{ fontSize: 12, color: '#D6454A', marginBottom: 12 }}>{submitError}</p>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
@@ -405,7 +405,7 @@ export function TabSoW({
                 disabled={submitting}
                 style={{
                   padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                  background: submitting ? '#E2E6EE' : '#2563EB', color: submitting ? '#9AA3B8' : '#fff',
+                  background: submitting ? '#E2E6EE' : '#005CD9', color: submitting ? '#A5A7AA' : '#fff',
                   border: 'none', cursor: submitting ? 'not-allowed' : 'pointer',
                 }}
               >
@@ -436,7 +436,7 @@ export function TabSoW({
       <label style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 16px', borderRadius: 8,
-        border: `1.5px solid ${precontract ? '#2563EB' : '#D6DCE8'}`,
+        border: `1.5px solid ${precontract ? '#005CD9' : '#D6DCE8'}`,
         background: precontract ? '#F0F5FF' : '#F9FAFB',
         cursor: saving ? 'not-allowed' : 'pointer',
         transition: 'all 150ms', marginBottom: 28,
@@ -444,8 +444,8 @@ export function TabSoW({
       }}>
         <div style={{
           width: 18, height: 18, borderRadius: 4, flexShrink: 0,
-          border: `2px solid ${precontract ? '#2563EB' : '#9AA3B8'}`,
-          background: precontract ? '#2563EB' : '#fff',
+          border: `2px solid ${precontract ? '#005CD9' : '#A5A7AA'}`,
+          background: precontract ? '#005CD9' : '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 150ms',
         }}>
@@ -462,7 +462,7 @@ export function TabSoW({
         <span style={{ fontSize: 13, fontWeight: 500, color: precontract ? '#1A3E8A' : '#3A4A6A' }}>
           Proceed with pre-contract agreement
         </span>
-        {saving && <span style={{ fontSize: 11, color: '#9AA3B8', marginLeft: 'auto' }}>Saving…</span>}
+        {saving && <span style={{ fontSize: 11, color: '#A5A7AA', marginLeft: 'auto' }}>Saving…</span>}
       </label>
 
       {/* ── 2. SoW upload ── */}
@@ -516,15 +516,15 @@ export function TabSoW({
           {/* Submit form — show when no pending verification */}
           {canSubmit && (
             <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#0A1F44', marginBottom: 4 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#001E96', marginBottom: 4 }}>
                 Submit for Verification
               </p>
-              <p style={{ fontSize: 12, color: '#6B7591', marginBottom: 14 }}>
+              <p style={{ fontSize: 12, color: '#7B7C7F', marginBottom: 14 }}>
                 One or more conditions are met. Select an approver to verify and mark this opportunity as Won.
               </p>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7591', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: '#7B7C7F', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
                     Approver
                   </label>
                   <select
@@ -532,7 +532,7 @@ export function TabSoW({
                     onChange={e => setApproverId(e.target.value)}
                     style={{
                       width: '100%', padding: '9px 12px', borderRadius: 8,
-                      border: '1px solid #D6DCE8', fontSize: 13, color: '#0A1F44',
+                      border: '1px solid #D6DCE8', fontSize: 13, color: '#001E96',
                       background: '#fff', outline: 'none', cursor: 'pointer',
                     }}
                   >
@@ -551,8 +551,8 @@ export function TabSoW({
                   style={{
                     padding: '9px 20px', borderRadius: 8, fontSize: 13,
                     fontWeight: 600, cursor: !approverId || submitting ? 'not-allowed' : 'pointer',
-                    background: !approverId || submitting ? '#E2E6EE' : '#2563EB',
-                    color: !approverId || submitting ? '#9AA3B8' : '#fff',
+                    background: !approverId || submitting ? '#E2E6EE' : '#005CD9',
+                    color: !approverId || submitting ? '#A5A7AA' : '#fff',
                     border: 'none', transition: 'all 150ms', whiteSpace: 'nowrap',
                   }}
                 >
@@ -560,7 +560,7 @@ export function TabSoW({
                 </button>
               </div>
               {submitError && (
-                <p style={{ fontSize: 12, color: '#C6432F', marginTop: 8 }}>{submitError}</p>
+                <p style={{ fontSize: 12, color: '#D6454A', marginTop: 8 }}>{submitError}</p>
               )}
             </div>
           )}

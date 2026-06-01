@@ -9,10 +9,10 @@ const C = {
   bg:         '#F4F6FB',
   rule:       '#D6DCE8',
   ruleSoft:   '#E2E6EE',
-  ink:        '#0A1F44',
-  inkMuted:   '#6B7591',
-  inkFaint:   '#9AA3B8',
-  accent:     '#1E5BB8',
+  ink:        '#001E96',
+  inkMuted:   '#7B7C7F',
+  inkFaint:   '#A5A7AA',
+  accent:     '#005CD9',
 }
 
 const MONO: React.CSSProperties = {

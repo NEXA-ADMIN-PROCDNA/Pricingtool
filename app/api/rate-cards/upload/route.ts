@@ -90,7 +90,25 @@ export async function POST(req: NextRequest) {
 
     const locationRaw = String(raw[0] ?? '').trim()
     const position    = String(raw[1] ?? '').trim()
-    const domain      = String(raw[2] ?? '').trim()
+    // Normalize the domain column to the LineOfBusiness enum value so the
+    // majority-LoB autofill on opp.primaryLob works whether the uploader wrote
+    // "Analytics", "ANALYTICS", "Technology", "Data Science", etc.
+    const domainRaw   = String(raw[2] ?? '').trim()
+    const domain      = (() => {
+      const k = domainRaw.toUpperCase()
+      switch (k) {
+        case 'ANALYTICS':        return 'ANALYTICS'
+        case 'TECH':
+        case 'TECHNOLOGY':       return 'TECH'
+        case 'MS':
+        case 'MANAGED SERVICES': return 'MS'
+        case 'DS':
+        case 'DATA SCIENCE':     return 'DS'
+        case 'DESIGN':           return 'DESIGN'
+        case 'AUXO':             return 'AUXO'
+        default:                 return domainRaw || null  // keep unknown values verbatim so they're visible
+      }
+    })()
     // col D (index 3) is unused — billing is col E (4), cost is col F (5)
     const billRate    = parseFloat(String(raw[4] ?? ''))
     const costRate    = parseFloat(String(raw[5] ?? ''))

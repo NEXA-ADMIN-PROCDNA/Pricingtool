@@ -8,12 +8,12 @@ import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 
 // V8 palette
 const C = {
-  ink:       '#0A1F44',
+  ink:       '#001E96',
   inkSoft:   '#3A4A6A',
-  inkMuted:  '#6B7591',
-  inkFaint:  '#9AA3B8',
-  accent:    '#1E5BB8',
-  accentDeep:'#143E80',
+  inkMuted:  '#7B7C7F',
+  inkFaint:  '#A5A7AA',
+  accent:    '#005CD9',
+  accentDeep:'#001E96',
   accentSoft:'#DCE7F5',
   rule:      '#D6DCE8',
   ruleSoft:  '#E2E6EE',
@@ -58,10 +58,10 @@ function hasFinalPricing(row: OpportunityRow) {
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { bg: string; fg: string; dot: string }> = {
     OPEN:      { bg: C.accentSoft, fg: C.accentDeep, dot: C.accent },
-    WON:       { bg: '#E1F1E9', fg: '#1F6B3C', dot: '#1E9E5B' },
-    LOST:      { bg: '#FBE9E7', fg: '#8A2A1F', dot: '#C6432F' },
-    ABANDONED: { bg: '#EEF0F4', fg: '#5A6478', dot: '#9AA3B8' },
-    ARCHIVED:  { bg: '#EEF0F4', fg: '#5A6478', dot: '#9AA3B8' },
+    WON:       { bg: '#E1F1E9', fg: '#1F6B3C', dot: '#36A463' },
+    LOST:      { bg: '#FBE9E7', fg: '#8A2A1F', dot: '#D6454A' },
+    ABANDONED: { bg: '#EEF0F4', fg: '#5A6478', dot: '#A5A7AA' },
+    ARCHIVED:  { bg: '#EEF0F4', fg: '#5A6478', dot: '#A5A7AA' },
   }
   const s = map[status] ?? map.OPEN
   return (

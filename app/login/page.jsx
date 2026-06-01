@@ -2,6 +2,7 @@
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { PROCDNA_LOGO_DATA_URL } from './_logo'
 
 const ERROR_MESSAGES = {
   not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
@@ -41,19 +42,29 @@ function LoginForm() {
             boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
             flexShrink: 0,
           }}>
-            <img src="/procdna-logo.png" alt="ProcDNA" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+            <img src={PROCDNA_LOGO_DATA_URL} alt="ProcDNA" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
           </div>
           <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
             ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
           </span>
         </div>
 
-        {/* Headline */}
+        {/* Headline — NEXA acronym expansion. Capital letters that spell
+            N-E-X-A get bumped up in size and tinted to the brand highlight. */}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <h1 style={{ fontFamily: serif, fontSize: 30, color: '#fff', lineHeight: 1.3, fontWeight: 400, marginBottom: 12 }}>
-            New Engagement<br />Expense Approvals,<br />simplified.
-          </h1>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6, maxWidth: 260 }}>
+          {(() => {
+            const baseStyle = { fontFamily: serif, fontSize: 30, color: '#fff', lineHeight: 1.25, fontWeight: 400 }
+            const bigStyle  = { fontSize: '1.55em', color: '#4D9EFF', lineHeight: 0.9, fontWeight: 500 }
+            return (
+              <h1 style={{ ...baseStyle, marginBottom: 14, letterSpacing: '0.5px' }}>
+                <span style={bigStyle}>N</span>ew{' '}
+                <span style={bigStyle}>E</span>ngagement<br />
+                and e<span style={bigStyle}>X</span>pense{' '}
+                <span style={bigStyle}>A</span>ccruals
+              </h1>
+            )
+          })()}
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: 280, marginTop: 18 }}>
             Request, review, and approve engagement expenses with full visibility at every step.
           </p>
         </div>
@@ -65,7 +76,7 @@ function LoginForm() {
         <div style={{ marginBottom: 36 }}>
           <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0B1C3D', letterSpacing: '-0.3px', marginBottom: 4 }}>Welcome to NEXA</h2>
           <span style={{ fontSize: 13, color: '#8A93A6', lineHeight: 1.5, display: 'block' }}>
-            Sign in with your firm Microsoft account<br />to access the approval portal.
+            Sign in with your ProcDNA Microsoft account<br />to access the approval portal.
           </span>
         </div>
 
@@ -107,15 +118,6 @@ function LoginForm() {
           </a>
         </p>
 
-        {/* Trust badges */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 32, paddingTop: 18, borderTop: '0.5px solid #EDF0F5', flexWrap: 'wrap' }}>
-          {['SOC 2 Compliant', 'SSO Enabled', 'Firm Data Isolated'].map(badge => (
-            <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#B0B8C8', fontWeight: 500 }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
-              {badge}
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   )

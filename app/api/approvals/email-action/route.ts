@@ -8,9 +8,9 @@ function page(body: string): Response {
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>NEXA</title></head>
 <body style="margin:0;padding:0;background:#F4F6FB;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(10,31,68,0.12);max-width:460px;width:90%;overflow:hidden;">
-    <div style="background:#0A1F44;padding:16px 28px;display:flex;align-items:center;gap:8px;">
+    <div style="background:#001E96;padding:16px 28px;display:flex;align-items:center;gap:8px;">
       <span style="font-family:Georgia,serif;font-weight:800;font-size:18px;letter-spacing:0.18em;color:#F4F6FB;text-transform:uppercase;">NEXA</span>
-      <span style="display:inline-block;width:5px;height:5px;background:#1E5BB8;transform:rotate(45deg);"></span>
+      <span style="display:inline-block;width:5px;height:5px;background:#005CD9;transform:rotate(45deg);"></span>
     </div>
     <div style="padding:32px 28px 28px;">${body}</div>
   </div>
@@ -22,8 +22,8 @@ function errorPage(title: string, message: string) {
   return page(`
     <div style="text-align:center;">
       <div style="font-size:44px;margin-bottom:16px;">⚠️</div>
-      <h1 style="margin:0 0 8px;font-size:20px;color:#0A1F44;">${title}</h1>
-      <p style="margin:0;font-size:13px;color:#6B7591;line-height:1.6;">${message}</p>
+      <h1 style="margin:0 0 8px;font-size:20px;color:#001E96;">${title}</h1>
+      <p style="margin:0;font-size:13px;color:#7B7C7F;line-height:1.6;">${message}</p>
     </div>`)
 }
 
@@ -34,16 +34,16 @@ type ResultVariant = 'approved' | 'rejected' | 'info'
 
 function resultPage(variant: ResultVariant, title: string, oppId: string, message: string) {
   const palette = {
-    approved: { accent: '#1E9E5B', title: '#1F6B3C' }, // matches StatusPill WON
-    rejected: { accent: '#C6432F', title: '#8A2A1F' }, // matches StatusPill LOST
-    info:     { accent: '#1E5BB8', title: '#0A1F44' }, // NEXA accent + ink
+    approved: { accent: '#36A463', title: '#1F6B3C' }, // matches StatusPill WON
+    rejected: { accent: '#D6454A', title: '#8A2A1F' }, // matches StatusPill LOST
+    info:     { accent: '#005CD9', title: '#001E96' }, // NEXA accent + ink
   }[variant]
 
   return page(`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px;
                 font-family:'IBM Plex Mono','Courier New',monospace;
                 font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;
-                color:#6B7591;font-weight:500;">
+                color:#7B7C7F;font-weight:500;">
       <span style="display:inline-block;width:5px;height:5px;background:${palette.accent};transform:rotate(45deg);"></span>
       NEXA · Approval · ${oppId}
     </div>
@@ -64,7 +64,7 @@ function resultPage(variant: ResultVariant, title: string, oppId: string, messag
     <p style="margin:24px 0 0;
               font-family:'IBM Plex Mono','Courier News',monospace;
               font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;
-              color:#9AA3B8;">
+              color:#A5A7AA;">
       Decision recorded · You may close this window.
     </p>
   `)
@@ -72,10 +72,10 @@ function resultPage(variant: ResultVariant, title: string, oppId: string, messag
 
 function approveConfirmPage(token: string, opportunityName: string, approverName: string) {
   return page(`
-    <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Confirm approval</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">
-      Hi <strong style="color:#0A1F44;">${approverName}</strong>, you are approving the request for
-      <strong style="color:#0A1F44;">${opportunityName}</strong>.
+    <h2 style="margin:0 0 4px;font-size:20px;color:#001E96;">Confirm approval</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:#7B7C7F;">
+      Hi <strong style="color:#001E96;">${approverName}</strong>, you are approving the request for
+      <strong style="color:#001E96;">${opportunityName}</strong>.
     </p>
     <form method="POST" action="/api/approvals/email-action">
       <input type="hidden" name="token" value="${token}" />
@@ -83,26 +83,26 @@ function approveConfirmPage(token: string, opportunityName: string, approverName
         ✓ Confirm Approval
       </button>
     </form>
-    <p style="margin:12px 0 0;font-size:11px;color:#9AA3B8;text-align:center;">Changed your mind? Close this tab — no action will be taken.</p>`)
+    <p style="margin:12px 0 0;font-size:11px;color:#A5A7AA;text-align:center;">Changed your mind? Close this tab — no action will be taken.</p>`)
 }
 
 function rejectFormPage(token: string, opportunityName: string, approverName: string) {
   return page(`
-    <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Reject request</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">
-      Hi <strong style="color:#0A1F44;">${approverName}</strong>, you are rejecting the approval request for
-      <strong style="color:#0A1F44;">${opportunityName}</strong>.
+    <h2 style="margin:0 0 4px;font-size:20px;color:#001E96;">Reject request</h2>
+    <p style="margin:0 0 20px;font-size:13px;color:#7B7C7F;">
+      Hi <strong style="color:#001E96;">${approverName}</strong>, you are rejecting the approval request for
+      <strong style="color:#001E96;">${opportunityName}</strong>.
     </p>
     <form method="POST" action="/api/approvals/email-action">
       <input type="hidden" name="token" value="${token}" />
-      <label style="display:block;font-size:12px;color:#6B7591;margin-bottom:6px;font-weight:600;">
-        Reason for rejection <span style="color:#9AA3B8;font-weight:400;">(optional)</span>
+      <label style="display:block;font-size:12px;color:#7B7C7F;margin-bottom:6px;font-weight:600;">
+        Reason for rejection <span style="color:#A5A7AA;font-weight:400;">(optional)</span>
       </label>
       <textarea
         name="reason"
         rows="4"
         placeholder="Enter your reason here…"
-        style="width:100%;box-sizing:border-box;border:1px solid #D6DCE8;border-radius:8px;padding:10px 12px;font-size:13px;color:#0A1F44;font-family:inherit;resize:vertical;outline:none;"
+        style="width:100%;box-sizing:border-box;border:1px solid #D6DCE8;border-radius:8px;padding:10px 12px;font-size:13px;color:#001E96;font-family:inherit;resize:vertical;outline:none;"
       ></textarea>
       <div style="margin-top:16px;">
         <button type="submit" style="width:100%;padding:11px 0;background:#DC2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.02em;">
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
       'approved',
       'Approved.',
       approval.opportunity.opportunityId,
-      `You have approved the request for <strong style="color:#0A1F44;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
+      `You have approved the request for <strong style="color:#001E96;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
     )
   }
 
@@ -238,6 +238,6 @@ export async function POST(req: NextRequest) {
     'rejected',
     'Rejected.',
     approval.opportunity.opportunityId,
-    `You have rejected the request for <strong style="color:#0A1F44;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
+    `You have rejected the request for <strong style="color:#001E96;">${approval.opportunity.opportunityName}</strong>. The requester has been notified.`,
   )
 }
