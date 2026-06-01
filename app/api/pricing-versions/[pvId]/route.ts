@@ -68,6 +68,9 @@ export async function GET(
       },
       scheduleOfPayments: { orderBy: { month: 'asc' } },
       financialSnapshots: { orderBy: { month: 'asc' } },
+      // Include the parent opportunity's primaryLob so the FE can reflect the
+      // recomputed majority LoB after closing the drawer.
+      opportunity:        { select: { primaryLob: true } },
     },
   })
   if (!version) return apiError('PV_NOT_FOUND')
@@ -138,7 +141,13 @@ export async function PATCH(
         ...(body.revenueSharePct    != null && { revenueSharePct:     body.revenueSharePct     }),
       },
     })
-    return NextResponse.json(updated)
+    // Surface the current opp.primaryLob so the FE can stop relying on the
+    // stale page-load value when isFinal flips and the LoB is recomputed.
+    const opp = await prisma.opportunity.findUnique({
+      where:  { id: updated.opportunityId },
+      select: { primaryLob: true },
+    })
+    return NextResponse.json({ ...updated, opportunityPrimaryLob: opp?.primaryLob ?? null })
   } catch (err) {
     console.error(err)
     return apiError('OPP_UPDATE_FAILED')

@@ -2,7 +2,6 @@
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Image from 'next/image'
 
 const ERROR_MESSAGES = {
   not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
@@ -32,7 +31,10 @@ function LoginForm() {
 
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-          <Image src="/procdna-logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
+          {/* Plain <img> bypasses Next's image optimizer — the dark navy panel
+              + small 34px display occasionally tripped up the optimizer and
+              served the broken-image fallback on first load. */}
+          <img src="/procdna-logo.png" alt="ProcDNA" width={34} height={34} style={{ borderRadius: 6, objectFit: 'contain' }} />
           <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
             ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
           </span>

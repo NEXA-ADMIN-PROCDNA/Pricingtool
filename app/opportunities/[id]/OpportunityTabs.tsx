@@ -50,6 +50,10 @@ export function OpportunityTabs({
 
   type PricingVersion = OpportunityDetail['pricingVersions'][number]
   const [pricingVersions, setPricingVersions] = useState<PricingVersion[]>(opp.pricingVersions)
+  // Live primary LoB — opp.primaryLob is the page-load value and goes stale
+  // the moment a pricing version is (re-)marked as final and the route
+  // recomputes the majority-LoB on the server.
+  const [primaryLob, setPrimaryLob]           = useState<string | null>(opp.primaryLob ?? null)
   const [creatingVersion, setCreatingVersion] = useState(false)
   const [markingFinal, setMarkingFinal]       = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -58,7 +62,12 @@ export function OpportunityTabs({
     if (drawerVersion) {
       const res = await fetch(`/api/pricing-versions/${drawerVersion.id}`)
       if (res.ok) {
-        const updated = await res.json() as PricingVersion
+        const updated = await res.json() as PricingVersion & { opportunity?: { primaryLob?: string | null } }
+        // Pick up the server's recomputed primaryLob (only set when the
+        // pricing was marked final; otherwise stays as it was).
+        if (updated.opportunity?.primaryLob !== undefined) {
+          setPrimaryLob(updated.opportunity.primaryLob ?? null)
+        }
         // If the edited version came back as final, mirror the server's
         // sibling-unset locally — otherwise the previously-final version
         // would keep its stale isFinal:true in component state.
@@ -108,6 +117,12 @@ export function OpportunityTabs({
         body: JSON.stringify({ isFinal: true }),
       })
       if (!res.ok) { toast.error('Failed to mark version as final'); return }
+      // The route returns the recomputed opportunity.primaryLob in
+      // opportunityPrimaryLob — apply it so the Details tab updates.
+      const body = await res.json() as { opportunityPrimaryLob?: string | null }
+      if (body.opportunityPrimaryLob !== undefined) {
+        setPrimaryLob(body.opportunityPrimaryLob ?? null)
+      }
       setPricingVersions(prev => prev.map(v => ({ ...v, isFinal: v.id === versionId })))
       if (['LEAD', 'PRICE_LINKING_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED'].includes(oppStage)) {
         setOppStage('PRICE_LINKED')
@@ -375,10 +390,8 @@ export function OpportunityTabs({
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId} />
                 <Field label="Business Unit" value={opp.client.businessUnit} />
-                <Field label="Industry"     value={opp.client.industry} />
-                <Field label="Region"       value={opp.client.region} />
                 <Field label="Opp. Type"    value={opp.opportunityType === 'NEW' ? 'New Business' : 'Existing Client'} />
-                <Field label="LOB"          value={opp.primaryLob} />
+                <Field label="LOB"          value={primaryLob} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes ⭐' : 'No'} />
