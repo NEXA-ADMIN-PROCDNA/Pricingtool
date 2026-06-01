@@ -597,12 +597,28 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
                     }}>{revStr}</span>
                   </td>
 
-                  {/* Win % */}
+                  {/* Win % — bar tinted along a warm→cool HSL gradient
+                       (red at 0% → orange at 50% → green at 100%) so the
+                       visual reading matches the implied confidence. */}
                   <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
                     {prob !== null ? (
-                      <span style={{ ...MONO, fontSize: 12.5, color: C.inkSoft, fontVariantNumeric: 'tabular-nums' }}>
-                        {prob}%
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 64 }}>
+                        <span style={{ ...MONO, fontSize: 11, color: C.inkSoft, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em' }}>
+                          {prob}%
+                        </span>
+                        <div style={{
+                          width: '100%', height: 4,
+                          background: C.ruleSoft, borderRadius: 2,
+                          overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            width: `${Math.max(0, Math.min(100, prob))}%`,
+                            height: '100%',
+                            background: `hsl(${Math.round((prob / 100) * 120)}, 72%, 45%)`,
+                            transition: 'width 200ms',
+                          }} />
+                        </div>
+                      </div>
                     ) : (
                       <span style={{ color: C.inkFaint }}>—</span>
                     )}

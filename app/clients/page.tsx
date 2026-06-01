@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import { getClients, type ClientRow } from '@/lib/db/clients'
 
 export const dynamic = 'force-dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { AddClientModal } from './AddClientModal'
 import { AdminRequestsPanel } from './AdminRequestsPanel'
+import { ClientsBrowser } from './ClientsBrowser'
 
 // V8 palette — matches dashboard
 const C = {
@@ -27,10 +27,6 @@ const MONO: React.CSSProperties = {
 
 const SERIF: React.CSSProperties = {
   fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
-}
-
-function initials(name: string) {
-  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
 function KPIStrip({ clients }: { clients: ClientRow[] }) {
@@ -86,171 +82,7 @@ function KPIStrip({ clients }: { clients: ClientRow[] }) {
   )
 }
 
-function ClientCard({ client }: { client: ClientRow }) {
-  return (
-    <Link
-      href={`/clients/${client.clientId}`}
-      style={{
-        background: '#ffffff',
-        border: `1px solid ${C.inkMuted}`,
-        borderTop: `3px solid ${C.ink}`,
-        boxShadow: `0 1px 0 ${C.rule}, 4px 4px 0 -1px ${C.bgSoft}`,
-        textDecoration: 'none',
-        display: 'block',
-        transition: 'border-color 120ms, background 120ms, box-shadow 120ms, transform 120ms',
-      }}
-      className="hover:border-[#005CD9] hover:bg-[#FAFBFE] hover:[border-top-color:#005CD9] hover:-translate-y-0.5"
-    >
-      {/* Card header — ID + Industry */}
-      <div style={{
-        padding: '12px 16px 10px',
-        borderBottom: `1px solid ${C.rule}`,
-        background: C.bgSoft,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-      }}>
-        <span style={{
-          ...MONO,
-          fontSize: 10.5,
-          color: C.inkMuted,
-          letterSpacing: '0.08em',
-        }}>{client.clientId}</span>
-        {client.industry && (
-          <span style={{
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: 9.5,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: C.inkMuted,
-            fontWeight: 500,
-            padding: '2px 8px',
-            border: `1px solid ${C.rule}`,
-            whiteSpace: 'nowrap',
-          }}>{client.industry}</span>
-        )}
-      </div>
-
-      {/* Body */}
-      <div style={{ padding: '16px 16px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{
-            width: 40, height: 40, flexShrink: 0,
-            background: C.accentSoft, color: C.accentDeep,
-            display: 'grid', placeItems: 'center',
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: 12, fontWeight: 700, letterSpacing: '-0.01em',
-          }}>
-            {initials(client.name)}
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{
-              ...SERIF,
-              fontSize: 19,
-              fontWeight: 400,
-              letterSpacing: '-0.01em',
-              color: C.ink,
-              lineHeight: 1.15,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>{client.name}</div>
-          </div>
-        </div>
-
-        {/* Metric row */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          borderTop: `1px solid ${C.ruleSoft}`,
-          borderBottom: `1px solid ${C.ruleSoft}`,
-          marginBottom: 14,
-        }}>
-          <div style={{ padding: '10px 0', borderRight: `1px solid ${C.ruleSoft}` }}>
-            <div style={{
-              ...SERIF, fontSize: 24, color: C.ink, lineHeight: 1,
-              fontVariantNumeric: 'tabular-nums',
-            }}>{client._count.opportunities}</div>
-            <div style={{
-              fontFamily: "'Inter', system-ui, sans-serif", fontSize: 9.5,
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: C.inkMuted, marginTop: 4, fontWeight: 500,
-            }}>Deals</div>
-          </div>
-          <div style={{ padding: '10px 0 10px 14px' }}>
-            <div style={{
-              ...SERIF, fontSize: 24, color: C.ink, lineHeight: 1,
-              fontVariantNumeric: 'tabular-nums',
-            }}>{client.pocs.length}</div>
-            <div style={{
-              fontFamily: "'Inter', system-ui, sans-serif", fontSize: 9.5,
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: C.inkMuted, marginTop: 4, fontWeight: 500,
-            }}>Contacts</div>
-          </div>
-        </div>
-
-        {/* POC list */}
-        {client.pocs.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {client.pocs.slice(0, 2).map(poc => (
-              <div key={poc.id} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: 12, color: C.inkSoft,
-              }}>
-                <div style={{
-                  width: 18, height: 18, borderRadius: 999,
-                  background: C.bgSoft, color: C.inkMuted,
-                  display: 'grid', placeItems: 'center',
-                  fontSize: 8.5, fontWeight: 700, flexShrink: 0,
-                }}>{initials(poc.name)}</div>
-                <span style={{
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
-                }}>
-                  {poc.name}
-                  {poc.jobTitle && (
-                    <span style={{ color: C.inkFaint, fontWeight: 400 }}> · {poc.jobTitle}</span>
-                  )}
-                </span>
-              </div>
-            ))}
-            {client.pocs.length > 2 && (
-              <div style={{
-                ...MONO, fontSize: 10, color: C.inkFaint, paddingLeft: 26,
-                letterSpacing: '0.06em',
-              }}>+{client.pocs.length - 2} MORE</div>
-            )}
-          </div>
-        ) : (
-          <div style={{
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: 12, color: C.inkFaint, fontStyle: 'italic',
-          }}>No POC contacts on file.</div>
-        )}
-
-        {/* Footer metadata */}
-        {(client.region || client.businessUnit) && (
-          <div style={{
-            marginTop: 14,
-            paddingTop: 12,
-            borderTop: `1px solid ${C.ruleSoft}`,
-            display: 'flex', gap: 16, flexWrap: 'wrap',
-            ...MONO,
-            fontSize: 10,
-            color: C.inkFaint,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}>
-            {client.region && <span>{client.region}</span>}
-            {client.businessUnit && <span>· {client.businessUnit}</span>}
-          </div>
-        )}
-      </div>
-    </Link>
-  )
-}
+// ClientCard moved to ClientsBrowser.tsx since it's only consumed there now.
 
 export default async function ClientsPage() {
   const clients = await getClients()
@@ -312,46 +144,8 @@ export default async function ClientsPage() {
           {/* KPI strip */}
           <KPIStrip clients={clients} />
 
-          {/* Section heading — matches dashboard editorial style */}
-          <div style={{
-            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-            padding: '20px 0 12px',
-            borderBottom: `1.5px solid ${C.ink}`,
-            marginBottom: 18,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-              <h2 style={{
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: 11,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: C.ink,
-                fontWeight: 600,
-                margin: 0,
-              }}>All Clients</h2>
-              <span style={{
-                ...MONO, fontSize: 10.5, color: C.inkFaint, letterSpacing: '0.08em',
-              }}>{String(clients.length).padStart(2, '0')} TOTAL</span>
-            </div>
-          </div>
-
-          {/* Client cards grid */}
-          {clients.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {clients.map(client => (
-                <ClientCard key={client.id} client={client} />
-              ))}
-            </div>
-          ) : (
-            <div style={{
-              padding: '80px 0',
-              textAlign: 'center',
-              fontFamily: "'Inter', system-ui, sans-serif",
-              fontSize: 14, color: C.inkMuted,
-            }}>
-              No clients yet. Submit a request using the button above.
-            </div>
-          )}
+          {/* Search bar + autocomplete dropdown + filtered grid */}
+          <ClientsBrowser clients={clients} />
         </div>
       </div>
     </div>

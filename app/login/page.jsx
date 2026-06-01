@@ -49,22 +49,48 @@ function LoginForm() {
           </span>
         </div>
 
-        {/* Headline — NEXA acronym expansion. Capital letters that spell
-            N-E-X-A get bumped up in size and tinted to the brand highlight. */}
+        {/* Headline — NEXA acronym expansion, one letter per line. The
+            capital that opens each word is bumped to ~1.5× and tinted to the
+            brand highlight; the rest of the word follows on the same row in
+            the regular white serif. */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           {(() => {
-            const baseStyle = { fontFamily: serif, fontSize: 30, color: '#fff', lineHeight: 1.25, fontWeight: 400 }
-            const bigStyle  = { fontSize: '1.55em', color: '#4D9EFF', lineHeight: 0.9, fontWeight: 500 }
+            const rowStyle = {
+              fontFamily: serif,
+              fontSize: 26,
+              color: '#fff',
+              lineHeight: 1.05,
+              fontWeight: 400,
+              letterSpacing: '0.3px',
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 4,
+            }
+            const bigStyle = {
+              fontSize: '1.55em',
+              color: '#4D9EFF',
+              fontWeight: 500,
+              lineHeight: 1,
+            }
+            const tail = '#fff'
             return (
-              <h1 style={{ ...baseStyle, marginBottom: 14, letterSpacing: '0.5px' }}>
-                <span style={bigStyle}>N</span>ew{' '}
-                <span style={bigStyle}>E</span>ngagement<br />
-                and e<span style={bigStyle}>X</span>pense{' '}
-                <span style={bigStyle}>A</span>ccruals
+              <h1 style={{ margin: 0, padding: 0 }}>
+                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
+                  <span style={bigStyle}>N</span><span style={{ color: tail }}>ew</span>
+                </span>
+                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
+                  <span style={bigStyle}>E</span><span style={{ color: tail }}>ngagement&nbsp;and</span>
+                </span>
+                <span style={{ ...rowStyle, display: 'block', marginBottom: 6 }}>
+                  <span style={{ color: tail }}>e</span><span style={bigStyle}>X</span><span style={{ color: tail }}>pense</span>
+                </span>
+                <span style={{ ...rowStyle, display: 'block' }}>
+                  <span style={bigStyle}>A</span><span style={{ color: tail }}>ccruals</span>
+                </span>
               </h1>
             )
           })()}
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: 280, marginTop: 18 }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, maxWidth: 280, marginTop: 22 }}>
             Request, review, and approve engagement expenses with full visibility at every step.
           </p>
         </div>
