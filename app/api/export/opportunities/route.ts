@@ -30,8 +30,14 @@ async function getGraphToken(): Promise<string> {
   return token
 }
 
+// Cap the export to the most recent N opportunities (createdAt desc) so the
+// generated workbook and the serverless build stay bounded regardless of how
+// large the pipeline grows.
+const MAX_EXPORT_ROWS = 5000
+
 async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
   const opps = await prisma.opportunity.findMany({
+    take: MAX_EXPORT_ROWS,
     include: {
       client: { include: { pocs: { take: 1 } } },
       owner:  true,

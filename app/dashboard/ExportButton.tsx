@@ -36,11 +36,23 @@ export function ExportButton() {
     }
   }
 
-  // Download button — always visible, opens GET endpoint directly
+  // Builds a filesystem-safe, timestamped download name (no colons, for Windows).
+  // e.g. NEXA_Export_2026-06-02_15-30-45.xlsx
+  function downloadName() {
+    const d = new Date()
+    const p = (n: number) => String(n).padStart(2, '0')
+    const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`
+    return `NEXA_Export_${stamp}.xlsx`
+  }
+
+  // Download button — always visible, opens GET endpoint directly.
+  // The download name is set at click time so the timestamp reflects the
+  // moment of download rather than when the page was rendered.
   const DownloadBtn = () => (
     <a
       href="/api/export/opportunities"
-      download="opportunities.xlsx"
+      download="NEXA_Export.xlsx"
+      onClick={e => { e.currentTarget.download = downloadName() }}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '10px 14px', borderRadius: 4,
