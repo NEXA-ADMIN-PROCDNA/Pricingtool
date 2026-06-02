@@ -49,12 +49,13 @@ function FileIcon({ mime }: { mime: string | null }) {
 }
 
 function DocUploadSection({
-  title, description, apiPath, onDocCountChange,
+  title, description, apiPath, onDocCountChange, disabled = false,
 }: {
   title: string
   description: string
   apiPath: string
   onDocCountChange: (count: number) => void
+  disabled?: boolean
 }) {
   const [docs, setDocs]           = useState<Doc[] | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -160,6 +161,7 @@ function DocUploadSection({
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault(); setDragOver(false)
+    if (disabled) return
     const file = e.dataTransfer.files[0]
     if (file) uploadFile(file)
   }
@@ -170,26 +172,30 @@ function DocUploadSection({
       <p style={{ fontSize: 12, color: '#7B7C7F', marginTop: 2 }}>{description}</p>
 
       <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+        onDragOver={e => { e.preventDefault(); if (!disabled) setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (!disabled && !uploading) inputRef.current?.click() }}
         style={{
           marginTop: 16,
-          border: `2px dashed ${dragOver ? '#005CD9' : '#D6DCE8'}`,
+          border: `2px dashed ${disabled ? '#E2E6EE' : dragOver ? '#005CD9' : '#D6DCE8'}`,
           borderRadius: 10, padding: '28px 24px', textAlign: 'center',
-          cursor: uploading ? 'not-allowed' : 'pointer',
-          background: dragOver ? '#EBF2FF' : '#F9FAFB',
-          transition: 'all 150ms', opacity: uploading ? 0.6 : 1,
+          cursor: disabled || uploading ? 'not-allowed' : 'pointer',
+          background: disabled ? '#F4F6FB' : dragOver ? '#EBF2FF' : '#F9FAFB',
+          transition: 'all 150ms', opacity: disabled ? 0.6 : uploading ? 0.6 : 1,
         }}
       >
         <input ref={inputRef} type="file"
           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
           style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = '' }}
-          disabled={uploading}
+          disabled={uploading || disabled}
         />
-        {uploading ? (
+        {disabled ? (
+          <p style={{ fontSize: 12.5, color: '#7B7C7F', lineHeight: 1.5 }}>
+            Disabled — uncheck <strong>“Proceed with pre-contract agreement”</strong> to upload SoW / PO documents.
+          </p>
+        ) : uploading ? (
           <p style={{ fontSize: 13, color: '#7B7C7F' }}>Uploading…</p>
         ) : (
           <>
@@ -285,7 +291,11 @@ export function TabSoW({
   const [submitError, setSubmitError]   = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen]   = useState(false)
 
-  const anyCondition = precontract || sowCount > 0 || poCount > 0
+  // Pre-contract agreement and SoW/PO documents are mutually exclusive routes:
+  // either the deal proceeds on a pre-contract agreement, OR it has SoW/PO docs —
+  // never both. (SoW + PO together is fine.)
+  const hasDocs = sowCount > 0 || poCount > 0
+  const anyCondition = precontract || hasDocs
   const canSubmit = anyCondition && (!verification || verification.status === 'REJECTED')
 
   useEffect(() => {
@@ -295,6 +305,11 @@ export function TabSoW({
   }, [])
 
   async function togglePreContract(checked: boolean) {
+    // Block enabling pre-contract while SoW/PO docs exist (mutually exclusive).
+    if (checked && hasDocs) {
+      toast.error('Remove uploaded SoW / PO documents before choosing pre-contract agreement.')
+      return
+    }
     setPrecontract(checked)
     setSaving(true)
     const res = await fetch(`/api/opportunities/${opportunityId}`, {
@@ -422,9 +437,9 @@ export function TabSoW({
         padding: '14px 16px', borderRadius: 8,
         border: `1.5px solid ${precontract ? '#005CD9' : '#D6DCE8'}`,
         background: precontract ? '#F0F5FF' : '#F9FAFB',
-        cursor: saving ? 'not-allowed' : 'pointer',
-        transition: 'all 150ms', marginBottom: 28,
-        userSelect: 'none', opacity: saving ? 0.7 : 1,
+        cursor: saving || hasDocs ? 'not-allowed' : 'pointer',
+        transition: 'all 150ms', marginBottom: hasDocs ? 8 : 28,
+        userSelect: 'none', opacity: saving ? 0.7 : hasDocs ? 0.55 : 1,
       }}>
         <div style={{
           width: 18, height: 18, borderRadius: 4, flexShrink: 0,
@@ -441,7 +456,7 @@ export function TabSoW({
         </div>
         <input type="checkbox" checked={precontract}
           onChange={e => togglePreContract(e.target.checked)}
-          disabled={saving} style={{ display: 'none' }}
+          disabled={saving || hasDocs} style={{ display: 'none' }}
         />
         <span style={{ fontSize: 13, fontWeight: 500, color: precontract ? '#1A3E8A' : '#3A4A6A' }}>
           Proceed with pre-contract agreement
@@ -449,12 +464,19 @@ export function TabSoW({
         {saving && <span style={{ fontSize: 11, color: '#A5A7AA', marginLeft: 'auto' }}>Saving…</span>}
       </label>
 
+      {hasDocs && (
+        <p style={{ fontSize: 11.5, color: '#7B7C7F', lineHeight: 1.5, margin: '0 0 28px' }}>
+          Unavailable while SoW / PO documents are uploaded — pre-contract agreement and SoW / PO are mutually exclusive.
+        </p>
+      )}
+
       {/* ── 2. SoW upload ── */}
       <DocUploadSection
         title="Statement of Work"
         description="Upload the signed SoW document after pricing approval. PDF, Word, and Excel files accepted · max 49 MB."
         apiPath={`/api/opportunities/${opportunityId}/sow`}
         onDocCountChange={setSowCount}
+        disabled={precontract}
       />
 
       <div style={{ borderTop: '1px solid #E8ECF4', margin: '32px 0' }} />
@@ -465,6 +487,7 @@ export function TabSoW({
         description="Upload the PO received from the client. PDF, Word, and Excel files accepted · max 49 MB."
         apiPath={`/api/opportunities/${opportunityId}/po`}
         onDocCountChange={setPoCount}
+        disabled={precontract}
       />
 
       {/* ── Submit for verification ── */}
