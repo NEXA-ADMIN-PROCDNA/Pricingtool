@@ -28,7 +28,7 @@ function Field({ label, value, wide }: { label: string; value?: string | null; w
 }
 
 const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
-  PENDING:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  PENDING:   'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
   APPROVED:  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
   REJECTED:  'bg-red-50 text-red-700 ring-1 ring-red-200',
   WITHDRAWN: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
@@ -902,42 +902,42 @@ export function OpportunityTabs({
 
             // ── In-flight approval ────────────────────────────────
             if (stage === 'APPROVAL_PENDING') return (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm flex items-start gap-4">
-                <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <div className="rounded-lg border border-slate-200 border-l-[3px] border-l-blue-700 bg-white p-5 shadow-sm flex items-start gap-3.5">
+                <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                     <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-amber-800 mb-1">Approval Pending</p>
-                  <p className="text-sm text-amber-700">
-                    Awaiting decision from <strong>{(pendingPricing as any)?.approver?.name ?? 'the approver'}</strong>.
+                  <p className="text-sm font-semibold text-slate-800 mb-1">Approval Pending</p>
+                  <p className="text-sm text-slate-500">
+                    Awaiting decision from <strong className="text-slate-700">{(pendingPricing as any)?.approver?.name ?? 'the approver'}</strong>.
                     They have received an email with Approve / Reject buttons.
                   </p>
                   {sessionUserId === opp.ownerId && pendingPricing && (
                     <div className="mt-4">
                       {withdrawConfirm ? (
                         <div className="flex flex-col gap-2">
-                          <span className="text-xs text-amber-800 font-semibold">Withdraw this request?</span>
+                          <span className="text-xs text-slate-700 font-semibold">Withdraw this request?</span>
                           <textarea
                             value={withdrawReason}
                             onChange={e => setWithdrawReason(e.target.value)}
                             placeholder="Reason for withdrawal (optional)"
                             rows={2}
-                            className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 resize-none focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 resize-none focus:outline-none focus:ring-1 focus:ring-slate-400"
                           />
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => withdrawApproval((pendingPricing as any).id)}
                               disabled={withdrawing}
-                              className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                              className="rounded-md px-3 py-1.5 text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
                             >
                               {withdrawing ? 'Withdrawing…' : 'Yes, withdraw'}
                             </button>
                             <button
                               onClick={() => { setWithdrawConfirm(false); setWithdrawReason('') }}
                               disabled={withdrawing}
-                              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+                              className="rounded-md px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition-colors"
                             >
                               Cancel
                             </button>
@@ -946,7 +946,7 @@ export function OpportunityTabs({
                       ) : (
                         <button
                           onClick={() => setWithdrawConfirm(true)}
-                          className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
+                          className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
                         >
                           Withdraw Approval
                         </button>
@@ -965,22 +965,22 @@ export function OpportunityTabs({
                 ? new Date(decidedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                 : null
               return (
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <div className="rounded-lg border border-slate-200 border-l-[3px] border-l-emerald-600 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <div className="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center shrink-0">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
                         <path d="M20 6L9 17l-5-5"/>
                       </svg>
                     </div>
-                    <p className="text-sm font-semibold text-emerald-800">Pricing Approved</p>
+                    <p className="text-sm font-semibold text-slate-800">Pricing Approved</p>
                   </div>
-                  <p className="text-sm text-emerald-700 mb-4">
-                    Approved by <strong>{approvedBy ?? 'the approver'}</strong>{approvedAt ? ` on ${approvedAt}` : ''}.
+                  <p className="text-sm text-slate-500 mb-4">
+                    Approved by <strong className="text-slate-700">{approvedBy ?? 'the approver'}</strong>{approvedAt ? ` on ${approvedAt}` : ''}.
                   </p>
-                  <div className="rounded-xl bg-white border border-emerald-200 p-4 mb-3">
+                  <div className="rounded-md bg-slate-50 border border-slate-200 p-4 mb-3">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Next Step</p>
-                    <p className="text-sm text-slate-700">
-                      Go to the <strong>SOW / PO</strong> tab to upload the signed Statement of Work and Purchase Order, then submit for verification.
+                    <p className="text-sm text-slate-600">
+                      Go to the <strong className="text-slate-800">SOW / PO</strong> tab to upload the signed Statement of Work and Purchase Order, then submit for verification.
                     </p>
                   </div>
                   <p className="text-xs text-slate-400">
@@ -992,8 +992,8 @@ export function OpportunityTabs({
 
             // ── Past pricing stage entirely ───────────────────────
             if (['SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'].includes(stage)) return (
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
-                <p className="text-sm text-slate-400">Pricing is approved and the engagement is progressing. No further pricing action is needed here.</p>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-5 text-center">
+                <p className="text-sm text-slate-500">Pricing is approved and the engagement is progressing. No further pricing action is needed here.</p>
               </div>
             )
 
@@ -1001,21 +1001,21 @@ export function OpportunityTabs({
             return (
               <>
                 {wasRejected && (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
-                    <p className="text-sm text-red-800">
-                      <strong>Approval was rejected.</strong> Review the rejection reason in the history below, revise the pricing if needed, then resubmit.
+                  <div className="rounded-lg border border-slate-200 border-l-[3px] border-l-red-500 bg-red-50/60 p-4">
+                    <p className="text-sm text-slate-700">
+                      <strong className="text-red-700">Approval was rejected.</strong> Review the rejection reason in the history below, revise the pricing if needed, then resubmit.
                     </p>
                   </div>
                 )}
                 {isInvalidated && !wasRejected && (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-sm text-amber-800">
-                      <strong>Previous approval invalidated.</strong> A different pricing version was marked as final after{' '}
-                      <strong>{(approvedPricing as any)?.approver?.name}</strong> approved. Submit a new request below for the updated pricing.
+                  <div className="rounded-lg border border-slate-200 border-l-[3px] border-l-slate-400 bg-slate-50 p-4">
+                    <p className="text-sm text-slate-700">
+                      <strong className="text-slate-800">Previous approval invalidated.</strong> A different pricing version was marked as final after{' '}
+                      <strong className="text-slate-800">{(approvedPricing as any)?.approver?.name}</strong> approved. Submit a new request below for the updated pricing.
                     </p>
                   </div>
                 )}
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
                   <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
                     {isReapproval ? 'Re-request Approval' : 'Request Approval'}
                   </h2>
@@ -1053,14 +1053,14 @@ export function OpportunityTabs({
                         value={businessJustification}
                         onChange={e => setBusinessJustification(e.target.value)}
                         placeholder="Explain why this pricing should be approved…"
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
+                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 resize-none"
                       />
                     </div>
                     <div className="flex justify-end">
                       <button
                         onClick={() => setApprovalConfirm(true)}
                         disabled={!approverId || !businessJustification.trim() || approvalLoading}
-                        className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                        className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                       >
                         {isReapproval ? 'Send Re-approval Request' : 'Send Request'}
                       </button>
@@ -1076,13 +1076,13 @@ export function OpportunityTabs({
 
           {/* Existing approvals */}
           {approvals.length > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
                 Approval History ({approvals.length})
               </h2>
               <div className="space-y-3">
                 {approvals.map((ar: any) => (
-                  <div key={ar.id} className="rounded-xl border border-slate-100 p-4">
+                  <div key={ar.id} className="rounded-md border border-slate-200 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -1121,8 +1121,8 @@ export function OpportunityTabs({
           )}
 
           {approvals.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-              <p className="text-slate-400 text-sm">No approval requests yet.</p>
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
+              <p className="text-slate-500 text-sm">No approval requests yet.</p>
             </div>
           )}
         </div>
@@ -1249,18 +1249,18 @@ export function OpportunityTabs({
       {/* ── Tab: Comments ────────────────────────────────────── */}
       {tab === 'Comments' && (
         <div className="max-w-2xl space-y-5">
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
 
             {/* Thread */}
             {comments.length === 0 ? (
               <div className="px-6 py-10 text-center">
-                <p className="text-sm text-slate-400">No comments yet. Be the first to add one.</p>
+                <p className="text-sm text-slate-500">No comments yet. Be the first to add one.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-50 px-6 pt-6 pb-2 space-y-4">
+              <div className="divide-y divide-slate-100 px-6 pt-6 pb-2 space-y-4">
                 {comments.map((c: any) => (
                   <div key={c.id} className="flex gap-3 pb-4">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 text-xs font-bold text-white">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white" style={{ background: '#001E96' }}>
                       {c.author.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1272,22 +1272,22 @@ export function OpportunityTabs({
                           {new Date(c.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600 bg-slate-50 rounded-xl rounded-tl-none px-3 py-2 whitespace-pre-wrap">
+                      <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-3 py-2 whitespace-pre-wrap">
                         {c.content}
                       </p>
                       {c.replies?.map((r: any) => (
                         <div key={r.id} className="mt-2 ml-4 flex gap-2">
-                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-bold text-slate-600">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[9px] font-semibold text-slate-600">
                             {r.author.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5 mb-0.5">
                               <p className="text-[10px] font-semibold text-slate-500">{r.author.name}</p>
-                              <span className="text-[9px] text-slate-300">
+                              <span className="text-[9px] text-slate-400">
                                 {new Date(r.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5">{r.content}</p>
+                            <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5">{r.content}</p>
                           </div>
                         </div>
                       ))}
@@ -1298,7 +1298,7 @@ export function OpportunityTabs({
             )}
 
             {/* Compose box */}
-            <div className="border-t border-slate-100 bg-slate-50/60 px-6 py-4">
+            <div className="border-t border-slate-200 bg-slate-50/60 px-6 py-4">
               <textarea
                 rows={3}
                 placeholder="Add a comment…"
@@ -1307,14 +1307,14 @@ export function OpportunityTabs({
                 onKeyDown={e => {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment()
                 }}
-                className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-colors"
+                className="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-colors"
               />
               <div className="flex items-center justify-between mt-2">
-                <span className="text-[10px] text-slate-300">⌘ Enter to post</span>
+                <span className="text-[10px] text-slate-400">⌘ Enter to post</span>
                 <button
                   onClick={submitComment}
                   disabled={!newComment.trim() || commentLoading}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-40 transition-colors"
                 >
                   {commentLoading ? 'Posting…' : 'Post Comment'}
                 </button>
