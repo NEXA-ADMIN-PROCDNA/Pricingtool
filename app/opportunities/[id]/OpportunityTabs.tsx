@@ -34,6 +34,16 @@ const APPROVAL_COLORS: Record<ApprovalStatus, string> = {
   WITHDRAWN: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
 }
 
+// Full LoB names for the Details tab (other tabs keep the short codes).
+const LOB_LABELS: Record<string, string> = {
+  TECH:      'Technology',
+  ANALYTICS: 'Analytics',
+  MS:        'Managed Services',
+  DS:        'Data Science',
+  DESIGN:    'Design',
+  AUXO:      'Auxo',
+}
+
 // ── Tab bar ──────────────────────────────────────────────────────
 const TABS = ['Details', 'Pricing', 'Pricing Approval', 'SOW / PO', 'Project Code', 'Comments'] as const
 type Tab = typeof TABS[number]
@@ -161,14 +171,21 @@ export function OpportunityTabs({
   const LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
   const pricingLocked = LOCKED_STAGES.includes(oppStage)
 
-  const SOW_UNLOCKED_STAGES = new Set(['SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'])
+  // SoW/PO unlocks once a pricing approval request has been submitted (stage
+  // APPROVAL_PENDING onward) and stays accessible afterwards — even if that
+  // request is later rejected/withdrawn (stage reverts to PRICE_LINKED) — as
+  // long as a pricing approval request was ever submitted.
+  const SOW_UNLOCKED_STAGES = new Set(['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'])
   const tabDimmed = (t: Tab) => {
-    if (t === 'SOW / PO')       return !SOW_UNLOCKED_STAGES.has(oppStage)
+    if (t === 'SOW / PO') {
+      const pricingRequested = approvals.some((ar: any) => ar.approvalType === 'PRICING')
+      return !(pricingRequested || SOW_UNLOCKED_STAGES.has(oppStage))
+    }
     if (t === 'Project Code')   return oppStage !== 'TO_BE_ARCHIVED'
     return false
   }
   const tabTooltip = (t: Tab) => {
-    if (t === 'SOW / PO')     return 'Available after Pricing Approval'
+    if (t === 'SOW / PO')     return 'Available once a pricing approval request is submitted'
     if (t === 'Project Code') return 'Available after SOW Verification'
     return undefined
   }
@@ -391,7 +408,7 @@ export function OpportunityTabs({
                 <Field label="Client ID"    value={opp.client.clientId} />
                 <Field label="Business Unit" value={opp.client.businessUnit} />
                 <Field label="Owner"        value={opp.owner.name} />
-                <Field label="LOB"          value={primaryLob} />
+                <Field label="LOB"          value={primaryLob ? (LOB_LABELS[primaryLob] ?? primaryLob) : null} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />

@@ -546,6 +546,7 @@ export function ApprovalsInbox() {
   const [items, setItems]     = useState<ApprovalItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
+  const [view, setView]       = useState<'PENDING' | 'HISTORICAL'>('PENDING')
 
   useEffect(() => {
     fetch('/api/approvals')
@@ -661,53 +662,54 @@ export function ApprovalsInbox() {
           }}>{error}</div>
         )}
 
-        {/* ── Pending section ── */}
+        {/* ── Toggle + sections ── */}
         {!loading && !error && (
           <>
-            <SectionDivider label="Pending Decision" count={pending.length} />
-
-            {pending.length === 0 ? (
+            {/* Pending | Historical segmented toggle (ProcDNA theme) */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0 6px' }}>
               <div style={{
-                padding: '60px 0',
-                textAlign: 'center',
+                position: 'relative', display: 'inline-flex',
+                background: C.bgSoft, border: `1px solid ${C.rule}`,
+                borderRadius: 999, padding: 4,
               }}>
+                {/* Sliding indicator */}
                 <div style={{
-                  ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
-                  color: C.inkMuted, fontWeight: 500, marginBottom: 8,
-                }}>NEXA · Inbox</div>
-                <div style={{
-                  ...SANS, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.01em',
-                  marginBottom: 6,
-                }}>All clear.</div>
-                <div style={{ ...SANS, fontSize: 13, color: C.inkMuted }}>
-                  No approvals awaiting your decision.
-                </div>
+                  position: 'absolute', top: 4, bottom: 4,
+                  left: view === 'PENDING' ? 4 : '50%',
+                  width: 'calc(50% - 4px)',
+                  background: C.accent, borderRadius: 999,
+                  boxShadow: '0 1px 3px rgba(0,28,150,0.30)',
+                  transition: 'left 0.22s cubic-bezier(0.4,0,0.2,1)',
+                }} />
+                {([
+                  { key: 'PENDING'    as const, label: 'Pending',    count: pending.length },
+                  { key: 'HISTORICAL' as const, label: 'Historical', count: decided.length },
+                ]).map(opt => {
+                  const active = view === opt.key
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => setView(opt.key)}
+                      style={{
+                        position: 'relative', zIndex: 1,
+                        ...MONO, fontSize: 11, letterSpacing: '0.14em',
+                        textTransform: 'uppercase', fontWeight: 600,
+                        padding: '8px 26px', minWidth: 134,
+                        border: 'none', background: 'transparent',
+                        color: active ? '#fff' : C.inkMuted,
+                        cursor: 'pointer', transition: 'color 0.2s', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {opt.label} · {String(opt.count).padStart(2, '0')}
+                    </button>
+                  )
+                })}
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {pending.map(item => (
-                  <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
-                ))}
-              </div>
-            )}
+            </div>
 
-            {/* ── Decided section ── */}
-            {decided.length > 0 && (
-              <>
-                <SectionDivider label="Decision History" count={decided.length} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  {decided.map(item => (
-                    <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* ── Truly empty ── */}
-            {items.length === 0 && !loading && (
-              <div style={{
-                padding: '80px 0', textAlign: 'center',
-              }}>
+            {/* Truly empty — no requests at all */}
+            {items.length === 0 ? (
+              <div style={{ padding: '80px 0', textAlign: 'center' }}>
                 <div style={{
                   ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
                   color: C.inkMuted, fontWeight: 500, marginBottom: 8,
@@ -719,6 +721,56 @@ export function ApprovalsInbox() {
                   Approval requests assigned to you will appear here.
                 </div>
               </div>
+            ) : view === 'PENDING' ? (
+              <>
+                <SectionDivider label="Pending Decision" count={pending.length} />
+                {pending.length === 0 ? (
+                  <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                    <div style={{
+                      ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                      color: C.inkMuted, fontWeight: 500, marginBottom: 8,
+                    }}>NEXA · Inbox</div>
+                    <div style={{
+                      ...SANS, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.01em',
+                      marginBottom: 6,
+                    }}>All clear.</div>
+                    <div style={{ ...SANS, fontSize: 13, color: C.inkMuted }}>
+                      No approvals awaiting your decision.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {pending.map(item => (
+                      <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <SectionDivider label="Decision History" count={decided.length} />
+                {decided.length === 0 ? (
+                  <div style={{ padding: '60px 0', textAlign: 'center' }}>
+                    <div style={{
+                      ...MONO, fontSize: 10.5, letterSpacing: '0.18em', textTransform: 'uppercase',
+                      color: C.inkMuted, fontWeight: 500, marginBottom: 8,
+                    }}>NEXA · Inbox</div>
+                    <div style={{
+                      ...SANS, fontSize: 22, fontWeight: 600, color: C.ink, letterSpacing: '-0.01em',
+                      marginBottom: 6,
+                    }}>Nothing decided yet.</div>
+                    <div style={{ ...SANS, fontSize: 13, color: C.inkMuted }}>
+                      Approved, rejected, and withdrawn requests will appear here.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {decided.map(item => (
+                      <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
