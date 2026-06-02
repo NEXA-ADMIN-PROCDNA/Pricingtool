@@ -499,7 +499,7 @@ function ApprovalCard({
                      style={{ width: 12, height: 12 }}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
-                {loading ? 'Approving…' : isSow ? 'Verify & Mark Won' : 'Approve'}
+                {loading ? 'Approving…' : isSow ? 'Verify SoW/PO/PCA' : 'Approve'}
               </button>
               <button onClick={() => setRejecting(true)} disabled={loading}
                 style={{

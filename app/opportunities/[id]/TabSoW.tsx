@@ -381,7 +381,7 @@ export function TabSoW({
               </p>
 
               <p style={{ fontSize: 12.5, color: '#7B7C7F', lineHeight: 1.55, margin: '8px 0 0' }}>
-                On approval, the opportunity will be marked Won and routed to project code generation.
+                On approval, the opportunity advances to project code generation.
                 If returned, supporting documents may be updated and the request resubmitted.
               </p>
             </div>
@@ -414,22 +414,6 @@ export function TabSoW({
             </div>
           </div>
         </>
-      )}
-
-      {/* Won banner */}
-      {verification?.status === 'APPROVED' && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 14px', borderRadius: 8, marginBottom: 24,
-          background: '#F0FDF4', border: '1px solid #BBF7D0',
-        }}>
-          <svg viewBox="0 0 20 20" fill="#16A34A" style={{ width: 16, height: 16, flexShrink: 0 }}>
-            <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-          </svg>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#15803D' }}>
-            Verification approved — opportunity marked as <strong>Won</strong>
-          </span>
-        </div>
       )}
 
       {/* ── 1. Pre-contract agreement ── */}
@@ -520,7 +504,7 @@ export function TabSoW({
                 Submit for Verification
               </p>
               <p style={{ fontSize: 12, color: '#7B7C7F', marginBottom: 14 }}>
-                One or more conditions are met. Select an approver to verify and mark this opportunity as Won.
+                One or more conditions are met. Select an approver to verify.
               </p>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
