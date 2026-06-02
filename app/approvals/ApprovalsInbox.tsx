@@ -603,10 +603,6 @@ export function ApprovalsInbox() {
             textTransform: 'uppercase', color: C.inkMuted, fontWeight: 500,
             display: 'inline-flex', alignItems: 'center', gap: 8,
           }}>
-            <span style={{
-              width: 5, height: 5, background: C.accent,
-              display: 'inline-block', transform: 'rotate(45deg)',
-            }} />
             NEXA · Approvals Inbox
           </div>
           <h1 style={{

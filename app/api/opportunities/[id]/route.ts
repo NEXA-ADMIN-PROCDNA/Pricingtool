@@ -35,10 +35,15 @@ export async function PATCH(
     }
   }
 
-  if (body.status === 'OPEN' || body.status === 'WON') {
+  if (
+    body.status === 'OPEN' ||
+    body.status === 'WON' ||
+    body.status === 'LOST' ||
+    body.status === 'ABANDONED'
+  ) {
     await prisma.opportunity.update({
       where: { id: opp.id },
-      data:  { status: body.status },
+      data:  { status: body.status as 'OPEN' | 'WON' | 'LOST' | 'ABANDONED' },
     })
   }
 

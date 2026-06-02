@@ -430,6 +430,8 @@ export function OpportunityTabs({
                 >
                   <option value="OPEN">Open</option>
                   <option value="WON">Won</option>
+                  <option value="LOST">Lost</option>
+                  <option value="ABANDONED">Abandoned</option>
                 </select>
                 <StageBadge  stage={oppStage}   />
               </div>
@@ -759,7 +761,6 @@ export function OpportunityTabs({
                       fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
                       color: '#7B7C7F', fontWeight: 500, marginBottom: 14,
                     }}>
-                      <span style={{ width: 5, height: 5, background: '#005CD9', display: 'inline-block', transform: 'rotate(45deg)' }} />
                       NEXA · Confirmation
                     </div>
 

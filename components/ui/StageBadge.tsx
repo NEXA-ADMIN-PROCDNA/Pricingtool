@@ -1,5 +1,5 @@
 const config: Record<string, { label: string; classes: string }> = {
-  LEAD:                  { label: 'Lead',              classes: 'bg-slate-100 text-slate-600'   },
+  LEAD:                  { label: 'WLBU Pending',      classes: 'bg-slate-100 text-slate-600'   },
   PRICE_LINKING_PENDING: { label: 'Price Linking',     classes: 'bg-blue-50 text-blue-700'      },
   PRICE_LINKED:          { label: 'Price Linked',      classes: 'bg-indigo-50 text-indigo-700'  },
   APPROVAL_PENDING:      { label: 'Approval Pending',  classes: 'bg-amber-50 text-amber-700'    },

@@ -48,6 +48,12 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
         .sort((a, b) => b.pct - a.pct)
     : []
   const majorityDomain = domainPcts[0]?.domain
+  // Primary LOB = the dominant LoB from the revenue mix (the highlighted chip).
+  // Fall back to the opportunity's stored primaryLob when there's no staffing
+  // data yet to derive a mix.
+  const primaryLobLabel = majorityDomain
+    ? (DOMAIN_LABELS[majorityDomain] ?? majorityDomain)
+    : (opp.primaryLob ? (DOMAIN_LABELS[opp.primaryLob] ?? opp.primaryLob) : null)
 
   return (
     <div className="space-y-5">
@@ -61,7 +67,7 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
           <ReadField label="Opportunity Name" value={opp.opportunityName} />
           <ReadField label="Start Date"       value={new Date(opp.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />
           <ReadField label="End Date"         value={new Date(opp.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />
-          <ReadField label="Primary LOB"      value={opp.primaryLob} />
+          <ReadField label="Primary LOB"      value={primaryLobLabel} highlight />
         </dl>
       </div>
 

@@ -265,8 +265,8 @@ export function Sidebar() {
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="mt-2 w-full rounded-lg py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
-              style={{ border: '1px solid rgba(255,255,255,0.12)', color: '#A5A7AA' }}
+              className="mt-2 w-full rounded-lg py-1.5 text-xs font-semibold transition-colors hover:bg-red-500/15"
+              style={{ border: '1px solid rgba(239,68,68,0.55)', color: '#F87171' }}
             >
               Sign out
             </button>

@@ -9,6 +9,9 @@ import { OpportunityTable } from './OpportunityTable'
 import { SearchBar } from './SearchBar'
 import { ExportButton } from './ExportButton'
 import { OpportunityStatus } from '@prisma/client'
+import pkg from '../../package.json'
+
+const APP_VERSION = pkg.version
 
 // V8 palette
 const C = {
@@ -165,7 +168,7 @@ export default async function DashboardPage({
     getDashboardStats(auth),
   ])
 
-  const banner  = ROLE_BANNER[role] ?? { label: 'BD Tracker', restriction: '' }
+  const banner  = ROLE_BANNER[role] ?? { label: 'Nexa', restriction: '' }
 
   return (
     <MainLayout noPadding>
@@ -248,16 +251,7 @@ export default async function DashboardPage({
           )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#8B95B0', letterSpacing: '0.08em' }}>
-          <span
-            className="animate-pulse"
-            style={{
-              width: 7, height: 7, borderRadius: 999,
-              background: '#36A463',
-              boxShadow: '0 0 0 3px rgba(30,158,91,0.18)',
-              display: 'inline-block', flexShrink: 0,
-            }}
-          />
-          <span style={{ color: '#7DA6E3', fontWeight: 600 }}>LIVE</span>
+          <span style={{ color: '#7DA6E3', fontWeight: 600 }}>V{APP_VERSION}</span>
           <span style={{ color: '#56607A' }}>·</span>
           <span>AUTO-REFRESH ON LOAD</span>
         </div>

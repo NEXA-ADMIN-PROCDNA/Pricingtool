@@ -33,7 +33,7 @@ export default async function OpportunityDetailPage({
     <MainLayout>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate-500 mb-4 shrink-0">
-        <Link href="/dashboard" className="hover:text-indigo-600 transition-colors">BD Tracker</Link>
+        <Link href="/dashboard" className="hover:text-indigo-600 transition-colors">Nexa</Link>
         <span>/</span>
         <span className="font-mono text-indigo-600">{opp.opportunityId}</span>
       </div>

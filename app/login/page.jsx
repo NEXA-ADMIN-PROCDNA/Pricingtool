@@ -2,7 +2,7 @@
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { PROCDNA_LOGO_DATA_URL } from './_logo'
+import { PROCDNA_LOGO_DATA_URL, NEXA_LOGO_DATA_URL } from './_logo'
 
 const ERROR_MESSAGES = {
   not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
@@ -31,21 +31,23 @@ function LoginForm() {
         <div style={{ position: 'absolute', bottom: -60, left: -40, width: 240, height: 240, borderRadius: '50%', background: 'rgba(0,122,255,0.05)', pointerEvents: 'none' }} />
 
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
-          {/* The source PNG has an off-white grid background, so we frame it as
-              a white logo card on the navy panel — reads as an intentional
-              brand mark instead of a tiny half-blended square. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+          {/* White card frames the blue ProcDNA logo against the navy panel so
+              it stays high-contrast. The logo is wide, so the card sizes to the
+              artwork's aspect ratio rather than a fixed square. */}
           <div style={{
-            width: 44, height: 44, borderRadius: 10,
+            height: 46, borderRadius: 10,
             background: '#fff',
             display: 'grid', placeItems: 'center',
+            padding: '7px 13px',
             boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
             flexShrink: 0,
           }}>
-            <img src={PROCDNA_LOGO_DATA_URL} alt="ProcDNA" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+            <img src={PROCDNA_LOGO_DATA_URL} alt="ProcDNA" style={{ height: 30, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </div>
-          <span style={{ fontFamily: serif, fontSize: 22, color: '#fff', letterSpacing: '0.3px' }}>
-            ProcDNA <span style={{ color: '#4D9EFF' }}>NEXA</span>
+          {/* Logo already carries the ProcDNA wordmark, so the text is just the product name. */}
+          <span style={{ fontFamily: serif, fontSize: 22, color: '#4D9EFF', letterSpacing: '0.3px' }}>
+            NEXA
           </span>
         </div>
 
@@ -106,7 +108,10 @@ function LoginForm() {
       <div style={{ flex: 1, background: '#fff', padding: '48px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
 
         <div style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0B1C3D', letterSpacing: '-0.3px', marginBottom: 4 }}>Welcome to NEXA</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 600, color: '#0B1C3D', letterSpacing: '-0.3px', margin: 0 }}>Welcome to NEXA</h2>
+            <img src={NEXA_LOGO_DATA_URL} alt="NEXA" style={{ height: 36, width: 'auto', objectFit: 'contain', display: 'block', borderRadius: 6 }} />
+          </div>
           <span style={{ fontSize: 13, color: '#8A93A6', lineHeight: 1.5, display: 'block' }}>
             Sign in with your ProcDNA Microsoft account<br />to access the approval portal.
           </span>

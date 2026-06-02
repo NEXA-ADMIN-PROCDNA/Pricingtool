@@ -151,7 +151,9 @@ export async function getDashboardStats(auth?: AuthCtx) {
       _count: { _all: true },
     }),
     prisma.opportunity.findMany({
-      where: { isActive: true, ...ownerFilter },
+      // Lost/Abandoned opps stay visible (and get auto-archived later) but must
+      // not inflate pipeline/weighted revenue, so exclude them from the sum here.
+      where: { isActive: true, status: { notIn: ['LOST', 'ABANDONED'] }, ...ownerFilter },
       select: {
         estimatedRevenue:   true,
         probability:        true,

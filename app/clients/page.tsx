@@ -111,10 +111,6 @@ export default async function ClientsPage() {
               alignItems: 'center',
               gap: 8,
             }}>
-              <span style={{
-                width: 5, height: 5, background: C.accent,
-                display: 'inline-block', transform: 'rotate(45deg)',
-              }} />
               NEXA · Client Registry
             </div>
             <h1 style={{
