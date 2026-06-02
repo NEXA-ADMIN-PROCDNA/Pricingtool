@@ -353,6 +353,13 @@ export function OpportunityTabs({
                 color: '#001E96', fontWeight: 600,
               }}>Marking as Final</span>
             </div>
+            <p style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 12, color: '#7B7C7F', textAlign: 'center',
+              lineHeight: 1.5, margin: 0, maxWidth: 260,
+            }}>
+              It may take a couple of seconds depending upon the size of the opportunity / time window.
+            </p>
           </div>
         </div>
       )}

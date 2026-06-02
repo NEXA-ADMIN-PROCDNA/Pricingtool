@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEXA — Admin Guide</title>
+<style>
+  :root{
+    --ink:#001E96; --accent:#005CD9; --ink-soft:#3A4A6A;
+    --muted:#7B7C7F; --faint:#A5A7AA; --rule:#D6DCE8; --rule-soft:#E2E6EE;
+    --bg:#F4F6FB; --bg-soft:#EAEEF6;
+    --won:#36A463; --won-soft:#E1F1E9; --won-deep:#1F6B3C;
+    --warn:#B7791F; --warn-soft:#FBF3E2; --warn-deep:#8A5A0E;
+    --danger:#D6454A; --danger-soft:#FBE9E7; --danger-deep:#8A2A1F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink-soft);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;
+    line-height:1.6; font-size:15px;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:0 24px 80px;}
+  header.hero{
+    background:#0B1C3D; color:#fff; padding:44px 24px 38px; margin-bottom:36px;
+    border-bottom:3px solid var(--accent);
+  }
+  header.hero .inner{max-width:880px; margin:0 auto;}
+  .eyebrow{
+    font-family:'Courier New',monospace; font-size:11px; letter-spacing:0.22em;
+    text-transform:uppercase; color:#7DA6E3; font-weight:600; margin-bottom:10px;
+  }
+  header.hero h1{font-size:34px; font-weight:600; margin:0 0 8px; letter-spacing:-0.02em;}
+  header.hero p{margin:0; color:rgba(255,255,255,0.65); font-size:14px; max-width:560px;}
+  h2{
+    font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink);
+    font-weight:700; margin:44px 0 4px; padding-bottom:10px;
+    border-bottom:1.5px solid var(--ink); display:flex; align-items:baseline; gap:10px;
+  }
+  h2 .n{font-family:'Courier New',monospace; font-size:12px; color:var(--faint); font-weight:600;}
+  h3{font-size:16px; color:var(--ink); font-weight:600; margin:22px 0 6px;}
+  p{margin:8px 0;}
+  ul{margin:8px 0; padding-left:22px;} li{margin:5px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px; color:var(--ink-soft);}
+  .card{
+    background:#fff; border:1px solid var(--rule); border-radius:8px;
+    padding:18px 20px; margin:14px 0;
+  }
+  .callout{
+    border-radius:8px; padding:14px 16px 14px 16px; margin:14px 0;
+    border:1px solid var(--rule); border-left:3px solid var(--accent);
+    background:#fff; font-size:14px;
+  }
+  .callout .tag{
+    font-family:'Courier New',monospace; font-size:10.5px; letter-spacing:0.14em;
+    text-transform:uppercase; font-weight:700; display:block; margin-bottom:5px;
+  }
+  .callout.important{border-left-color:var(--danger); }
+  .callout.important .tag{color:var(--danger-deep);}
+  .callout.heads{border-left-color:var(--warn);}
+  .callout.heads .tag{color:var(--warn-deep);}
+  .callout.tip{border-left-color:var(--won);}
+  .callout.tip .tag{color:var(--won-deep);}
+  .callout.note .tag{color:var(--accent);}
+  .flow{
+    display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:14px 0;
+    font-family:'Courier New',monospace; font-size:12px;
+  }
+  .flow .stage{
+    background:var(--bg-soft); border:1px solid var(--rule); border-radius:999px;
+    padding:5px 12px; color:var(--ink); white-space:nowrap;
+  }
+  .flow .arr{color:var(--faint);}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14px;}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule-soft);}
+  th{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+  td:first-child{font-weight:600; color:var(--ink); white-space:nowrap;}
+  .toc{columns:2; column-gap:28px; font-size:14px; margin:6px 0 0;}
+  .toc a{color:var(--accent); text-decoration:none; display:block; padding:3px 0;}
+  .toc a:hover{text-decoration:underline;}
+  footer{margin-top:50px; padding-top:18px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--faint);}
+  code{font-family:'Courier New',monospace; background:var(--bg-soft); padding:1px 5px; border-radius:3px; font-size:13px; color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <div class="eyebrow">ProcDNA · NEXA</div>
+    <h1>Admin Guide</h1>
+    <p>How the Business Development &amp; Pricing tool works — the everyday features, the rules to remember, and the few things that can trip you up.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <strong>On this page</strong>
+    <div class="toc">
+      <a href="#lifecycle">1 · The opportunity lifecycle</a>
+      <a href="#status">2 · Status vs. Stage</a>
+      <a href="#lob">3 · Line of Business (auto)</a>
+      <a href="#pricing">4 · Pricing &amp; versions</a>
+      <a href="#approvals">5 · Approvals</a>
+      <a href="#sow">6 · SoW / PO &amp; pre-contract</a>
+      <a href="#clients">7 · Clients &amp; requests</a>
+      <a href="#ratecards">8 · Rate cards</a>
+      <a href="#sync">9 · Sync &amp; download (OneDrive)</a>
+      <a href="#limits">10 · Limits &amp; things to watch</a>
+    </div>
+  </div>
+
+  <p class="lead">NEXA tracks an opportunity from first lead all the way through pricing, approval, SoW/PO, and project-code generation. Most things happen automatically as a deal moves forward — this guide explains what to expect and where you need to take action.</p>
+
+  <!-- 1 -->
+  <h2 id="lifecycle"><span class="n">01</span> The opportunity lifecycle</h2>
+  <p>Every opportunity moves through a fixed sequence of <strong>stages</strong>. The stage advances on its own as you complete each step (create pricing, get approval, upload documents, etc.).</p>
+  <div class="flow">
+    <span class="stage">WLBU Pending</span><span class="arr">→</span>
+    <span class="stage">Price Linking</span><span class="arr">→</span>
+    <span class="stage">Price Linked</span><span class="arr">→</span>
+    <span class="stage">Approval Pending</span><span class="arr">→</span>
+    <span class="stage">SOW Pending</span><span class="arr">→</span>
+    <span class="stage">SOW Submitted</span><span class="arr">→</span>
+    <span class="stage">SOW Under Review</span><span class="arr">→</span>
+    <span class="stage">Archiving</span>
+  </div>
+  <p>Some tabs stay greyed-out until the deal reaches the right point — this is intentional, so steps happen in order. For example, the <strong>SOW / PO</strong> tab opens up once a pricing approval request has been submitted, and <strong>Project Code</strong> opens after SoW verification.</p>
+
+  <!-- 2 -->
+  <h2 id="status"><span class="n">02</span> Status vs. Stage — two different things</h2>
+  <p><strong>Stage</strong> is the workflow position (above) and moves automatically. <strong>Status</strong> is the business outcome and is set <em>manually</em> from the dropdown on the opportunity:</p>
+  <ul>
+    <li><strong>Open</strong> · <strong>Won</strong> · <strong>Lost</strong> · <strong>Abandoned</strong></li>
+  </ul>
+  <div class="callout note">
+    <span class="tag">Note</span>
+    Approving the SoW verification does <strong>not</strong> automatically mark a deal “Won”. Status is always a deliberate choice — set it yourself. (<strong>Lost</strong> and <strong>Abandoned</strong> opportunities are excluded from the pipeline-revenue figures on the dashboard.)
+  </div>
+
+  <!-- 3 -->
+  <h2 id="lob"><span class="n">03</span> Line of Business is computed for you</h2>
+  <p>You don’t pick a Line of Business when creating an opportunity. NEXA works it out automatically: it looks at the staffing mix in the <strong>final pricing version</strong> and takes the <strong>dominant (majority) LoB domain</strong> — the one carrying the largest share of the revenue mix.</p>
+  <ul>
+    <li>The opportunity’s Primary LoB fills in once you mark a pricing version as final.</li>
+    <li>In the pricing Details, the highlighted chip in the “LoB Revenue Mix” is the one used as the Primary LoB.</li>
+    <li>Full names are shown on the Details tab (e.g. <em>Managed Services</em>, <em>Data Science</em>) rather than the short codes.</li>
+  </ul>
+
+  <!-- 4 -->
+  <h2 id="pricing"><span class="n">04</span> Pricing &amp; versions</h2>
+  <ul>
+    <li>An opportunity can have <strong>several pricing versions</strong>; you mark one as <strong>final</strong>.</li>
+    <li>Once a version is final and the deal has entered approval, the pricing becomes <strong>read-only (locked)</strong> so numbers can’t shift mid-approval.</li>
+    <li>If pricing must change after approval, mark a different version final — this <strong>invalidates</strong> the previous approval and a fresh request is needed.</li>
+  </ul>
+  <div class="callout heads">
+    <span class="tag">Heads up</span>
+    Opportunities with a <strong>longer time window</strong> (multi-year, many weeks of staffing) have a lot more to calculate and save — expect these to take noticeably longer to open and save than short engagements. Give it a moment rather than clicking repeatedly.
+  </div>
+
+  <!-- 5 -->
+  <h2 id="approvals"><span class="n">05</span> Approvals</h2>
+  <ul>
+    <li>There are two kinds: <strong>Pricing Approval</strong> and <strong>SoW / PO / PCA Verification</strong>.</li>
+    <li>The chosen approver receives an <strong>email with Approve / Reject buttons</strong> — they can act straight from the email, or from the Approvals page.</li>
+    <li>People added in <strong>CC</strong> get a notification only (no action buttons).</li>
+    <li>The requester can <strong>withdraw</strong> a pending request.</li>
+    <li>The <strong>Approvals inbox</strong> has a <strong>Pending | Historical</strong> toggle — Pending shows what’s awaiting a decision, Historical shows everything already approved, rejected, or withdrawn.</li>
+  </ul>
+  <div class="callout note">
+    <span class="tag">Note</span>
+    Verifying the SoW/PO/PCA <strong>advances the deal to project-code generation</strong>; it does not set the status to Won (see section 2).
+  </div>
+
+  <!-- 6 -->
+  <h2 id="sow"><span class="n">06</span> SoW / PO &amp; pre-contract agreement</h2>
+  <p>To progress a deal you provide <strong>either</strong> signed documents <strong>or</strong> a pre-contract agreement — not both:</p>
+  <ul>
+    <li>You may upload a <strong>SoW and a PO together</strong>.</li>
+    <li><strong>Or</strong> tick <strong>“Proceed with pre-contract agreement”</strong>.</li>
+  </ul>
+  <div class="callout important">
+    <span class="tag">Important — mutually exclusive</span>
+    Pre-contract agreement and SoW/PO documents <strong>cannot both be used</strong>. If you’ve uploaded a document, the pre-contract checkbox is disabled; if pre-contract is ticked, the upload areas are disabled. To switch routes, remove the uploaded documents first.
+  </div>
+  <p>Documents accepted: PDF, Word, Excel, PNG, JPEG — up to roughly 49&nbsp;MB each.</p>
+
+  <!-- 7 -->
+  <h2 id="clients"><span class="n">07</span> Clients &amp; client requests</h2>
+  <ul>
+    <li>Anyone can <strong>request a new client</strong> while creating an opportunity.</li>
+    <li>These requests are reviewed and <strong>approved on the Client master page</strong> (the admin requests panel there). Approving one creates the client record with its ID.</li>
+    <li>The Client master is also where you browse existing clients and add new ones directly.</li>
+  </ul>
+
+  <!-- 8 -->
+  <h2 id="ratecards"><span class="n">08</span> Rate cards</h2>
+  <ul>
+    <li>Rate cards are uploaded from an <strong>Excel file in the specified format</strong> — keep the column layout and the sheet naming intact (the upload looks for the “Rate Card” sheet).</li>
+    <li>When updating, <strong>add new entries as new rows below</strong> the existing ones — don’t reorder or remove the existing columns/headers.</li>
+    <li>After uploading, you confirm the parsed entries before they’re saved.</li>
+  </ul>
+  <div class="callout heads">
+    <span class="tag">Heads up</span>
+    If the format or sheet name doesn’t match, the upload won’t recognise the data. When in doubt, start from the last working file and append rows.
+  </div>
+
+  <!-- 9 -->
+  <h2 id="sync"><span class="n">09</span> Sync &amp; download (OneDrive / SharePoint)</h2>
+  <p>From the dashboard you can <strong>Sync to OneDrive</strong> (updates the shared SharePoint Excel) or <strong>Download</strong> a local copy.</p>
+  <div class="callout important">
+    <span class="tag">Important — close the file first</span>
+    Before syncing, the shared OneDrive/SharePoint file <strong>must be closed everywhere</strong> — in your browser, the desktop Excel app, and on any colleague’s machine. If it’s open anywhere it stays <strong>locked</strong> and the sync will fail. Close it, then sync.
+  </div>
+  <ul>
+    <li><strong>It’s a full refresh, not a merge.</strong> Each sync rewrites the whole file to match NEXA exactly. Removed opportunities disappear; the file always reflects current data.</li>
+    <li><strong>Don’t hand-edit the shared file.</strong> Any manual changes are overwritten on the next sync.</li>
+    <li><strong>5,000-row limit.</strong> The export contains only the <strong>most recent 5,000 opportunities</strong> (newest first). Older ones beyond that aren’t included in the file.</li>
+    <li><strong>Download</strong> gives you a timestamped copy on your PC (e.g. <code>NEXA_Export_2026-06-02_15-30-45.xlsx</code>) — handy for a point-in-time snapshot.</li>
+  </ul>
+
+  <!-- 10 -->
+  <h2 id="limits"><span class="n">10</span> Limits &amp; things to watch</h2>
+  <table>
+    <tr><th>Area</th><th>What to remember</th></tr>
+    <tr><td>OneDrive sync</td><td>Close the file everywhere first; it’s a full overwrite; manual edits are lost.</td></tr>
+    <tr><td>Export size</td><td>Most recent <strong>5,000</strong> opportunities only.</td></tr>
+    <tr><td>Long engagements</td><td>Bigger time-window opportunities take longer to open, save, and sync — be patient.</td></tr>
+    <tr><td>Status</td><td>Always set manually (Open / Won / Lost / Abandoned). Nothing auto-marks Won.</td></tr>
+    <tr><td>Line of Business</td><td>Auto-computed from the dominant LoB in the final pricing.</td></tr>
+    <tr><td>Documents</td><td>PDF / Word / Excel / PNG / JPEG, ~49&nbsp;MB max each.</td></tr>
+    <tr><td>SoW vs pre-contract</td><td>Use one route or the other — never both at once.</td></tr>
+    <tr><td>Rate cards</td><td>Keep the template format; append new entries as new rows below.</td></tr>
+  </table>
+
+  <footer>
+    NEXA Admin Guide · ProcDNA Business Development &amp; Pricing Tool · For questions contact <strong>nexa_admin@procdna.com</strong>.
+  </footer>
+
+</div>
+</body>
+</html>
