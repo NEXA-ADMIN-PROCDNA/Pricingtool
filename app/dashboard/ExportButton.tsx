@@ -12,6 +12,7 @@ export function ExportButton() {
   const [state, setState]   = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [webUrl, setWebUrl] = useState<string | null>(null)
   const [errMsg, setErrMsg] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   async function handleSync() {
     setState('loading')
@@ -37,7 +38,7 @@ export function ExportButton() {
   }
 
   // Builds a filesystem-safe, timestamped download name (no colons, for Windows).
-  // e.g. NEXA_Export_2026-06-02_15-30-45.xlsx
+  // Uses the browser's local time, e.g. NEXA_Export_2026-06-02_15-30-45.xlsx
   function downloadName() {
     const d = new Date()
     const p = (n: number) => String(n).padStart(2, '0')
@@ -45,29 +46,56 @@ export function ExportButton() {
     return `NEXA_Export_${stamp}.xlsx`
   }
 
-  // Download button — always visible, opens GET endpoint directly.
-  // The download name is set at click time so the timestamp reflects the
-  // moment of download rather than when the page was rendered.
+  // Fetch the file as a blob, then download it under our own name. We can't rely
+  // on the <a download> attribute: the GET endpoint sends a Content-Disposition
+  // header whose filename ("opportunities.xlsx") takes priority over the
+  // attribute. A blob URL carries no such header, so our timestamped name wins.
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const res = await fetch('/api/export/opportunities')
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.detail ?? d.error ?? 'Download failed')
+        return
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = downloadName()
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Download failed')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  // Download button — always visible. Names the file with a local-time timestamp.
   const DownloadBtn = () => (
-    <a
-      href="/api/export/opportunities"
-      download="NEXA_Export.xlsx"
-      onClick={e => { e.currentTarget.download = downloadName() }}
+    <button
+      onClick={handleDownload}
+      disabled={downloading}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         padding: '10px 14px', borderRadius: 4,
         border: `1px solid ${C.rule}`, background: C.bg, color: C.inkMuted,
         fontFamily: "'Inter', system-ui, sans-serif",
         fontSize: 13, fontWeight: 500,
-        textDecoration: 'none', whiteSpace: 'nowrap',
+        cursor: downloading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
+        opacity: downloading ? 0.6 : 1,
       }}
       title="Download latest copy to your PC"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}>
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
       </svg>
-      Download
-    </a>
+      {downloading ? 'Preparing…' : 'Download'}
+    </button>
   )
 
   if (state === 'done' && webUrl) {
