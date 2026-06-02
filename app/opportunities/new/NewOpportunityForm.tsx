@@ -78,7 +78,7 @@ function FieldLabel({ text, required }: { text: string; required?: boolean }) {
       fontWeight: 500,
       marginBottom: 6,
     }}>
-      {text}{required && <span style={{ color: C.danger, marginLeft: 4 }}>*</span>}
+      {text}{required && <span style={{ color: C.danger, marginLeft: 4, position: 'relative', top: -2, display: 'inline-block' }}>*</span>}
     </label>
   )
 }
@@ -278,7 +278,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
           >
             <option value="">Select client…</option>
             {sortedClients.map(c => (
-              <option key={c.id} value={c.id}>{c.name} ({c.clientId})</option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           <div style={{

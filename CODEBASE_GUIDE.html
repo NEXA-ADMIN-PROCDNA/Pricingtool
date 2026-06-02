@@ -1,745 +1,572 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ProcDNA BD Tracker — Codebase Guide</title>
+<meta charset="UTF-8">
+<title>NEXA · Codebase Guide</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13.5px; color: #1e293b; background: #fff; padding: 40px; max-width: 960px; margin: auto; }
-  h1 { font-size: 24px; font-weight: 700; color: #1e293b; border-bottom: 3px solid #6366f1; padding-bottom: 10px; margin-bottom: 6px; }
-  .subtitle { color: #64748b; font-size: 12px; margin-bottom: 32px; }
-  h2 { font-size: 16px; font-weight: 700; color: #4f46e5; margin: 32px 0 10px; padding-left: 10px; border-left: 4px solid #6366f1; }
-  h3 { font-size: 13px; font-weight: 700; color: #334155; margin: 18px 0 6px; }
-  p { line-height: 1.7; margin-bottom: 8px; color: #374151; }
-  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12.5px; }
-  th { background: #f1f5f9; text-align: left; padding: 7px 10px; font-weight: 600; color: #475569; border: 1px solid #e2e8f0; }
-  td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; line-height: 1.5; }
-  tr:nth-child(even) td { background: #f8fafc; }
-  code { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 3px; padding: 1px 5px; font-family: 'Consolas', 'Courier New', monospace; font-size: 11.5px; color: #7c3aed; }
-  pre { background: #0f172a; color: #e2e8f0; border-radius: 6px; padding: 14px 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 11.5px; line-height: 1.7; margin: 10px 0 16px; overflow-x: auto; }
-  pre code { background: none; border: none; padding: 0; color: #e2e8f0; font-size: 11.5px; }
-  .tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; margin: 1px; }
-  .tag-get    { background: #dcfce7; color: #166534; }
-  .tag-post   { background: #dbeafe; color: #1d4ed8; }
-  .tag-patch  { background: #fef9c3; color: #854d0e; }
-  .tag-delete { background: #fee2e2; color: #991b1b; }
-  .tag-put    { background: #f3e8ff; color: #6b21a8; }
-  .tag-new    { background: #fce7f3; color: #9d174d; font-size: 9px; vertical-align: top; margin-left: 4px; }
-  .callout { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
-  .callout-warn { background: #fffbeb; border-color: #fde68a; }
-  .callout-green { background: #f0fdf4; border-color: #bbf7d0; }
-  .callout-red { background: #fff1f2; border-color: #fecdd3; }
-  ul { padding-left: 20px; margin: 6px 0 10px; }
-  li { line-height: 1.8; color: #374151; }
-  .section { margin-bottom: 8px; }
-  .flow-step { display: flex; gap: 10px; align-items: flex-start; margin: 5px 0; }
-  .flow-num { min-width: 22px; height: 22px; background: #6366f1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
-  .flow-text { color: #374151; line-height: 1.6; }
-  .badge { display: inline-block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; border-radius: 10px; padding: 1px 8px; font-size: 10.5px; font-weight: 600; }
-  .badge-amber { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-  .badge-red { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
-  .auth-ok  { color: #166534; font-weight: 600; }
-  .auth-no  { color: #92400e; font-weight: 600; }
-  @media print { body { padding: 20px; } }
+  :root {
+    --ink: #0A1F44;
+    --ink-soft: #3A4A6A;
+    --ink-muted: #7B7C7F;
+    --ink-faint: #A5A7AA;
+    --accent: #1A6EFF;
+    --accent-deep: #001E96;
+    --accent-soft: #DCE7F5;
+    --rule: #D6DCE8;
+    --bg: #F4F6FB;
+    --bg-soft: #EAEEF6;
+    --green: #16A34A;
+    --red: #DC2626;
+    --amber: #D97706;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.55; }
+
+  .layout { display: flex; min-height: 100vh; }
+
+  aside {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 240px; height: 100vh;
+    background: var(--ink); color: #fff;
+    padding: 28px 20px; overflow-y: auto; flex-shrink: 0;
+  }
+  aside h1 {
+    font-family: Georgia, serif; font-size: 18px; font-weight: 700;
+    letter-spacing: 0.16em; color: #fff;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+  aside .sub { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.08em; margin-bottom: 28px; }
+  aside ul { list-style: none; padding: 0; margin: 0; }
+  aside li { margin: 0 0 4px; }
+  aside a { display: block; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; padding: 5px 10px; border-radius: 4px; transition: all .15s; }
+  aside a:hover { background: rgba(255,255,255,0.06); color: #fff; }
+
+  main { flex: 1; max-width: 1100px; padding: 48px 56px; }
+
+  h2 { font-family: Georgia, serif; font-size: 26px; font-weight: 700; color: var(--ink); margin: 56px 0 4px; padding-top: 12px; border-top: 2px solid var(--ink); letter-spacing: -0.01em; }
+  h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+  h2 .num { display: inline-block; font-size: 12px; color: var(--accent); letter-spacing: 0.18em; font-family: 'SF Mono', Menlo, monospace; vertical-align: middle; margin-right: 12px; font-weight: 600; }
+
+  h3 { font-size: 16px; font-weight: 600; color: var(--ink); margin: 28px 0 10px; }
+  h4 { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  p, li { font-size: 14px; color: var(--ink-soft); }
+  p { margin: 8px 0; }
+
+  code { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 12.5px; background: var(--bg-soft); padding: 1px 6px; border-radius: 3px; color: var(--ink); }
+  pre { background: var(--ink); color: #C9D5E5; padding: 18px 22px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; margin: 14px 0; }
+  pre code { background: transparent; padding: 0; color: inherit; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 600; color: var(--ink); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  td { color: var(--ink-soft); }
+  td code { font-size: 12px; }
+
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 600; font-family: 'SF Mono', Menlo, monospace; letter-spacing: 0.04em; }
+  .pill.get { background: #D1FAE5; color: #065F46; }
+  .pill.post { background: #DBEAFE; color: #1E40AF; }
+  .pill.patch { background: #FEF3C7; color: #92400E; }
+  .pill.delete { background: #FEE2E2; color: #991B1B; }
+  .pill.put { background: #E0E7FF; color: #3730A3; }
+
+  .auth-y { color: var(--green); font-weight: 700; }
+  .auth-n { color: var(--amber); font-weight: 700; }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; margin: 18px 0; border-radius: 0 6px 6px 0; font-size: 13.5px; }
+  .callout.warn { border-color: var(--amber); background: #FEF3C7; }
+  .callout.warn strong { color: #92400E; }
+  .callout.danger { border-color: var(--red); background: #FEE2E2; }
+  .callout.danger strong { color: #991B1B; }
+
+  .flow {
+    background: var(--ink); color: #C9D5E5; border-radius: 6px;
+    padding: 22px 28px; font-family: 'SF Mono', Menlo, monospace; font-size: 12px;
+    line-height: 1.75; overflow-x: auto; margin: 14px 0;
+    white-space: pre;
+  }
+  .flow .stage { color: #7FC4FF; font-weight: 600; }
+  .flow .action { color: #FBBF24; }
+  .flow .arrow { color: rgba(255,255,255,0.4); }
+
+  .meta-grid { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 14px 0; }
+  .meta-grid dt { font-weight: 600; color: var(--ink); font-size: 13px; }
+  .meta-grid dd { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; background: var(--bg-soft); color: var(--ink-soft); margin-right: 6px; }
+  .tag.new { background: #DCFCE7; color: #166534; }
+
+  footer { margin-top: 80px; padding-top: 24px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-faint); text-align: center; }
 </style>
 </head>
 <body>
 
-<h1>ProcDNA BD Tracker — Codebase Guide</h1>
-<p class="subtitle">Updated May 2026 (commits 87755ee · c679942 · 0f7c41a) &nbsp;·&nbsp; Next.js 16.2 App Router &nbsp;·&nbsp; Prisma 7 &nbsp;·&nbsp; Supabase PostgreSQL + Storage &nbsp;·&nbsp; PgBouncer port 6543</p>
+<div class="layout">
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>1. High-Level Architecture</h2>
+<aside>
+  <h1>NEXA</h1>
+  <div class="sub">Codebase Guide</div>
+  <ul>
+    <li><a href="#overview">1 · Overview</a></li>
+    <li><a href="#stack">2 · Stack</a></li>
+    <li><a href="#layout-fs">3 · Filesystem</a></li>
+    <li><a href="#pages">4 · Page routes</a></li>
+    <li><a href="#api">5 · API routes</a></li>
+    <li><a href="#schema">6 · DB schema</a></li>
+    <li><a href="#approvals">7 · Approval flow</a></li>
+    <li><a href="#auth">8 · Auth flow</a></li>
+    <li><a href="#mail">9 · Mail</a></li>
+    <li><a href="#storage">10 · Storage</a></li>
+    <li><a href="#env">11 · Env vars</a></li>
+    <li><a href="#conventions">12 · Conventions</a></li>
+    <li><a href="#gotchas">13 · Gotchas</a></li>
+    <li><a href="#recent">14 · Recent work</a></li>
+  </ul>
+</aside>
+
+<main>
+
+<h2 id="overview"><span class="num">01</span>Overview</h2>
+
+<p>
+  <strong>NEXA</strong> is ProcDNA's internal app for tracking new business opportunities from lead through
+  pricing, approval, SOW signoff, and project-code allocation. It replaces a scattered set of Excel
+  files and email threads with a single auditable workflow.
+</p>
+
+<dl class="meta-grid">
+  <dt>Production URL</dt>
+  <dd><code>https://procdnanexa.vercel.app</code> (also legacy: <code>pricingtoolprimero.vercel.app</code>)</dd>
+  <dt>Repository branch</dt>
+  <dd><code>main</code> — both Vercel projects deploy the same branch</dd>
+  <dt>Region</dt>
+  <dd><code>fra1</code> (Frankfurt, set via <code>vercel.json</code>)</dd>
+  <dt>DB</dt>
+  <dd>Supabase Postgres, schema <code>procdna_database</code></dd>
+  <dt>Auth</dt>
+  <dd>Azure AD SSO (NextAuth v4) + fallback credentials at <code>/login2</code></dd>
+</dl>
+
+<h2 id="stack"><span class="num">02</span>Stack</h2>
+
+<table>
+  <tr><th>Layer</th><th>Choice</th><th>Notes</th></tr>
+  <tr><td>Framework</td><td>Next.js 16 (App Router)</td><td>React 19. <strong>Breaking changes vs older versions</strong> — check <code>node_modules/next/dist/docs/</code> before writing new features.</td></tr>
+  <tr><td>ORM</td><td>Prisma 7</td><td>Accessor casing changed: <code>prisma.sOWDocument</code>, <code>prisma.pODocument</code>. Connection config in <code>prisma.config.ts</code>, not <code>schema.prisma</code>.</td></tr>
+  <tr><td>Database</td><td>PostgreSQL on Supabase</td><td>Region BOM. Pooled connection (port 6543) in prod.</td></tr>
+  <tr><td>Auth</td><td>NextAuth v4</td><td>Azure AD provider + Credentials provider. JWT sessions. Cookie: <code>__Secure-next-auth.session-token</code>.</td></tr>
+  <tr><td>Storage</td><td>Supabase Storage</td><td>Buckets: <code>SoW_bucket</code> and <code>PO_busket</code> (sic). Always use <code>getSupabase()</code> from <code>lib/supabase.ts</code>.</td></tr>
+  <tr><td>Mail</td><td>Microsoft Graph API</td><td>Client-credentials flow via <code>@azure/identity</code>. Send-as <code>MAIL_SENDER</code>.</td></tr>
+  <tr><td>Export</td><td>Microsoft Graph / OneDrive</td><td><code>Files.ReadWrite.All</code> scope. Writes to one user's OneDrive (configured via env).</td></tr>
+  <tr><td>Styling</td><td>Tailwind v4 + inline styles</td><td>Some pages use inline-style design tokens. Fonts: Geist Sans, Playfair Display, IBM Plex Mono, DM Sans, DM Serif Display.</td></tr>
+  <tr><td>UI util</td><td>shadcn/ui, sonner</td><td>Toasts via sonner. Custom components in <code>components/ui/</code>.</td></tr>
+  <tr><td>Hosting</td><td>Vercel</td><td>Two projects deploying same branch.</td></tr>
+</table>
+
+<h2 id="layout-fs"><span class="num">03</span>Filesystem layout</h2>
+
+<pre><code>pricingtool/
+├── app/                      Next.js App Router
+│   ├── api/                  All API routes (uses getAuthToken)
+│   ├── approvals/            Approval inbox page
+│   ├── clients/              Client master + detail
+│   ├── dashboard/            Pipeline list + KPIs (HOME)
+│   ├── login/                Azure SSO login
+│   ├── login2/               Credentials login (fallback)
+│   ├── opportunities/        Detail and new-form pages
+│   ├── layout.tsx            Root layout (Geist fonts, Providers)
+│   ├── globals.css           Global styles + Google Fonts import
+│   ├── Providers.tsx         SessionProvider + sonner Toaster
+│   └── page.tsx              Server redirect to /dashboard
+├── components/
+│   ├── layout/               MainLayout, Sidebar
+│   └── ui/                   SearchableSelect, MultiSelect, StageBadge, LOBBadge, StatusBadge
+├── lib/
+│   ├── auth.js               NextAuth config (Azure + Credentials)
+│   ├── getAuthToken.ts       ★ Explicit getToken wrapper — use this in all routes
+│   ├── prisma.ts             Prisma singleton
+│   ├── supabase.ts           Supabase factory + signed URL cache
+│   ├── mail.ts               Microsoft Graph mailer + branded templates
+│   ├── approval-tokens.ts    HMAC tokens for email-action links
+│   ├── errors.ts             Standardized error responses
+│   ├── stageNextSteps.ts     Stage → next-action copy map
+│   ├── utils.ts              cn() and misc helpers
+│   └── db/
+│       ├── opportunities.ts  Opp queries + RBAC visibility filter
+│       ├── clients.ts        Client queries
+│       └── users.ts          User dropdown queries
+├── prisma/
+│   ├── schema.prisma         Models, enums, datasource
+│   ├── migrations/           Historical only — Vercel doesn't apply these
+│   └── seed.ts               Seed script
+├── prisma.config.ts          ★ DB connection config (NOT schema.prisma)
+├── proxy.ts                  ★ Next.js 16 middleware (renamed)
+├── next.config.ts            Empty / default
+├── vercel.json               { "regions": ["fra1"] }
+└── codebase_guide.html       This file
+</code></pre>
+
+<h2 id="pages"><span class="num">04</span>Page routes</h2>
+
+<table>
+  <tr><th>Route</th><th>File</th><th>Notes</th></tr>
+  <tr><td><code>/</code></td><td><code>app/page.tsx</code></td><td>Server redirect → <code>/dashboard</code>.</td></tr>
+  <tr><td><code>/login</code></td><td><code>app/login/page.jsx</code></td><td>Two-panel SSO design. Microsoft only. Credentials form removed.</td></tr>
+  <tr><td><code>/login2</code></td><td><code>app/login2/page.tsx</code></td><td>Credentials login (backup access).</td></tr>
+  <tr><td><code>/dashboard</code></td><td><code>app/dashboard/page.tsx</code></td><td>Pipeline list + KPIs. <strong>No <code>'use server'</code> directive at top</strong> — would break rendering.</td></tr>
+  <tr><td><code>/opportunities/new</code></td><td><code>NewOpportunityForm.tsx</code></td><td>End date required. Client dropdown shows name only (no CL-NNN).</td></tr>
+  <tr><td><code>/opportunities/[id]</code></td><td><code>OpportunityTabs.tsx</code></td><td>6 tabs: Details / Pricing / Pricing Approval / SOW &amp; PO / Project Code / Comments. Tabs gated by stage (dimmed but clickable).</td></tr>
+  <tr><td><code>/clients</code></td><td><code>app/clients/page.tsx</code></td><td>Client master, KPIs, add modal, admin requests panel.</td></tr>
+  <tr><td><code>/clients/[id]</code></td><td><code>app/clients/[id]/page.tsx</code></td><td>Client detail with POCs and opportunity list.</td></tr>
+  <tr><td><code>/approvals</code></td><td><code>ApprovalsInbox.tsx</code></td><td>Approval inbox with SOW preview, pending/decided sections.</td></tr>
+</table>
+
+<h2 id="api"><span class="num">05</span>API routes</h2>
 
 <div class="callout">
-  <strong>One app, three layers:</strong><br/>
-  <strong>Frontend (React/Next.js)</strong> — pages and components served from <code>app/</code><br/>
-  <strong>Backend (Route Handlers)</strong> — REST API endpoints at <code>app/api/</code>, each a <code>route.ts</code> file<br/>
-  <strong>Database + Storage (Supabase)</strong> — PostgreSQL for structured data (via Prisma/PgBouncer), and private Storage buckets for file uploads (SoW, PO documents)
+  All authed routes use <code>getAuthToken(req)</code> from <code>@/lib/getAuthToken</code> — <strong>never</strong>
+  <code>getToken({ req })</code> directly. The helper explicitly passes
+  <code>secret</code>, <code>secureCookie: true</code>, and <code>cookieName: '__Secure-next-auth.session-token'</code>
+  to avoid Edge-runtime env-var auto-detection failures.
 </div>
-
-<p>There is <strong>no separate backend server</strong>. Next.js runs everything — it serves the React pages and also handles the API calls. When the browser (or a React component) calls <code>fetch("/api/something")</code>, that request goes to the matching <code>route.ts</code> file in the same project, which talks to the database via Prisma.</p>
-
-<table>
-  <tr><th>Layer</th><th>Technology</th><th>Where</th></tr>
-  <tr><td>UI / Pages</td><td>React 19 + Tailwind CSS 4</td><td><code>app/**/page.tsx</code>, <code>app/**/*.tsx</code> components</td></tr>
-  <tr><td>API Endpoints</td><td>Next.js Route Handlers</td><td><code>app/api/**/route.ts</code></td></tr>
-  <tr><td>Auth</td><td>NextAuth v4 — Azure AD SSO + Credentials fallback</td><td><code>lib/auth.js</code>, <code>app/api/auth/[...nextauth]/</code></td></tr>
-  <tr><td>Database Client</td><td>Prisma 7 + pg Pool via PgBouncer</td><td><code>lib/prisma.ts</code></td></tr>
-  <tr><td>Database Queries (helpers)</td><td>Typed Prisma queries</td><td><code>lib/db/*.ts</code></td></tr>
-  <tr><td>File Storage</td><td>Supabase Storage (private buckets)</td><td><code>lib/supabase.ts</code>, buckets: <code>SoW_bucket</code>, <code>PO_busket</code></td></tr>
-  <tr><td>Database Host</td><td>Supabase (PostgreSQL)</td><td>Schema: <code>procdna_database</code>, AWS Mumbai (ap-south-1)</td></tr>
-  <tr><td>Deployment</td><td>Vercel (auto-deploy from GitHub)</td><td>Connected to <code>main</code> branch; each commit triggers a new build</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>2. Folder Structure</h2>
-
-<table>
-  <tr><th>Folder / File</th><th>What it does</th></tr>
-  <tr><td><code>app/</code></td><td>Everything Next.js renders or serves. Pages, API routes, layout, global CSS.</td></tr>
-  <tr><td><code>app/layout.tsx</code></td><td>Root HTML shell. Sets Geist font, page title ("ProcDNA BD Tracker"), wraps all pages in <code>&lt;Providers&gt;</code> (NextAuth session). Google Fonts (Playfair Display, IBM Plex Mono, Instrument Serif) loaded via CSS <code>@import</code> in <code>globals.css</code> — <strong>not</strong> via <code>next/font/google</code> (Turbopack production build incompatibility).</td></tr>
-  <tr><td><code>app/Providers.tsx</code></td><td>Client component that wraps the app in <code>SessionProvider</code> so any component can call <code>useSession()</code>.</td></tr>
-  <tr><td><code>app/page.tsx</code></td><td>Root route (<code>/</code>). Immediately redirects to <code>/dashboard</code>.</td></tr>
-  <tr><td><code>app/login/</code></td><td>Login page. Two auth paths: (1) <strong>Sign in with Microsoft</strong> — Azure AD SSO via <code>signIn('azure-ad')</code>; (2) <strong>Sign in with email &amp; password</strong> — toggle reveals email + password form, calls <code>signIn('credentials')</code>. The credentials path uses a shared <code>CREDENTIALS_SECRET</code> env var as the password — any DB-provisioned user can log in with their email + this secret.</td></tr>
-  <tr><td><code>app/dashboard/</code></td><td>Main landing after login. Shows KPI cards and the opportunity table with Excel-style per-column filters. Data fetched server-side via <code>lib/db/opportunities.ts</code> with RBAC filtering applied.</td></tr>
-  <tr><td><code>app/dashboard/OpportunityTable.tsx</code></td><td>Client component. Renders the opportunity table with multi-column filter popovers. Filters are OR-within-column, AND-across-columns. Popovers use <code>position:fixed</code> + <code>getBoundingClientRect()</code> to escape overflow containers.</td></tr>
-  <tr><td><code>app/opportunities/[id]/</code></td><td>Opportunity detail page. Loads full opportunity data server-side, then renders the tabbed layout: Details, Pricing, Approvals, SoW, Comments.</td></tr>
-  <tr><td><code>app/opportunities/[id]/TabSoW.tsx</code></td><td>Client component. SoW tab with two independent <code>DocUploadSection</code> sub-components — one for SoW (<code>/api/…/sow</code>) and one for PO (<code>/api/…/po</code>). Supports drag-and-drop and pre-contract agreement checkbox.</td></tr>
-  <tr><td><code>app/opportunities/new/</code></td><td>Form to create a new opportunity. Submits to <code>POST /api/opportunities</code>.</td></tr>
-  <tr><td><code>app/clients/</code></td><td>Clients list page. Client cards are clickable <code>&lt;Link&gt;</code> elements navigating to <code>/clients/[id]</code>. Also has Add Client modal and admin requests panel.</td></tr>
-  <tr><td><code>app/clients/[id]/page.tsx</code></td><td>Client detail page. Shows header (avatar, name, ID badge, industry, BU/region), 4 KPI tiles (total deals, open, won, pipeline revenue), opportunity table with links, and POC list.</td></tr>
-  <tr><td><code>app/approvals/</code></td><td>Approvals page for approvers. Lists pending requests, approve/reject actions.</td></tr>
-  <tr><td><code>app/api/</code></td><td>All REST API endpoints. Each subfolder = one resource. Each <code>route.ts</code> = one or more HTTP verbs.</td></tr>
-  <tr><td><code>lib/prisma.ts</code></td><td>Singleton Prisma client. Connects to Supabase via a <code>pg.Pool</code> (max 5 connections) through PgBouncer on port 6543.</td></tr>
-  <tr><td><code>lib/auth.js</code></td><td>NextAuth config. Email-based login. Puts <code>user.id</code> and <code>user.role</code> into the JWT. Tokens are HMAC-SHA256 signed with <code>NEXTAUTH_SECRET</code> — cannot be forged by clients.</td></tr>
-  <tr><td><code>lib/supabase.ts</code></td><td>Singleton Supabase client + signed URL cache. <code>getSupabase()</code> returns the same <code>SupabaseClient</code> instance on every call (globalThis pattern, same as Prisma). <code>getSignedUrl(bucket, path)</code> checks an in-memory <code>Map</code> keyed by <code>{bucket}::{path}</code> before calling Supabase — cache TTL is 55 min (URLs are valid 60 min). Cache miss calls Supabase and stores the result. All SoW/PO routes use <code>getSignedUrl()</code> instead of calling <code>createSignedUrl()</code> directly. Also exports <code>SOW_BUCKET = 'SoW_bucket'</code>, <code>PO_BUCKET = 'PO_busket'</code>.</td></tr>
-  <tr><td><code>lib/db/opportunities.ts</code></td><td>Heavy-lifting query functions: <code>getOpportunities</code>, <code>getOpportunityDetail</code>, <code>getDashboardStats</code>. All accept optional <code>auth?: AuthCtx</code>. RBAC is enforced here via <code>resolveOwnerFilter(auth)</code>.</td></tr>
-  <tr><td><code>lib/db/clients.ts</code></td><td>Query helpers for clients list, dropdown, and <code>getClientDetail(clientId)</code> with full opportunity and POC data.</td></tr>
-  <tr><td><code>lib/db/users.ts</code></td><td>Query helper for the user select dropdown.</td></tr>
-  <tr><td><code>prisma/schema.prisma</code></td><td>Source of truth for the DB schema. Defines all models. <strong>Note:</strong> in Prisma 7, <code>url</code>/<code>directUrl</code> are NOT set here — they live in <code>prisma.config.ts</code>.</td></tr>
-  <tr><td><code>prisma.config.ts</code></td><td>Prisma CLI config. Sets <code>datasource.url = DIRECT_URL</code> (port 5432, direct connection) so <code>prisma db push</code> and migrations work. Application runtime still uses <code>DATABASE_URL</code> (port 6543) via <code>lib/prisma.ts</code>.</td></tr>
-  <tr><td><code>prisma/seed.ts</code></td><td>Seeds rate cards, sample users, clients, opportunities, pricing versions, and Azure AD users.</td></tr>
-  <tr><td><code>components/layout/Sidebar.tsx</code></td><td>Sidebar navigation. Near-black color palette (<code>#111111</code> background, <code>#1E5BB8</code> accent). User avatar, nav links, role badge.</td></tr>
-  <tr><td><code>CODEBASE_GUIDE.html</code></td><td>This file. Open in browser, print to PDF via File → Print → Save as PDF.</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>3. How Data Flows — The Request Lifecycle</h2>
-
-<p>Two patterns are used depending on whether the component is a <em>server component</em> (page) or a <em>client component</em> (interactive UI):</p>
-
-<h3>Pattern A — Server-Side Fetch (pages, initial load)</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User navigates to <code>/dashboard</code>. Next.js runs <code>app/dashboard/page.tsx</code> on the server.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The page calls <code>getServerSession(authOptions)</code> to get <code>userId</code> and <code>role</code>, then calls <code>getDashboardStats(auth)</code> and <code>getOpportunities(status, q, auth)</code> from <code>lib/db/opportunities.ts</code> directly — no HTTP, just Prisma.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Prisma applies the RBAC where-filter (<code>resolveOwnerFilter</code>) and sends a SQL query to Supabase via PgBouncer.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Data comes back filtered by role. The page renders HTML with pre-filled data and sends it to the browser.</div></div>
-
-<h3>Pattern B — Client-Side Fetch (interactive components)</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User drops a file onto the SoW upload zone in <code>TabSoW.tsx</code>.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text">The component calls <code>fetch("/api/opportunities/[id]/sow", { method: "POST", body: formData })</code>.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Next.js routes the request to <code>app/api/opportunities/[id]/sow/route.ts</code>. The handler validates the NextAuth JWT, then uploads the file to Supabase Storage using the service role key.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">The handler creates a <code>SOWDocument</code> DB record via Prisma and returns a signed URL (1-hour TTL). The UI appends the new doc to state.</div></div>
-
-<div class="callout callout-warn">
-  <strong>Where does data actually live?</strong> Structured data is in <strong>Supabase PostgreSQL</strong>, schema <code>procdna_database</code>. Files (SoW, PO) are in <strong>Supabase Storage</strong> in private buckets (<code>SoW_bucket</code>, <code>PO_busket</code>). Files are accessed via temporary signed URLs generated server-side (1-hour TTL). Prisma is the only thing that reads/writes the database.
-</div>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>4. API Endpoints Reference</h2>
-
-<p>All endpoints live under <code>/api/</code>. <span class="auth-ok">✅ Auth</span> = requires valid NextAuth JWT (returns 401 if missing). <span class="auth-no">⚠️ No auth</span> = currently unguarded — do not add new routes without auth.</p>
 
 <h3>Opportunities</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
-  <tr>
-    <td><code>/api/opportunities</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td><strong>GET:</strong> list opportunities filtered by RBAC role (ADMIN/PARTNER = all; DIRECTOR = own + SEL-owned; SEL = own only). <strong>POST:</strong> create new opportunity (auto-generates <code>BD-NNN</code> ID), optionally creates POCs.</td>
-    <td><code>NewOpportunityForm.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/pricing-versions</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Create a new pricing version. Auto-increments versionNumber.</td>
-    <td><code>OpportunityTabs.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/comments</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>Post a new comment. Gets <code>authorId</code> from JWT. Supports threaded replies via <code>parentId</code>.</td>
-    <td><code>OpportunityTabs.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/approvals</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Submit an approval request (links approverId + requestedById). Sets status to PENDING.</td>
-    <td>Approvals tab</td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/other-costs</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Add other-cost line. Body: <code>{ description, amount, markupPct? }</code>. Defaults <code>isBillable: true</code>.</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/other-costs/[costId]</code></td>
-    <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>PATCH: update <code>isBillable</code> or <code>markupPct</code>. DELETE: remove the row permanently.</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/sow</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td><strong>GET:</strong> list SoW docs with fresh 1-hr signed URLs. <strong>POST:</strong> upload to <code>SoW_bucket</code> (multipart, max 20 MB, PDF/Word/Excel/PNG/JPEG). Storage path: <code>{opportunityId}/v{n}_{timestamp}.{ext}</code>. <strong>DELETE:</strong> soft-delete (<code>isActive: false</code>). Body: <code>{ docId }</code>.</td>
-    <td><code>TabSoW.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/opportunities/[id]/po</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>Identical to SoW route but uses <code>PO_busket</code> and <code>prisma.pODocument</code>. Same validation, same signed URL pattern.</td>
-    <td><code>TabSoW.tsx</code></td>
-  </tr>
+  <tr><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr>
+  <tr><td><span class="pill get">GET</span></td><td><code>/api/opportunities</code></td><td class="auth-y">✓</td><td>List opportunities, filtered by RBAC.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities</code></td><td class="auth-y">✓</td><td>Create opportunity (auto-generates <code>BD-NNN</code>).</td></tr>
+  <tr><td><span class="pill patch">PATCH</span></td><td><code>/api/opportunities/[id]</code></td><td class="auth-y">✓</td><td>Update <code>preContractAgreed</code> / <code>status</code> (OPEN/WON) / <code>projectCodeProceed</code>.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities/[id]/approvals</code></td><td class="auth-y">✓</td><td>Request PRICING or SOW_VERIFICATION approval. Sends email.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities/[id]/comments</code></td><td class="auth-y">✓</td><td>Add threaded comment.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities/[id]/other-costs</code></td><td class="auth-y">✓</td><td>Add cost (incl. <code>lineOfBusiness</code>).</td></tr>
+  <tr><td><span class="pill patch">PATCH</span></td><td><code>/api/opportunities/[id]/other-costs/[costId]</code></td><td class="auth-y">✓</td><td>Update isBillable / markupPct / lineOfBusiness.</td></tr>
+  <tr><td><span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/other-costs/[costId]</code></td><td class="auth-y">✓</td><td>Delete cost line.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities/[id]/pricing-versions</code></td><td class="auth-y">✓</td><td>Create pricing version (auto versionNumber).</td></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span> / <span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/sow</code></td><td class="auth-y">✓</td><td>SOW docs to <code>SoW_bucket</code>. Max 20 MB. PDF/Word/Excel/PNG/JPEG.</td></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span> / <span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/po</code></td><td class="auth-y">✓</td><td>PO docs to <code>PO_busket</code>.</td></tr>
 </table>
 
 <h3>Pricing Versions</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
-  <tr>
-    <td><code>/api/pricing-versions/[pvId]</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td><strong>GET:</strong> fetch full version (staffing + weeklyHours, SoP, snapshots). <strong>PATCH:</strong> save computed metrics; <code>isFinal: true</code> atomically unsets siblings. <strong>DELETE:</strong> hard-delete (cascades all child records).</td>
-    <td><code>PricingDrawer.tsx</code>, <code>OpportunityTabs.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/pricing-versions/[pvId]/duplicate</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Deep-copy version including staffing + weekly hours + schedule + snapshots. Runs in a single Prisma <code>$transaction</code>.</td>
-    <td><code>OpportunityTabs.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/pricing-versions/[pvId]/staffing</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Add staffing resource from rate card. Body: <code>{ rateCardId }</code>. Copies role/location/domain/rates from the rate card row.</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/pricing-versions/[pvId]/staffing/[srId]</code></td>
-    <td><span class="tag tag-patch">PATCH</span><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>PATCH: update utilization/billRate/active/billable; upsert <code>weekEntries: [{ weekStartDate, hours }]</code>. DELETE: remove row (cascades week entries).</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/pricing-versions/[pvId]/staffing/[srId]/hours</code></td>
-    <td><span class="tag tag-put">PUT</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Upsert a single week entry. Body: <code>{ weekStartDate, hours }</code>.</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
+  <tr><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill patch">PATCH</span> / <span class="pill delete">DELETE</span></td><td><code>/api/pricing-versions/[pvId]</code></td><td class="auth-y">✓</td><td>Fetch / update / delete. Marking <code>isFinal: true</code> unsets siblings.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/pricing-versions/[pvId]/duplicate</code></td><td class="auth-y">✓</td><td>Deep-copy version (staffing + hours + schedule + financials).</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/pricing-versions/[pvId]/staffing</code></td><td class="auth-y">✓</td><td>Add staffing from rate card. <code>effectiveBillRate</code> defaults to rate-card bill rate (D/P starts at 0).</td></tr>
+  <tr><td><span class="pill patch">PATCH</span> / <span class="pill delete">DELETE</span></td><td><code>/api/pricing-versions/[pvId]/staffing/[srId]</code></td><td class="auth-y">✓</td><td>Update or delete a staffing resource.</td></tr>
+  <tr><td><span class="pill put">PUT</span></td><td><code>/api/pricing-versions/[pvId]/staffing/[srId]/hours</code></td><td class="auth-y">✓</td><td>Upsert single week entry <code>{ weekStartDate, hours }</code>.</td></tr>
 </table>
 
 <h3>Approvals</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
-  <tr>
-    <td><code>/api/approvals</code></td>
-    <td><span class="tag tag-get">GET</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>List approval requests for the signed-in user as approver. <code>?pending=true</code> filters to PENDING only. Returns nested opportunity and final pricingVersion data.</td>
-    <td><code>app/approvals/page.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/approvals/[id]/approve</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>Approve a PENDING request. Validates the JWT user is the designated approver. Sets APPROVED + <code>decidedAt</code>.</td>
-    <td>Approvals page</td>
-  </tr>
-  <tr>
-    <td><code>/api/approvals/[id]/reject</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>Reject a PENDING request. Body: <code>{ reason? }</code>. Sets REJECTED + <code>decidedAt</code> + optional <code>rejectionReason</code>.</td>
-    <td>Approvals page</td>
-  </tr>
+  <tr><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr>
+  <tr><td><span class="pill get">GET</span></td><td><code>/api/approvals</code></td><td class="auth-y">✓</td><td>List approvals for current user. <code>?pending=true</code> filters.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/approvals/[id]/approve</code></td><td class="auth-y">✓</td><td>Approve. Stage: PRICING → SOW_PENDING, SOW_VERIFICATION → TO_BE_ARCHIVED.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/approvals/[id]/reject</code></td><td class="auth-y">✓</td><td>Reject (optional reason). Reverts stage.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/approvals/[id]/withdraw</code></td><td class="auth-y">✓</td><td>Requester withdraws pending request. <code>{ reason? }</code> → <code>withdrawalReason</code>.</td></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span></td><td><code>/api/approvals/email-action</code></td><td class="auth-n">⚠</td><td>One-click email action. Token-authed (HMAC, 7-day TTL). Renders branded HTML.</td></tr>
 </table>
 
-<h3>Client Requests</h3>
+<h3>Client Requests &amp; Misc</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
-  <tr>
-    <td><code>/api/client-requests</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>GET: list PENDING client requests. POST: create request (<code>name</code>, <code>requestedById</code>, optional metadata).</td>
-    <td><code>AddClientModal.tsx</code>, <code>AdminRequestsPanel.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/client-requests/[reqId]/approve</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Approve request: creates a <code>Client</code> record (auto-generates <code>CL-NNN</code> ID), marks request APPROVED. Body: <code>{ reviewerId }</code>.</td>
-    <td><code>AdminRequestsPanel.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/client-requests/[reqId]/reject</code></td>
-    <td><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Mark request REJECTED. Body: <code>{ reviewerId }</code>.</td>
-    <td><code>AdminRequestsPanel.tsx</code></td>
-  </tr>
+  <tr><th>Method</th><th>Path</th><th>Auth</th><th>Purpose</th></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span></td><td><code>/api/client-requests</code></td><td class="auth-n">⚠</td><td>List / create client requests (legacy, missing auth).</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/client-requests/[reqId]/approve</code></td><td class="auth-n">⚠</td><td>Approve → creates Client with <code>CL-NNN</code>.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/client-requests/[reqId]/reject</code></td><td class="auth-n">⚠</td><td>Reject.</td></tr>
+  <tr><td><span class="pill delete">DELETE</span></td><td><code>/api/client-pocs/[id]</code></td><td class="auth-y">✓</td><td>Delete a client POC.</td></tr>
+  <tr><td><span class="pill get">GET</span></td><td><code>/api/pipeline-revenue</code></td><td class="auth-n">⚠</td><td>Sum revenue across active opps.</td></tr>
+  <tr><td><span class="pill get">GET</span></td><td><code>/api/rate-cards</code></td><td class="auth-n">⚠</td><td>Active rate cards.</td></tr>
+  <tr><td><span class="pill post">POST</span></td><td><code>/api/rate-cards/upload</code></td><td class="auth-n">⚠</td><td>Upload Excel rate card (ADMIN).</td></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span></td><td><code>/api/users</code></td><td class="auth-n">⚠</td><td>List / create users.</td></tr>
+  <tr><td><span class="pill get">GET</span></td><td><code>/api/export/opportunities</code></td><td class="auth-y">✓</td><td>Export to Shreeraj's OneDrive Excel file.</td></tr>
 </table>
 
-<h3>Other Resources</h3>
+<h2 id="schema"><span class="num">06</span>Database schema</h2>
+
+<h3>Enums</h3>
 <table>
-  <tr><th>Endpoint</th><th>Methods</th><th>Auth</th><th>What it does</th><th>Called from</th></tr>
-  <tr>
-    <td><code>/api/rate-cards</code></td>
-    <td><span class="tag tag-get">GET</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>List all active rate cards (role, location, domain, cost rate, bill rate). Used to populate the Add Resource dropdown.</td>
-    <td><code>PricingDrawer.tsx</code></td>
-  </tr>
-  <tr>
-    <td><code>/api/users</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>GET: list all users. POST: create user (<code>name</code>, <code>email</code>, <code>role</code> — defaults to <code>'BD'</code>).</td>
-    <td>Admin / seed script</td>
-  </tr>
-  <tr>
-    <td><code>/api/client-pocs/[id]</code></td>
-    <td><span class="tag tag-delete">DELETE</span></td>
-    <td><span class="auth-ok">✅</span></td>
-    <td>Delete a client point-of-contact. Returns 404 if not found.</td>
-    <td>Client detail page</td>
-  </tr>
-  <tr>
-    <td><code>/api/pipeline-revenue</code></td>
-    <td><span class="tag tag-get">GET</span></td>
-    <td><span class="auth-no">⚠️</span></td>
-    <td>Sum estimatedRevenue (or final pricingVersion proposedBillings) across active opportunities. Returns <code>{ total: number }</code>.</td>
-    <td>Dashboard KPI card</td>
-  </tr>
-  <tr>
-    <td><code>/api/auth/[...nextauth]</code></td>
-    <td><span class="tag tag-get">GET</span><span class="tag tag-post">POST</span></td>
-    <td>N/A</td>
-    <td>NextAuth magic route. Handles sign-in, sign-out, session tokens. Configured in <code>lib/auth.js</code>.</td>
-    <td>Browser automatically (login page, session refresh)</td>
-  </tr>
+  <tr><th>Enum</th><th>Values</th></tr>
+  <tr><td><code>UserRole</code></td><td>SEL · DIRECTOR · ED · PARTNER · ADMIN</td></tr>
+  <tr><td><code>LineOfBusiness</code></td><td>TECH · ANALYTICS · MS · DS · DESIGN · AUXO</td></tr>
+  <tr><td><code>OpportunityStatus</code></td><td>OPEN · WON · LOST · ABANDONED · ARCHIVED</td></tr>
+  <tr><td><code>OpportunityStage</code></td><td>LEAD · PRICE_LINKING_PENDING · PRICE_LINKED · APPROVAL_PENDING · SOW_PENDING · SOW_SUBMITTED · SOW_REVIEW_PENDING · TO_BE_ARCHIVED</td></tr>
+  <tr><td><code>Location</code></td><td>INDIA · US</td></tr>
+  <tr><td><code>ApprovalStatus</code></td><td>PENDING · APPROVED · REJECTED · WITHDRAWN</td></tr>
+  <tr><td><code>ApprovalType</code></td><td>PRICING · SOW_VERIFICATION</td></tr>
 </table>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>5. Database Schema — Key Models</h2>
-
-<p>All tables are in Supabase under schema <code>procdna_database</code>, defined as Prisma models in <code>prisma/schema.prisma</code>. <strong>Prisma 7 breaking change:</strong> <code>url</code>/<code>directUrl</code> are no longer valid in <code>schema.prisma</code> — they live in <code>prisma.config.ts</code>.</p>
-<p><strong>Prisma accessor naming:</strong> PascalCase models get camelCase accessors. Examples: <code>SOWDocument</code> → <code>prisma.sOWDocument</code>, <code>PODocument</code> → <code>prisma.pODocument</code>.</p>
+<h3>Models (key fields)</h3>
 
 <table>
-  <tr><th>Model / Table</th><th>What it stores</th><th>Key fields</th></tr>
-  <tr><td><code>User</code></td><td>App users</td><td>email, name, role (ADMIN | PARTNER | ED | DIRECTOR | SEL | BD), isActive</td></tr>
-  <tr><td><code>Client</code></td><td>Client companies</td><td>clientId (CL-001), name, businessUnit, industry, region, isActive</td></tr>
-  <tr><td><code>ClientPOC</code></td><td>Points of contact at each client</td><td>clientId (FK), name, email, phone, jobTitle</td></tr>
-  <tr><td><code>ClientRequest</code></td><td>Requests to add a new client (PENDING → APPROVED/REJECTED)</td><td>name, status, requestedById, reviewedById</td></tr>
-  <tr><td><code>Opportunity</code></td><td>BD deals/pursuits</td><td>opportunityId (BD-001), clientId, primaryLob (LoB enum), status, stage, ownerId, startDate, endDate, estimatedRevenue, probability</td></tr>
-  <tr>
-    <td><code>RateCard</code></td>
-    <td>Standard billing and cost rates per role/location. 24 rows seeded.</td>
-    <td>jobRole (enum), location (enum), domain (ANALYTICS | TECH | MS | DS), costRatePerHour, billRatePerHour, isActive</td>
-  </tr>
-  <tr>
-    <td><code>PricingVersion</code></td>
-    <td>A pricing scenario for an opportunity. At most one has <code>isFinal = true</code>.</td>
-    <td>opportunityId (FK), versionNumber, isFinal, label, totalHours, totalCost, proposedBillings, grossMarginPct, offshorePct, effectiveRatePerHour, revenueSharePct, discountPremiumPct, businessJustification</td>
-  </tr>
-  <tr>
-    <td><code>StaffingResource</code></td>
-    <td>One person/role in a pricing version's Efforts tab.</td>
-    <td>pricingVersionId (FK), rateCardId (FK), resourceDesignation, location, domain, costRatePerHour, systemBillRatePerHour, effectiveBillRate, utilization (0–100), isActive, isBillable</td>
-  </tr>
-  <tr><td><code>StaffingWeekEntry</code></td><td>Hours for a staffing resource in one specific week. Unique per (resource, week).</td><td>staffingResourceId (FK), weekStartDate (DateTime), hours (Decimal)</td></tr>
-  <tr>
-    <td><code>OtherCost</code></td>
-    <td>Non-staffing costs linked at the opportunity level (shared across versions).</td>
-    <td>opportunityId (FK), description, amount (Decimal), markupPct (Decimal?, 8,4), isBillable (default true)</td>
-  </tr>
-  <tr><td><code>ScheduleOfPayment</code></td><td>Monthly billing schedule for a pricing version.</td><td>pricingVersionId (FK), month, recommendedBillings, proposedBillings, recommendedOtherCost, proposedOtherCost, proposedIsManual, discountPct, premiumPct</td></tr>
-  <tr><td><code>FinancialSnapshot</code></td><td>Computed P&amp;L per month (and overall) for a pricing version.</td><td>pricingVersionId (FK), month (null = project total), totalRevenue, employeeCost, otherCost, grossMargin, grossMarginPct, totalHours, offshoreRatio, billedRatePerHour, effectiveRatePerHour</td></tr>
-  <tr><td><code>ApprovalRequest</code></td><td>Approval workflow entries.</td><td>opportunityId (FK), requestedById, approverId, status (PENDING/APPROVED/REJECTED), rejectionReason</td></tr>
-  <tr><td><code>Comment</code></td><td>Comments on an opportunity (threaded).</td><td>opportunityId (FK), authorId (FK), content, parentId (nullable for replies)</td></tr>
-  <tr><td><code>ActivityLog</code></td><td>Audit trail of changes.</td><td>opportunityId (FK), userId, action, oldValue (JSON), newValue (JSON)</td></tr>
-  <tr>
-    <td><code>SOWDocument</code><br/><small>accessor: <code>prisma.sOWDocument</code></small></td>
-    <td>Statement of Work file records. Physical file stored in <code>SoW_bucket</code> on Supabase Storage.</td>
-    <td>opportunityId (FK), clientId (FK), fileName, storagePath, fileUrl, fileSizeBytes, mimeType, version, uploadedAt, isActive (soft-delete)</td>
-  </tr>
-  <tr>
-    <td><code>PODocument</code><br/><small>accessor: <code>prisma.pODocument</code></small><br/><small>table: <code>po_documents</code></small></td>
-    <td>Purchase Order file records. Physical file stored in <code>PO_busket</code> on Supabase Storage.</td>
-    <td>opportunityId (FK), clientId (FK), fileName, storagePath, fileUrl, fileSizeBytes, mimeType, version, uploadedAt, isActive (soft-delete)</td>
-  </tr>
+  <tr><th>Model</th><th>Key fields</th></tr>
+  <tr><td><code>User</code></td><td>email, name, role, location, azureId, managerId, isActive</td></tr>
+  <tr><td><code>Client</code></td><td>clientId (CL-NNN), name, businessUnit, industry, region</td></tr>
+  <tr><td><code>ClientPOC</code></td><td>name, email, phone, jobTitle, clientId</td></tr>
+  <tr><td><code>Opportunity</code></td><td>
+    opportunityId (BD-NNN), name, clientId, primaryLob, stage, status,
+    <span class="tag new">projectCodeProceed</span> preContractAgreed,
+    starConnect, ownerId, startDate, endDate, estimatedRevenue, probability
+  </td></tr>
+  <tr><td><code>RateCard</code></td><td>jobRole, location, domain, costRatePerHour, billRatePerHour, effectiveFrom, effectiveTo</td></tr>
+  <tr><td><code>PricingVersion</code></td><td>versionNumber, isFinal, label, proposedBillings, totalCost, grossMarginPct, businessJustification, …</td></tr>
+  <tr><td><code>StaffingResource</code></td><td>pricingVersionId, rateCardId, resourceDesignation, location, domain, effectiveBillRate, systemBillRatePerHour, manualBillRatePerHour, utilization, costRatePerHour, isBillable, isActive</td></tr>
+  <tr><td><code>StaffingWeekEntry</code></td><td>staffingResourceId, weekStartDate, hours · unique (resource, weekStart)</td></tr>
+  <tr><td><code>OtherCost</code></td><td>description, amount, markupPct, isBillable, <span class="tag new">lineOfBusiness</span></td></tr>
+  <tr><td><code>ApprovalRequest</code></td><td>
+    opportunityId, requestedById, approverId, approvalType, status, rejectionReason,
+    <span class="tag new">withdrawalReason</span> <span class="tag new">emailMessageId</span>
+    businessJustification, pricingVersionNumber
+  </td></tr>
+  <tr><td><code>SOWDocument</code> / <code>PODocument</code></td><td>fileName, storagePath, fileUrl, fileSizeBytes, mimeType, version, isActive</td></tr>
+  <tr><td><code>Comment</code></td><td>content, parentId (self-relation for threads)</td></tr>
+  <tr><td><code>ScheduleOfPayment</code></td><td>month, recommendedBillings, proposedBillings, discountPct, premiumPct</td></tr>
+  <tr><td><code>FinancialSnapshot</code></td><td>month, rows A–K (revenue, cost, margin, hours, offshore %, rates)</td></tr>
+  <tr><td><code>ActivityLog</code> / <code>NotificationLog</code></td><td>audit trails</td></tr>
 </table>
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>6. Key UI Files — What They Do</h2>
+<h2 id="approvals"><span class="num">07</span>Approval flow</h2>
 
-<table>
-  <tr><th>File</th><th>What it does &amp; which APIs it calls</th></tr>
-  <tr>
-    <td><code>app/dashboard/page.tsx</code></td>
-    <td>Server component. Extracts <code>userId</code> and <code>role</code> from session, passes as <code>auth</code> to <code>getOpportunities()</code> and <code>getDashboardStats()</code> — RBAC filtering applied server-side. Header shows "Your one stop solution for tracking Opportunities". New Opportunity button styled blue (<code>#2563EB</code>).</td>
-  </tr>
-  <tr>
-    <td><code>app/dashboard/OpportunityTable.tsx</code></td>
-    <td>Client component. Renders opportunity table with Excel-style per-column filter popovers. State: <code>columnFilters: Record&lt;string, string[]&gt;</code>. Popovers use <code>position: fixed</code> + <code>getBoundingClientRect()</code> to escape any overflow-hidden ancestor. Filters are AND-across-columns, OR-within-column. Footer shows <code>N of M&nbsp;&nbsp;SHOWN</code>.</td>
-  </tr>
-  <tr>
-    <td><code>app/opportunities/[id]/page.tsx</code></td>
-    <td>Server component. Calls <code>getOpportunityDetail(id, auth)</code> with RBAC auth extracted from session. Passes result to <code>OpportunityTabs</code>.</td>
-  </tr>
-  <tr>
-    <td><code>app/opportunities/[id]/OpportunityTabs.tsx</code></td>
-    <td>Client component. Tab strip: <strong>Details, Pricing, Approvals, SoW, Comments</strong>. Manages pricing version list and all version actions. Renders <code>&lt;TabSoW opportunityId={opp.opportunityId} /&gt;</code> for the SoW tab.<br/>
-      Calls: <code>POST /api/.../pricing-versions</code> · <code>POST /api/.../duplicate</code> · <code>PATCH /api/pricing-versions/[pvId]</code> · <code>DELETE /api/pricing-versions/[pvId]</code> · <code>GET /api/pricing-versions/[pvId]</code> · <code>POST /api/.../comments</code>
-    </td>
-  </tr>
-  <tr>
-    <td><code>app/opportunities/[id]/TabSoW.tsx</code></td>
-    <td>Client component. Contains a pre-contract agreement checkbox (local state) and two independent <code>DocUploadSection</code> instances separated by a horizontal rule:<br/>
-      &bull; <strong>Statement of Work</strong> → <code>/api/opportunities/[id]/sow</code><br/>
-      &bull; <strong>Purchase Order</strong> → <code>/api/opportunities/[id]/po</code><br/>
-      Each section handles drag-and-drop upload, file list with version/size/date, Download link (signed URL), and soft-delete. Files load on mount via <code>useEffect</code>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>app/opportunities/[id]/PricingDrawer.tsx</code></td>
-    <td>Client component (~1,300 lines). Full-screen pricing modal. See Section 9 for deep reference.</td>
-  </tr>
-  <tr>
-    <td><code>app/clients/page.tsx</code></td>
-    <td>Server component. Client cards are wrapped in <code>&lt;Link href="/clients/{clientId}"&gt;</code> — clicking navigates to the detail page. Also renders AddClientModal and AdminRequestsPanel.</td>
-  </tr>
-  <tr>
-    <td><code>app/clients/[id]/page.tsx</code></td>
-    <td>Server component. Client detail page. Calls <code>getClientDetail(clientId)</code>. Sections: header (avatar circle, name, ID badge, industry chip, region/BU), 4 KPI tiles (total deals, open, won, pipeline revenue), opportunities table with status badges and links to detail pages, POC contact list.</td>
-  </tr>
-  <tr>
-    <td><code>app/clients/AddClientModal.tsx</code></td>
-    <td>Client component. Form to request a new client. Calls <code>POST /api/client-requests</code>.</td>
-  </tr>
-  <tr>
-    <td><code>app/clients/AdminRequestsPanel.tsx</code></td>
-    <td>Client component. Admin view of pending client requests. Calls approve/reject endpoints.</td>
-  </tr>
-  <tr>
-    <td><code>components/layout/Sidebar.tsx</code></td>
-    <td>Near-black sidebar (<code>#111111</code> background). Active nav items highlighted with <code>#1E5BB8</code> accent. Role badge shown on user avatar. Uses <code>useSession()</code> for user display.</td>
-  </tr>
-</table>
+<div class="flow"><span class="stage">LEAD</span>
+  <span class="arrow">│</span> <span class="action">create pricing version</span>
+  <span class="arrow">▼</span>
+<span class="stage">PRICE_LINKING_PENDING</span>
+  <span class="arrow">│</span> <span class="action">mark version as final</span>
+  <span class="arrow">▼</span>
+<span class="stage">PRICE_LINKED</span>
+  <span class="arrow">│</span> <span class="action">request PRICING approval</span>
+  <span class="arrow">▼</span>
+<span class="stage">APPROVAL_PENDING</span>
+  <span class="arrow">├─</span> <span class="action">approve</span>   → <span class="stage">SOW_PENDING</span>
+  <span class="arrow">├─</span> <span class="action">reject</span>    → <span class="stage">PRICE_LINKED</span>
+  <span class="arrow">└─</span> <span class="action">withdraw</span>  → <span class="stage">PRICE_LINKED</span>   (requester only; stores withdrawalReason)
 
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>7. Authentication &amp; RBAC</h2>
+<span class="stage">SOW_PENDING</span>
+  <span class="arrow">│</span> <span class="action">upload SOW/PO + preContractAgreed = true</span>
+  <span class="arrow">▼</span>
+<span class="stage">SOW_SUBMITTED</span>
+  <span class="arrow">│</span> <span class="action">request SOW_VERIFICATION approval</span>
+  <span class="arrow">▼</span>
+<span class="stage">SOW_REVIEW_PENDING</span>
+  <span class="arrow">├─</span> <span class="action">approve</span> → <span class="stage">TO_BE_ARCHIVED</span>
+  <span class="arrow">└─</span> <span class="action">reject</span>  → <span class="stage">SOW_SUBMITTED</span>
 
-<div class="callout">
-  <strong>Library:</strong> NextAuth v4 &nbsp;·&nbsp; <strong>Providers:</strong> Azure AD SSO + Credentials fallback &nbsp;·&nbsp; <strong>Config:</strong> <code>lib/auth.js</code>
-</div>
+<span class="stage">TO_BE_ARCHIVED</span></div>
 
-<h3>Auth Flow — Azure AD SSO (primary)</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks "Sign in with Microsoft" on <code>/login</code>. Redirects to Microsoft login.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>signIn</code> callback validates the returned Azure AD profile: user must exist in the DB (<code>prisma.user.findUnique</code>) and have <code>isActive: true</code>. Unknown emails are rejected with <code>/login?error=not_provisioned</code>.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text"><code>jwt</code> callback enriches the token: fetches <code>id</code>, <code>role</code>, <code>location</code> from DB on every sign-in.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">A JWT is issued. Stored in a cookie. Signed with HMAC-SHA256 using <code>NEXTAUTH_SECRET</code> — clients <strong>cannot forge or modify</strong> the token.</div></div>
-
-<h3>Auth Flow — Credentials fallback (admin/service accounts)</h3>
-<div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User clicks "Sign in with email &amp; password" toggle, enters email + password.</div></div>
-<div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>CredentialsProvider.authorize()</code>: password must exactly match <code>CREDENTIALS_SECRET</code> env var. Email must exist in DB with <code>isActive: true</code>. Both must pass or login is rejected.</div></div>
-<div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Same <code>jwt</code> callback fires — role/location loaded from DB. Identical token issued.</div></div>
-<div class="flow-step"><div class="flow-num">4</div><div class="flow-text">If <code>CREDENTIALS_SECRET</code> is not set in env, the credentials form always rejects. Safe to leave unset in environments where you don't need it.</div></div>
-
-<h3>In API Routes &amp; Server Components</h3>
-<div class="flow-step"><div class="flow-num">→</div><div class="flow-text">API routes: <code>getToken({ req })</code> reads and verifies the JWT. Returns <code>null</code> if invalid/missing → route returns 401.</div></div>
-<div class="flow-step"><div class="flow-num">→</div><div class="flow-text">Server components (pages): <code>getServerSession(authOptions)</code> returns the session with <code>user.id</code>, <code>user.role</code>, <code>user.location</code>.</div></div>
-
-<h3>Role Hierarchy &amp; RBAC</h3>
-
-<p>Role hierarchy (highest to lowest): <code>ADMIN</code> → <code>PARTNER</code> → <code>ED</code> → <code>DIRECTOR</code> → <code>SEL</code> → <code>BD</code>.</p>
-
-<p>RBAC is enforced in <code>lib/db/opportunities.ts</code> by <code>resolveOwnerFilter(auth: AuthCtx)</code> — a synchronous pure function that returns a Prisma <code>where</code> fragment. No managerId traversal, no recursive DB calls — just a single query with a role-based filter:</p>
-
-<table>
-  <tr><th>Role</th><th>What they see</th><th>Prisma where fragment</th></tr>
-  <tr><td>ADMIN, PARTNER</td><td>All opportunities</td><td><code>{}</code> (no filter)</td></tr>
-  <tr><td>ED</td><td>Own + DIRECTOR-owned + SEL-owned</td><td><code>OR: [{ ownerId }, { owner: { role: { in: ['DIRECTOR','SEL'] } } }]</code></td></tr>
-  <tr><td>DIRECTOR</td><td>Own + SEL-owned</td><td><code>OR: [{ ownerId }, { owner: { role: 'SEL' } }]</code></td></tr>
-  <tr><td>SEL</td><td>Own only</td><td><code>{ ownerId }</code></td></tr>
-  <tr><td>BD (default)</td><td>Own only (fallback)</td><td><code>{ ownerId }</code></td></tr>
-</table>
-
-<div class="callout callout-green">
-  <strong>Security model:</strong> The JWT is signed server-side — a user cannot inspect or modify the <code>role</code> field in the token. RBAC filtering happens entirely in server-side Prisma queries; the browser never receives data it isn't supposed to see. Opportunities are the primary restricted resource.
-</div>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>8. Supabase Connection &amp; PgBouncer</h2>
-
-<div class="callout callout-warn">
-  <strong>Important — port matters:</strong> Port <code>6543</code> goes through <strong>PgBouncer</strong> (transaction mode — use this for the app, <code>DATABASE_URL</code>). Port <code>5432</code> is direct (use only for schema migrations, <code>DIRECT_URL</code> in <code>prisma.config.ts</code>). Many corporate firewalls block port 5432 — if <code>prisma db push</code> hangs, create tables via the Supabase SQL Editor instead.
-</div>
-
-<table>
-  <tr><th>Step</th><th>Detail</th></tr>
-  <tr><td>App connection string</td><td><code>DATABASE_URL</code> env var. Port <strong>6543</strong>. Used by <code>lib/prisma.ts</code> at runtime.</td></tr>
-  <tr><td>CLI connection string</td><td><code>DIRECT_URL</code> env var. Port <strong>5432</strong>. Used by <code>prisma.config.ts</code> for <code>prisma db push</code> / migrations.</td></tr>
-  <tr><td>Connection pool</td><td><code>lib/prisma.ts</code> creates a <code>pg.Pool</code> with <code>max: 5</code>. Additional safety net alongside PgBouncer.</td></tr>
-  <tr><td>Prisma adapter</td><td><code>PrismaPg</code> from <code>@prisma/adapter-pg</code> bridges Prisma 7 to the pg pool.</td></tr>
-  <tr><td>Schema namespace</td><td>All tables under <code>procdna_database</code> schema (not default <code>public</code>).</td></tr>
-  <tr><td>Schema changes</td><td>Run <code>npx prisma db push</code> (needs direct port 5432). If blocked by firewall, create/alter tables via Supabase SQL Editor. Then run <code>npx prisma generate</code> to regenerate the TypeScript client.</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>8b. Supabase Storage (File Uploads)</h2>
-
-<div class="callout">
-  <strong>Why service role key?</strong> NextAuth (not Supabase Auth) is used for authentication, so <code>auth.uid()</code> is always null in Supabase RLS policies. The service role key bypasses RLS entirely — this is safe because uploads only go through server-side API routes that verify the NextAuth JWT first.
-</div>
-
-<table>
-  <tr><th>Item</th><th>Detail</th></tr>
-  <tr><td>Client (singleton)</td><td><code>getSupabase()</code> in <code>lib/supabase.ts</code>. Returns the same <code>SupabaseClient</code> instance on every call via <code>globalThis._supabase</code> (same pattern as Prisma). Throws at call time if env vars are missing, not at module load. Created with <code>auth: { persistSession: false }</code> — no session state server-side.</td></tr>
-  <tr><td>Signed URL cache</td><td><code>getSignedUrl(bucket, path)</code> — use this instead of calling <code>createSignedUrl</code> directly. Checks an in-memory <code>Map&lt;string, { url, expiresAt }&gt;</code>. Cache TTL = 55 min. Signed URLs are valid 60 min, so cached URLs always have ≥5 min remaining when served. First caller hits Supabase; subsequent callers within 55 min get the cached URL instantly.</td></tr>
-  <tr><td>Credentials</td><td><code>SUPABASE_URL</code> = <code>https://&lt;project-id&gt;.supabase.co</code> (NOT the dashboard URL). <code>SUPABASE_SERVICE_ROLE_KEY</code> = starts with <code>eyJhb…</code> (JWT), found under Project Settings → API → Service Role Key.</td></tr>
-  <tr><td>Buckets</td><td><code>SoW_bucket</code> (Statement of Work) · <code>PO_busket</code> (Purchase Orders). Both are private — no public access.</td></tr>
-  <tr><td>Storage path pattern</td><td><code>{opportunityId}/v{version}_{timestamp}.{ext}</code> — e.g. <code>BD-001/v2_1715000000000.pdf</code>.</td></tr>
-  <tr><td>Allowed MIME types</td><td>PDF, Word (.doc/.docx), Excel (.xls/.xlsx), PNG, JPEG. Max 20 MB per file.</td></tr>
-  <tr><td>Download access</td><td>Signed URLs generated server-side with 1-hour TTL. Always call <code>getSignedUrl(bucket, path)</code> from <code>lib/supabase.ts</code> — never call <code>createSignedUrl</code> directly. The cache layer handles deduplication. Returned in API responses and used directly as <code>&lt;a href&gt;</code> download links.</td></tr>
-  <tr><td>Soft delete</td><td>Deleting a document sets <code>isActive: false</code> in the DB record. The physical file in Supabase Storage is <strong>not</strong> removed — preserves history. GET endpoints filter by <code>isActive: true</code>.</td></tr>
-  <tr><td>Versioning</td><td>Each upload increments <code>version</code>: <code>existing count + 1</code>. All versions are kept in storage, only the active ones are returned by the GET endpoint.</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>9. PricingDrawer.tsx — Deep Reference</h2>
-
-<p><strong>File:</strong> <code>app/opportunities/[id]/PricingDrawer.tsx</code> &nbsp;·&nbsp; Client component (~1,300 lines) &nbsp;·&nbsp; The most complex file in the codebase.</p>
-
-<div class="callout">
-  <strong>What it is:</strong> A full-screen modal opened when a user clicks a pricing version card. Contains seven sub-tabs. All Efforts, Other Cost, and Financial logic lives here. Props: <code>version: PricingVersion</code>, <code>opp: OpportunityDetail</code>, <code>onClose: () =&gt; void</code>.
-</div>
-
-<h3>9a. TypeScript Type Definitions</h3>
-<table>
-  <tr><th>Type</th><th>Fields</th><th>Purpose</th></tr>
-  <tr>
-    <td><code>StaffRow</code></td>
-    <td><code>id, rateCardId, resourceDesignation, location, domain, utilization, costRatePerHour, systemBillRatePerHour, effectiveBillRate, isActive, isBillable, weeklyHours[]</code></td>
-    <td>In-memory representation of one staffing resource row. Populated from <code>version.staffingResources</code> on mount via <code>toStaffRow()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>OtherCostRow</code></td>
-    <td><code>id, description, amount, markupPct, isBillable</code></td>
-    <td>In-memory other cost line. Populated from <code>opp.otherCosts</code> on mount.</td>
-  </tr>
-  <tr>
-    <td><code>ComputedMetrics</code></td>
-    <td><code>totalHours, billedHours, unbilledHours, totalCost, proposedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour</code></td>
-    <td>Output of <code>computeFromRows()</code>. Drives the metrics banner and is patched to the DB via <code>patchVersion()</code>.</td>
-  </tr>
-  <tr>
-    <td><code>MRow</code> (Financial tab, local)</td>
-    <td><code>a1, a2, a, b, c, d, dPct, ePct, f1, f2, f, g, h, i, j, k, indiaRev, indiaHrs, usRev, usHrs, recRev</code></td>
-    <td>Per-month accumulator for all Financial tab rows A–K. Computed on every render — never persisted.</td>
-  </tr>
-  <tr>
-    <td><code>RateCardItem</code></td>
-    <td><code>id, jobRole, location, domain, costRatePerHour, billRatePerHour</code></td>
-    <td>Shape of items returned by <code>GET /api/rate-cards</code>. Drives the Add Resource dropdown.</td>
-  </tr>
-</table>
-
-<h3>9b. Sub-Tabs</h3>
-<table>
-  <tr><th>Tab</th><th>Status</th><th>Content</th></tr>
-  <tr><td>Basic Details</td><td>Active</td><td>Read-only opportunity fields + computed pricing metrics + schedule of payments table.</td></tr>
-  <tr><td>Efforts</td><td>Active</td><td>Staffing resource table with Active/Bill checkboxes, rate columns, weekly hour cells, utilization auto-fill, add/remove resource. Live metrics banner.</td></tr>
-  <tr><td>Other Cost</td><td>Active</td><td>Non-staffing cost table with Billable checkbox, Markup %, and bidirectional Billed amount.</td></tr>
-  <tr><td>Financial</td><td>Active</td><td>Live P&amp;L breakdown by month (rows A–K) + business justification field (L). 100% client-side computed.</td></tr>
-  <tr><td>Resource Mix</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
-  <tr><td>Timeline</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
-  <tr><td>Risk Assessment</td><td>Coming Soon</td><td>Greyed out, not clickable.</td></tr>
-</table>
-
-<h3>9c. State (useState)</h3>
-<table>
-  <tr><th>State variable</th><th>Initial value</th><th>What it controls</th></tr>
-  <tr><td><code>sub</code></td><td><code>'Basic Details'</code></td><td>Which sub-tab is active.</td></tr>
-  <tr><td><code>staffRows</code></td><td>Mapped from <code>version.staffingResources</code></td><td>All staffing rows. Every edit updates this array and fires <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>versionMetrics</code></td><td><code>computeFromRows(staffRows)</code></td><td>Latest computed metrics. Updated every time <code>patchVersion()</code> runs.</td></tr>
-  <tr><td><code>allRateCards</code></td><td><code>[]</code></td><td>Fetched once from <code>GET /api/rate-cards</code> when Efforts tab first opens.</td></tr>
-  <tr><td><code>showAddRow</code></td><td><code>false</code></td><td>Shows/hides the Add Resource dropdown row.</td></tr>
-  <tr><td><code>editCell</code></td><td><code>null</code></td><td>Which week cell is in edit mode: <code>{ srId, wk }</code>.</td></tr>
-  <tr><td><code>editVal</code></td><td><code>''</code></td><td>Current value in the active week cell input.</td></tr>
-  <tr><td><code>editRateCell</code></td><td><code>null</code></td><td>Which rate cell is in edit mode: <code>{ srId, field: 'eff' | 'dp' }</code>.</td></tr>
-  <tr><td><code>editRateVal</code></td><td><code>''</code></td><td>Current value in the active rate/D%P input.</td></tr>
-  <tr><td><code>otherCosts</code></td><td>Mapped from <code>opp.otherCosts</code></td><td>All other cost rows.</td></tr>
-  <tr><td><code>showAddCost</code></td><td><code>false</code></td><td>Shows/hides the Add Cost inline form row.</td></tr>
-  <tr><td><code>newDesc / newAmount</code></td><td><code>''</code></td><td>Controlled inputs for the new cost form.</td></tr>
-  <tr><td><code>editCostCell</code></td><td><code>null</code></td><td>Which other-cost cell is in edit mode: <code>{ id, field: 'markup' | 'billed' }</code>.</td></tr>
-  <tr><td><code>editCostVal</code></td><td><code>''</code></td><td>Current value in the active other-cost input.</td></tr>
-</table>
-
-<h3>9d. Key Functions &amp; Callbacks</h3>
-<table>
-  <tr><th>Function</th><th>What it does</th></tr>
-  <tr><td><code>computeFromRows(rows)</code></td><td>Pure function. Returns <code>ComputedMetrics</code> from active staffing rows. Never touches the DB.</td></tr>
-  <tr><td><code>patchVersion(rows)</code></td><td>Runs <code>computeFromRows</code>, updates <code>versionMetrics</code> state, then sends <code>PATCH /api/pricing-versions/[pvId]</code> with all computed fields. Called after every edit and by the Save &amp; Close button.</td></tr>
-  <tr><td><code>toStaffRow(sr)</code></td><td>Maps a raw DB record to a typed <code>StaffRow</code>. Normalises Decimal → <code>Number()</code>, dates → <code>toISOString().slice(0,10)</code>.</td></tr>
-  <tr><td><code>addRow(rc)</code></td><td>Posts to staffing endpoint, appends to state, calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>removeRow(srId)</code></td><td>Sends DELETE, removes from state, calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>commitHours(srId, wk, val)</code></td><td>Sends PUT with <code>{ weekStartDate, hours }</code>. Upserts weekly hours in state. Calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>applyUtilization(srId, util)</code></td><td>Computes <code>hoursPerWeek = round(util/100 × 40)</code>. Sends PATCH with all <code>weekEntries</code>. Updates state. Calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>commitEffectiveRate(srId, val)</code></td><td>Sends PATCH with <code>{ effectiveBillRate }</code>. Updates state. Calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>commitDP(srId, val)</code></td><td>Converts D/P% to eff rate: <code>sys × (1 + dp/100)</code>. Sends PATCH.</td></tr>
-  <tr><td><code>toggleRow(srId, isActive)</code></td><td>Sends PATCH <code>{ isActive }</code>. Calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>toggleStaffBillable(srId, isBillable)</code></td><td>Sends PATCH <code>{ isBillable }</code>. Calls <code>patchVersion()</code>.</td></tr>
-  <tr><td><code>addOtherCost()</code></td><td>Posts to other-costs endpoint. Appends to state.</td></tr>
-  <tr><td><code>toggleBillable(costId, billable)</code></td><td>Optimistic: updates state, then sends PATCH <code>{ isBillable }</code>.</td></tr>
-  <tr><td><code>commitMarkup(costId, val)</code></td><td>Sends PATCH <code>{ markupPct }</code>. Billed is derived: <code>amount × (1 + pct/100)</code>.</td></tr>
-  <tr><td><code>commitBilled(costId, val)</code></td><td>Back-calculates: <code>markupPct = (billed/amount − 1) × 100</code>. Sends PATCH. Bidirectional with Markup.</td></tr>
-  <tr><td><code>removeOtherCost(costId)</code></td><td>Sends DELETE. Removes from state.</td></tr>
-</table>
-
-<h3>9e. Pure Helper Functions (module-level)</h3>
-<table>
-  <tr><th>Function</th><th>Signature</th><th>What it does</th></tr>
-  <tr><td><code>getWeekColumns</code></td><td><code>(start, end) → Date[]</code></td><td>Returns Monday dates covering the full opportunity range (max 52 weeks). Generates W1…Wn columns.</td></tr>
-  <tr><td><code>weekKey</code></td><td><code>(d: Date) → string</code></td><td>Returns <code>'YYYY-MM-DD'</code> string for a Monday <code>Date</code>.</td></tr>
-  <tr><td><code>getProjectMonths</code></td><td><code>(start, end) → string[]</code></td><td>Returns every <code>'YYYY-MM'</code> month from start to end inclusive.</td></tr>
-  <tr><td><code>distributeWeekToMonths</code></td><td><code>(weekStartDate, value) → [string, number][]</code></td><td>Core Financial tab algorithm. Distributes a week's value across calendar months proportionally by working days (Mon–Fri). Uses local time to avoid UTC shift bugs.</td></tr>
-  <tr><td><code>computeFromRows</code></td><td><code>(rows: StaffRow[]) → ComputedMetrics</code></td><td>Pure function. Iterates active rows, computes billed/unbilled hours, cost, revenue, margins.</td></tr>
-  <tr><td><code>fmtRole</code></td><td><code>(r: string) → string</code></td><td><code>BUSINESS_ANALYST_SENIOR</code> → <code>Business Analyst Senior</code>.</td></tr>
-  <tr><td><code>fmt</code></td><td><code>(n: number) → string</code></td><td>Currency shortener: <code>≥1M → $X.XXM</code>, <code>≥1K → $XK</code>, else <code>$X</code>.</td></tr>
-</table>
-
-<h3>9f. Efforts Tab — Column Reference</h3>
-
-<div class="callout callout-green">
-  <strong>Two-checkbox priority:</strong> Active (indigo) = master switch — OFF excludes row from everything. Billable (emerald) = secondary — OFF when Active is ON means cost counted but no revenue; hours go to Unbilled.
-</div>
-
-<table>
-  <tr><th>Column</th><th>Source / Formula</th><th>Editable?</th><th>Persisted to DB?</th></tr>
-  <tr><td><strong>Active ☑</strong></td><td><code>StaffingResource.isActive</code>.</td><td>Yes</td><td>PATCH <code>{ isActive }</code></td></tr>
-  <tr><td><strong>Bill ☑</strong></td><td><code>StaffingResource.isBillable</code>. OFF (with Active ON) → cost only, no revenue.</td><td>Yes</td><td>PATCH <code>{ isBillable }</code></td></tr>
-  <tr><td>Role</td><td><code>resourceDesignation</code> from RateCard. Formatted via <code>fmtRole()</code>.</td><td>No</td><td>—</td></tr>
-  <tr><td>Location</td><td><code>location</code> enum: INDIA or US.</td><td>No</td><td>—</td></tr>
-  <tr><td>Domain</td><td><code>domain</code> from RateCard (ANALYTICS, TECH, MS, DS).</td><td>No</td><td>—</td></tr>
-  <tr><td>Cost Rate</td><td><code>costRatePerHour</code> from RateCard.</td><td>No</td><td>—</td></tr>
-  <tr><td>Bill Rate</td><td><code>systemBillRatePerHour</code> — standard rate without discount.</td><td>No</td><td>—</td></tr>
-  <tr><td><strong>Eff. Rate</strong></td><td><code>effectiveBillRate</code> — actual rate charged to client.</td><td>Yes (click)</td><td>PATCH <code>{ effectiveBillRate }</code></td></tr>
-  <tr><td><strong>D/P %</strong></td><td><code>((effRate − sysRate) / sysRate) × 100</code>. Negative = discount (amber); positive = premium (green). Editing back-calculates eff rate.</td><td>Yes (click)</td><td>Only effectiveBillRate is persisted.</td></tr>
-  <tr><td><strong>Util %</strong></td><td><code>utilization</code> (0–100). Auto-fills all week cells: <code>round(util/100 × 40)</code> hrs.</td><td>Yes (type+blur)</td><td>PATCH <code>{ utilization, weekEntries }</code></td></tr>
-  <tr><td><strong>W1…Wn</strong></td><td>Hours per Monday week. Weeks derived from opportunity date range.</td><td>Yes (click)</td><td>PUT <code>{ weekStartDate, hours }</code></td></tr>
-</table>
-
-<h3>9g. Other Cost Tab</h3>
-<table>
-  <tr><th>Column</th><th>Behavior</th><th>DB field</th></tr>
-  <tr><td>Bill ☑</td><td>Unchecked = internal cost, not charged to client. Billed shows $0.</td><td><code>OtherCost.isBillable</code></td></tr>
-  <tr><td>Nature of Expense</td><td>Free-text description. Read-only after creation.</td><td><code>OtherCost.description</code></td></tr>
-  <tr><td>Cost</td><td>Raw cost amount. Read-only after creation.</td><td><code>OtherCost.amount</code></td></tr>
-  <tr><td><strong>Markup %</strong></td><td>Click to edit. When changed: Billed auto-updates to <code>amount × (1 + pct/100)</code>.</td><td><code>OtherCost.markupPct</code></td></tr>
-  <tr><td><strong>Billed</strong></td><td>Click to edit. Back-calculates markup: <code>pct = (billed/amount − 1) × 100</code>. Bidirectional with Markup.</td><td>Derived from <code>markupPct</code></td></tr>
-</table>
-
-<h3>9h. Financial Tab — Architecture</h3>
-
-<div class="callout callout-green">
-  The Financial tab is <strong>100% client-side computed</strong> — no API calls, no saved snapshots. Reads <code>staffRows</code> and <code>otherCosts</code> state and recomputes on every render. Columns = one per project month + a Total column.
-</div>
-
-<h3>Financial Tab Row Reference (A–K, L)</h3>
-<table>
-  <tr><th>Row</th><th>Label</th><th>Formula</th><th>Source rows</th></tr>
-  <tr><td><strong>A</strong></td><td>Total Revenue</td><td>A = A1 + A2</td><td>—</td></tr>
-  <tr><td>A1</td><td>Staffing Revenue</td><td>Σ(hours × effectiveBillRate) distributed by working-day ratio</td><td>isActive + isBillable</td></tr>
-  <tr><td>A2</td><td>Other Cost Revenue</td><td>Σ(amount × (1 + markupPct/100)) / numMonths</td><td>isBillable other costs</td></tr>
-  <tr><td><strong>B</strong></td><td>Employee Cost</td><td>Σ(hours × costRatePerHour) distributed by working-day ratio</td><td>isActive (all)</td></tr>
-  <tr><td>C</td><td>Other Cost (raw)</td><td>Σ(amount) / numMonths</td><td>All other costs</td></tr>
-  <tr><td><strong>D</strong></td><td>Gross Margin</td><td>A − B − C</td><td>—</td></tr>
-  <tr><td><strong>D%</strong></td><td>Gross Margin %</td><td>D / A × 100</td><td>—</td></tr>
-  <tr><td>E</td><td>Discount / Premium %</td><td>(A1 / recommendedRevenue − 1) × 100</td><td>isActive + isBillable</td></tr>
-  <tr><td>F</td><td>Total Hours</td><td>F1 + F2</td><td>—</td></tr>
-  <tr><td>F1</td><td>Billed Hours</td><td>Σ hours by working-day ratio</td><td>isActive + isBillable</td></tr>
-  <tr><td>F2</td><td>Unbilled Hours</td><td>Σ hours by working-day ratio</td><td>isActive + NOT isBillable</td></tr>
-  <tr><td>G</td><td>Offshore Ratio</td><td>India hours / F × 100</td><td>isActive (India)</td></tr>
-  <tr><td>H</td><td>Blended Rate / Hr</td><td>A1 / F</td><td>—</td></tr>
-  <tr><td>I</td><td>Effective Rate / Hr</td><td>A1 / F1</td><td>—</td></tr>
-  <tr><td>J</td><td>India Rate</td><td>India billed revenue / India hours</td><td>isActive + isBillable + INDIA</td></tr>
-  <tr><td>K</td><td>US Rate</td><td>US billed revenue / US hours</td><td>isActive + isBillable + US</td></tr>
-  <tr><td>L</td><td>Business Justification</td><td>Free text. Read from <code>version.businessJustification</code>.</td><td>—</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>10. Pricing Version Management</h2>
-
-<h3>Mark as Final</h3>
-<p>Sends <code>PATCH /api/pricing-versions/[pvId]</code> with <code>{ isFinal: true }</code>. Server atomically sets all siblings to <code>isFinal: false</code> then sets target to <code>true</code>. Only one final version per opportunity at any time. Final version shows <span class="badge">Selected for approval</span> badge.</p>
-
-<h3>Duplicate</h3>
-<p>Sends <code>POST /api/pricing-versions/[pvId]/duplicate</code>. Server deep-copies in a single <code>$transaction</code>: new version + all staffing resources + all weekly hour entries + all SoP rows + all financial snapshots. Fully independent from source.</p>
-
-<h3>Delete</h3>
-<p>Inline confirmation required per card. Sends <code>DELETE /api/pricing-versions/[pvId]</code>. Hard-delete with cascade — permanent, no recycle bin. Use Duplicate before deleting to preserve a backup.</p>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>11. Rate Card Domain Mapping</h2>
-
-<table>
-  <tr><th>Job Role(s)</th><th>Domain</th></tr>
-  <tr><td>Business Analyst, Senior BA, Lead BA, Principal BA</td><td>ANALYTICS</td></tr>
-  <tr><td>Technology Analyst, Senior TA, Lead TA, Principal TA</td><td>TECH</td></tr>
-  <tr><td>Consultant, Senior Consultant, Lead Consultant, Associate Director, Director, Senior Director, Partner, Senior Partner, Managing Partner</td><td>MS</td></tr>
-  <tr><td>Data Scientist, Senior DS, Lead DS</td><td>DS</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>12. Vercel Deployment</h2>
-
-<div class="callout">
-  <strong>Auto-deploy is always on.</strong> Every push to the connected branch (<code>main</code>) triggers a new production build automatically.
-</div>
-
-<table>
-  <tr><th>Concept</th><th>Detail</th></tr>
-  <tr><td>Production URL</td><td>Stable URL on the Vercel dashboard. Always the latest successful build of <code>main</code>.</td></tr>
-  <tr><td>Preview URL</td><td>Each build also gets a unique immutable URL — useful for testing a specific deploy.</td></tr>
-  <tr><td>Prisma on deploy</td><td><code>"postinstall": "prisma generate"</code> in <code>package.json</code> — regenerates the TypeScript client on every Vercel build.</td></tr>
-  <tr><td>Environment variables</td><td>Set in Vercel project settings. Must include: <code>DATABASE_URL</code> (port 6543), <code>DIRECT_URL</code> (port 5432), <code>NEXTAUTH_SECRET</code>, <code>NEXTAUTH_URL</code>, <code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code>, <code>AZURE_AD_CLIENT_ID</code>, <code>AZURE_AD_CLIENT_SECRET</code>, <code>AZURE_AD_TENANT_ID</code>, <code>CREDENTIALS_SECRET</code> (shared password for credentials login — omit to disable), <code>MAIL_SENDER</code> (e.g. <code>nexaadmin@procdna.com</code> — for future email notifications).</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>13. External Services</h2>
-
-<table>
-  <tr><th>Service</th><th>Used for</th><th>Where</th></tr>
-  <tr><td>Supabase (PostgreSQL)</td><td>All structured application data. Connection via PgBouncer port 6543.</td><td><code>DATABASE_URL</code> → <code>lib/prisma.ts</code></td></tr>
-  <tr><td>Supabase Storage</td><td>Private file buckets for SoW (<code>SoW_bucket</code>) and PO (<code>PO_busket</code>) documents. Server-side only, service role key.</td><td><code>SUPABASE_URL</code> + <code>SUPABASE_SERVICE_ROLE_KEY</code> → <code>lib/supabase.ts</code></td></tr>
-  <tr><td>Azure Active Directory</td><td>Two uses: (1) <strong>SSO login</strong> — Azure AD is the primary auth provider in NextAuth (<code>lib/auth.js</code>); (2) <strong>User sync</strong> — <code>prisma/sync-azure-users.ts</code> syncs BD staff from the company directory. App registration: <strong>NEXA</strong>.</td><td><code>AZURE_AD_CLIENT_ID</code>, <code>AZURE_AD_CLIENT_SECRET</code>, <code>AZURE_AD_TENANT_ID</code></td></tr>
-  <tr><td>Vercel</td><td>Hosting + auto-deploy from GitHub. <code>postinstall: prisma generate</code> ensures Prisma client is built on every deploy.</td><td>GitHub → Vercel CI (<code>main</code> branch)</td></tr>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════ -->
-<h2>14. Common Development Commands</h2>
-
-<table>
-  <tr><th>Command</th><th>What it does</th></tr>
-  <tr><td><code>npm run dev</code></td><td>Start local dev server at <code>http://localhost:3000</code>. Ctrl+C to stop, then re-run to restart.</td></tr>
-  <tr><td><code>npx prisma db push</code></td><td>Push schema changes to Supabase (no migration files). Requires direct port 5432 via <code>DIRECT_URL</code>. If firewall blocks 5432, use Supabase SQL Editor.</td></tr>
-  <tr><td><code>npx prisma generate</code></td><td>Regenerate Prisma TypeScript client after any model change. Required before TypeScript compiles.</td></tr>
-  <tr><td><code>npx tsx prisma/seed.ts</code></td><td>Seed/reseed rate cards, sample data, and Azure AD users. Upsert logic — safe to re-run.</td></tr>
-  <tr><td><code>npx prisma studio</code></td><td>Open Prisma Studio — web UI to browse and edit the database directly.</td></tr>
-  <tr><td><code>git push origin main</code></td><td>Push to main → triggers Vercel auto-deploy to production.</td></tr>
-</table>
-
-<br/>
-<hr style="border-color:#e2e8f0; margin-top:32px;"/>
-<p style="color:#94a3b8; font-size:11px; text-align:center; margin-top:12px;">
-  ProcDNA BD Tracker &nbsp;·&nbsp; Codebase Guide &nbsp;·&nbsp; To save as PDF: File → Print → Save as PDF in your browser.
+<h3>Pricing version lock</h3>
+<p>
+  A pricing version becomes <strong>read-only</strong> when
+  <code>isFinal === true</code> <strong>AND</strong>
+  stage ∈ <code>{ APPROVAL_PENDING, SOW_PENDING, SOW_SUBMITTED, SOW_REVIEW_PENDING, TO_BE_ARCHIVED }</code>.
+  Lock check uses the live <code>oppStage</code> state passed as
+  <code>currentStage</code> prop to <code>PricingDrawer</code>, not the static
+  <code>opp.stage</code> from server. After rejection/withdrawal the stage
+  reverts and the lock lifts immediately without page reload.
 </p>
 
+<h3>Tab gating (visual dim only)</h3>
+<table>
+  <tr><th>Tab</th><th>Dimmed when</th></tr>
+  <tr><td>SOW / PO</td><td>Stage NOT in <code>{SOW_PENDING, SOW_SUBMITTED, SOW_REVIEW_PENDING, TO_BE_ARCHIVED}</code></td></tr>
+  <tr><td>Project Code</td><td>Stage !== <code>TO_BE_ARCHIVED</code></td></tr>
+</table>
+
+<h3>Withdraw button visibility</h3>
+<p>
+  Shows only when <code>sessionUserId === opp.ownerId AND a pending PRICING approval exists</code>.
+  Owner-only — admins cannot withdraw on someone else's behalf in the current UI.
+</p>
+
+<h2 id="auth"><span class="num">08</span>Auth flow</h2>
+
+<h3>Sign-in</h3>
+<ol>
+  <li>User clicks <strong>Sign in with Microsoft</strong> on <code>/login</code></li>
+  <li>NextAuth redirects to Azure AD (<code>login.microsoftonline.com</code>) with state + nonce</li>
+  <li>Microsoft authenticates and redirects back to <code>/api/auth/callback/azure-ad?code=…</code></li>
+  <li>NextAuth exchanges code for ID token, calls <code>signIn</code> callback in <code>lib/auth.js</code>:
+    <ul>
+      <li>Verifies <code>profile.email</code> exists in the <code>users</code> table</li>
+      <li>Updates <code>azureId</code> and <code>location</code> on first sign-in</li>
+      <li>Returns <code>true</code> (allow) or <code>false</code>/<code>error URL</code> (deny)</li>
+    </ul>
+  </li>
+  <li>Session JWT issued, signed with <code>NEXTAUTH_SECRET</code>, set as <code>__Secure-next-auth.session-token</code> cookie</li>
+  <li>Browser redirected to <code>callbackUrl</code> (usually <code>/dashboard</code>)</li>
+</ol>
+
+<h3>Per-request auth</h3>
+<p>
+  <code>proxy.ts</code> intercepts every non-excluded request, calls <code>getToken</code> with
+  <strong>explicit</strong> <code>secret</code> + <code>secureCookie: true</code> + <code>cookieName</code>,
+  and either lets the request through or redirects to <code>/login</code>.
+</p>
+<p>
+  API routes do the same check via <code>getAuthToken(req)</code> from <code>@/lib/getAuthToken</code>
+  (returns 401 if missing).
+</p>
+
+<h3>RBAC</h3>
+<p>Visibility hierarchy (highest first): <code>ADMIN</code> → <code>PARTNER</code> → <code>ED</code> → <code>DIRECTOR</code> → <code>SEL</code>. Filter built in <code>lib/db/opportunities.ts</code> via <code>resolveOwnerFilter(auth)</code>.</p>
+<ul>
+  <li><strong>SEL</strong>: own opportunities only</li>
+  <li><strong>DIRECTOR</strong>: own + SELs in team</li>
+  <li><strong>ED</strong>: own + 2-level subtree</li>
+  <li><strong>PARTNER / ADMIN</strong>: all</li>
+</ul>
+
+<h2 id="mail"><span class="num">09</span>Mail (lib/mail.ts)</h2>
+
+<p>
+  Sent via Microsoft Graph API endpoint <code>POST /users/{MAIL_SENDER}/sendMail</code>.
+  Token via client-credentials (<code>@azure/identity</code>'s <code>ClientSecretCredential</code>).
+</p>
+
+<div class="callout warn">
+  <strong>Graph blocks RFC headers:</strong> <code>Message-ID</code>, <code>In-Reply-To</code>, and
+  <code>References</code> all return <code>InvalidInternetMessageHeader</code>. Threading relies on
+  <strong>identical subject lines</strong> (Gmail/Outlook thread by subject) — not RFC headers.
+</div>
+
+<h3>Functions</h3>
+<table>
+  <tr><th>Function</th><th>Recipients</th><th>When</th></tr>
+  <tr><td><code>sendMail()</code></td><td>any</td><td>Low-level helper.</td></tr>
+  <tr><td><code>mailApprovalRequested()</code></td><td>approver (with action links), CC list (info), requester (confirmation)</td><td>POST <code>/api/opportunities/[id]/approvals</code>.</td></tr>
+  <tr><td><code>mailApprovalApproved()</code></td><td>requester + approver</td><td>After approve.</td></tr>
+  <tr><td><code>mailApprovalRejected()</code></td><td>requester + approver</td><td>After reject. Includes reason.</td></tr>
+  <tr><td><code>mailApprovalWithdrawn()</code></td><td>approver + requester</td><td>After withdraw. Includes reason. Same subject as original for threading.</td></tr>
+</table>
+
+<h3>Email-action endpoint</h3>
+<p>
+  Approval emails contain one-click <em>Approve</em> / <em>Reject</em> links pointing to
+  <code>/api/approvals/email-action?token=…</code>. Token signed with HMAC-SHA256 using
+  <code>EMAIL_ACTION_SECRET</code>, 7-day TTL, encodes <code>(approvalId, approverId, action)</code>.
+  Endpoint renders a branded HTML confirmation page (POST-back to commit the action).
+</p>
+
+<h2 id="storage"><span class="num">10</span>File storage</h2>
+
+<p>
+  All file uploads go through Supabase Storage. Use <code>getSupabase()</code> from
+  <code>lib/supabase.ts</code> (<strong>lazy singleton</strong> — never instantiate at module level
+  or you'll leak connections in serverless).
+</p>
+
+<h4>Buckets</h4>
+<ul>
+  <li><code>SoW_bucket</code> — SOW documents</li>
+  <li><code>PO_busket</code> — PO documents (typo is baked in)</li>
+</ul>
+
+<h4>Flow</h4>
+<ol>
+  <li>Client POSTs file via multipart to <code>/api/opportunities/[id]/sow</code></li>
+  <li>Server uploads to Supabase Storage with service role key (bypasses RLS)</li>
+  <li>Server creates <code>SOWDocument</code> row with <code>storagePath</code></li>
+  <li>On subsequent GETs, server issues a fresh 55-min signed URL (cached in <code>lib/supabase.ts</code>)</li>
+</ol>
+
+<h2 id="env"><span class="num">11</span>Environment variables</h2>
+
+<table>
+  <tr><th>Var</th><th>Used for</th></tr>
+  <tr><td><code>DATABASE_URL</code></td><td>Prisma pooled connection (port 6543, transaction mode).</td></tr>
+  <tr><td><code>DIRECT_URL</code></td><td>Direct DB connection for migrations.</td></tr>
+  <tr><td><code>NEXTAUTH_URL</code></td><td>Public app URL. Must be https in prod. <strong>Must match deployment hostname exactly.</strong></td></tr>
+  <tr><td><code>NEXTAUTH_SECRET</code></td><td>JWT signing secret. Referenced explicitly in <code>getAuthToken</code> and <code>proxy.ts</code>.</td></tr>
+  <tr><td><code>AZURE_AD_CLIENT_ID</code> / <code>_SECRET</code> / <code>_TENANT_ID</code></td><td>Azure App Registration. Powers SSO + Graph mailer + OneDrive export. Single app reg shared across both Vercel projects.</td></tr>
+  <tr><td><code>SUPABASE_URL</code> / <code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Server-side Supabase access.</td></tr>
+  <tr><td><code>NEXT_PUBLIC_SUPABASE_URL</code> / <code>_ANON_KEY</code></td><td>Client-side (rarely used).</td></tr>
+  <tr><td><code>MAIL_SENDER</code></td><td>From-address (e.g. <code>nexa_admin@procdna.com</code>).</td></tr>
+  <tr><td><code>MAIL_BASE_URL</code></td><td>Base URL for email links. Should equal <code>NEXTAUTH_URL</code> in prod.</td></tr>
+  <tr><td><code>EMAIL_ACTION_SECRET</code></td><td>HMAC secret for email-action tokens.</td></tr>
+  <tr><td><code>CREDENTIALS_SECRET</code></td><td>Shared password for <code>/login2</code> credentials provider.</td></tr>
+  <tr><td><code>ONEDRIVE_USER</code> / <code>ONEDRIVE_FILE_PATH</code></td><td>OneDrive export target.</td></tr>
+</table>
+
+<h2 id="conventions"><span class="num">12</span>Conventions</h2>
+
+<h3>Code patterns</h3>
+<ul>
+  <li><strong>Auth in API routes</strong>: <code>const token = await getAuthToken(req)</code> from <code>@/lib/getAuthToken</code>. Return <code>apiError('UNAUTHORIZED')</code> on miss.</li>
+  <li><strong>Errors</strong>: use <code>apiError(code)</code> from <code>lib/errors.ts</code> with codes from <code>APP_ERRORS</code>. Don't return raw <code>NextResponse.json({error:…})</code> for known errors.</li>
+  <li><strong>Prisma Decimal</strong>: always <code>Number(value)</code> when transferring to client / doing math.</li>
+  <li><strong>Server components fetch data</strong>; client components handle interactivity. Don't put <code>'use server'</code> at the top of a <code>page.tsx</code> — it breaks rendering in Next 16.</li>
+  <li><strong>Locked pricing</strong>: pass live state (<code>oppStage</code>) into <code>PricingDrawer</code> as <code>currentStage</code> prop; don't rely on <code>opp.stage</code> from the server (it's stale once the user takes actions).</li>
+</ul>
+
+<h3>Naming &amp; UI</h3>
+<ul>
+  <li>Opportunity IDs: <code>BD-NNN</code>. Client IDs: <code>CL-NNN</code>.</li>
+  <li>Tabs visually dimmed (40% opacity) when their stage gate isn't met — still clickable so users can inspect.</li>
+  <li>Domain pills (Analytics, MS, DS, Design, Technology, AUXO) used for LoB breakdown.</li>
+  <li>Status field is now a <strong>manual dropdown</strong> (OPEN / WON). Auto-WON-on-approval was removed.</li>
+</ul>
+
+<h2 id="gotchas"><span class="num">13</span>Gotchas</h2>
+
+<div class="callout danger">
+  <strong>Never write <code>'use server'</code> at the top of a <code>page.tsx</code>.</strong>
+  It marks every export in the file as a Server Action, which is incompatible with a page-render
+  default export. Caused the silent login → redirect-to-login loop on the new Vercel project until
+  removed from <code>app/dashboard/page.tsx</code>.
+</div>
+
+<div class="callout warn">
+  <strong>NextAuth env-var auto-detection fails in Edge runtime.</strong>
+  Internal NextAuth code reads <code>process.env.NEXTAUTH_URL</code> / <code>VERCEL_URL</code>
+  buried inside <code>node_modules</code>. Vercel's build can fail to inline those references for
+  Edge bundles, leaving <code>useSecureCookies</code> defaulting to <code>false</code> → looking
+  for <code>next-auth.session-token</code> (no prefix) → never finding the actual
+  <code>__Secure-next-auth.session-token</code> cookie. Always use <code>getAuthToken</code> /
+  the explicit pattern in <code>proxy.ts</code>.
+</div>
+
+<div class="callout warn">
+  <strong>Vercel doesn't run <code>prisma migrate deploy</code></strong> — only <code>prisma generate</code>
+  (via <code>postinstall</code>). Any DB schema change must be applied as SQL in Supabase manually.
+  The <code>prisma/migrations/</code> folder is historical only.
+</div>
+
+<div class="callout warn">
+  <strong>Supabase typo: <code>PO_busket</code></strong> — don't fix it without a migration plan.
+  Existing PO docs reference this bucket name in their <code>storagePath</code>.
+</div>
+
+<div class="callout warn">
+  <strong>Microsoft Graph blocks RFC email headers.</strong>
+  <code>Message-ID</code>, <code>In-Reply-To</code>, <code>References</code> all rejected.
+  Email threading relies on identical subject lines.
+</div>
+
+<h2 id="recent"><span class="num">14</span>Recent feature work</h2>
+
+<table>
+  <tr><th>Feature</th><th>Notes</th></tr>
+  <tr><td>Withdraw approval + reason</td><td>POST <code>/api/approvals/[id]/withdraw</code>. Stores <code>withdrawalReason</code>, sends email, reverts to PRICE_LINKED.</td></tr>
+  <tr><td>LoB on OtherCost</td><td><code>lineOfBusiness</code> field + dropdown in <code>TabOtherCost</code>. Required SQL applied manually: <code>ALTER TABLE other_costs ADD COLUMN "lineOfBusiness" VARCHAR(20)</code>.</td></tr>
+  <tr><td>Domain Revenue Mix card</td><td>Replaces Revenue Share in <code>TabBasicDetails</code>. Falls back to hours weight when effective bill rate is 0 (so single-LoB single-resource scenarios still render).</td></tr>
+  <tr><td>Project Code tab</td><td>New tab + <code>projectCodeProceed</code> field. Two-step red warning before commit (permanent action).</td></tr>
+  <tr><td>Manual OPEN/WON dropdown</td><td>Replaced auto-WON on SOW verification approval.</td></tr>
+  <tr><td>Tab gating (dim)</td><td>SOW/PO and Project Code dimmed by stage. Still clickable.</td></tr>
+  <tr><td>520-week pricing horizon</td><td>Staffing weekly grid supports up to 10-year opportunities.</td></tr>
+  <tr><td><code>getAuthToken</code> helper</td><td>Created <code>lib/getAuthToken.ts</code>. Mass-applied across 31 API routes + <code>proxy.ts</code>. Resolves silent-redirect-to-login on new Vercel deployments.</td></tr>
+  <tr><td>Login page redesign</td><td>Two-panel layout. Microsoft SSO only on <code>/login</code>. Credentials moved to <code>/login2</code>.</td></tr>
+  <tr><td>End date required</td><td>NewOpportunityForm validates non-empty end date with red asterisk.</td></tr>
+  <tr><td>Star Connect badge removed</td><td>From opportunity page header. Field still present in form and Details tab.</td></tr>
+  <tr><td>Dashboard logo size</td><td>Bumped from 34→51 px.</td></tr>
+  <tr><td>Win Probability placeholder</td><td>Faded to <code>#A5A7AA</code> at 55% opacity so the default "70" doesn't look like a real value.</td></tr>
+  <tr><td>Client dropdown</td><td>CL-NNN hidden in new-opp dropdown options. Still shown elsewhere.</td></tr>
+  <tr><td>New Vercel project (procdnanexa)</td><td>Migrated from <code>pricingtoolprimero.vercel.app</code>. Same Azure App Reg + Supabase DB.</td></tr>
+</table>
+
+<footer>
+  NEXA codebase guide · Generated reference · Mirrored from <code>AGENTS.md</code> with extra detail · Last refreshed when 20–30 commits accumulated.
+</footer>
+
+</main>
+</div>
 </body>
 </html>
