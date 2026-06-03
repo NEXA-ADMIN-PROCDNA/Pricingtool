@@ -44,6 +44,8 @@ export const APP_ERRORS = {
   CLIENT_EXISTS:          { status: 409, message: 'A client with this name already exists.' },
   CLIENT_REQUEST_FAILED:  { status: 500, message: 'Could not submit the client request.' },
   POC_DELETE_FAILED:      { status: 500, message: 'Failed to remove this contact.' },
+  POC_CREATE_FAILED:      { status: 500, message: 'Could not add this contact. Try again.' },
+  POC_NAME_REQUIRED:      { status: 400, message: 'Contact name is required.' },
 
   // Export
   EXPORT_LOCKED:          { status: 423, message: 'The Excel file is open in OneDrive — close it and retry, or download a local copy.' },

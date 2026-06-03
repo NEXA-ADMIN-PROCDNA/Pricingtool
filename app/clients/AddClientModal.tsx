@@ -177,7 +177,7 @@ export function AddClientModal() {
 
                   <div>
                     <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">
-                      Notes <span className="text-slate-300 normal-case font-normal">(why are we adding this client?)</span>
+                      Notes <span className="text-slate-300 normal-case font-normal">|</span>
                     </label>
                     <textarea
                       rows={3}

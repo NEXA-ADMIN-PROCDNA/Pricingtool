@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getClientDetail } from '@/lib/db/clients'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { AddPocButton } from './AddPocButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -247,13 +248,16 @@ export default async function ClientDetailPage({
             {/* ── Contacts ── */}
             <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
               <div style={{
-                display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                padding: '16px 22px', borderBottom: `1px solid ${C.ruleSoft}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 22px', borderBottom: `1px solid ${C.ruleSoft}`,
               }}>
                 <h2 style={{ ...SANS, fontSize: 13, fontWeight: 600, color: C.ink, letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>Contacts</h2>
-                <span style={{ ...MONO, fontSize: 11, color: C.inkFaint }}>
-                  {String(client.pocs.length).padStart(2, '0')} POC{client.pocs.length !== 1 ? 's' : ''}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ ...MONO, fontSize: 11, color: C.inkFaint }}>
+                    {String(client.pocs.length).padStart(2, '0')} POC{client.pocs.length !== 1 ? 's' : ''}
+                  </span>
+                  <AddPocButton clientId={client.id} />
+                </div>
               </div>
 
               {client.pocs.length === 0 ? (
