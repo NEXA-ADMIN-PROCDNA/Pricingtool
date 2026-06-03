@@ -88,9 +88,11 @@ export async function GET(
       },
       scheduleOfPayments: { orderBy: { month: 'asc' } },
       financialSnapshots: { orderBy: { month: 'asc' } },
-      // Include the parent opportunity's primaryLob so the FE can reflect the
-      // recomputed majority LoB after closing the drawer.
-      opportunity:        { select: { primaryLob: true } },
+      // Include the parent opportunity's primaryLob + stage so the FE can reflect
+      // the recomputed majority LoB and the (possibly rolled-back) stage after
+      // closing the drawer — marking a different version final can move the
+      // opportunity back to PRICE_LINKED.
+      opportunity:        { select: { primaryLob: true, stage: true } },
     },
   })
   if (!version) return apiError('PV_NOT_FOUND')

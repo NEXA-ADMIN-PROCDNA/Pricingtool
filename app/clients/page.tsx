@@ -1,4 +1,6 @@
 import { getClients, type ClientRow } from '@/lib/db/clients'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 import { Sidebar } from '@/components/layout/Sidebar'
@@ -80,7 +82,8 @@ function KPIStrip({ clients }: { clients: ClientRow[] }) {
 // ClientCard moved to ClientsBrowser.tsx since it's only consumed there now.
 
 export default async function ClientsPage() {
-  const clients = await getClients()
+  const [clients, session] = await Promise.all([getClients(), getServerSession(authOptions)])
+  const isAdmin = ((session?.user as { role?: string } | undefined)?.role) === 'ADMIN'
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: C.bg }}>
@@ -136,7 +139,7 @@ export default async function ClientsPage() {
           <KPIStrip clients={clients} />
 
           {/* Search bar + autocomplete dropdown + filtered grid */}
-          <ClientsBrowser clients={clients} />
+          <ClientsBrowser clients={clients} isAdmin={isAdmin} />
         </div>
       </div>
     </div>

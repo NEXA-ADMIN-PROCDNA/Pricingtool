@@ -12,6 +12,9 @@ export const APP_ERRORS = {
   OPP_CREATE_FAILED:      { status: 500, message: 'Could not create the opportunity. Try again.' },
   OPP_UPDATE_FAILED:      { status: 500, message: 'Failed to save changes. Try again.' },
   OPP_ID_CONFLICT:        { status: 409, message: 'An opportunity with this ID already exists.' },
+  OPP_EDIT_FORBIDDEN:     { status: 403, message: 'Only the owner or an admin can edit this opportunity.' },
+  OPP_DATE_INVALID:       { status: 400, message: 'End date must be on or after the start date.' },
+  OPP_DATE_LOCKED:        { status: 409, message: 'Dates can’t be changed while an approval is in progress — withdraw the pending request first.' },
 
   // Pricing
   PV_NOT_FOUND:           { status: 404, message: 'Pricing version not found.' },
@@ -43,6 +46,10 @@ export const APP_ERRORS = {
   // Clients
   CLIENT_EXISTS:          { status: 409, message: 'A client with this name already exists.' },
   CLIENT_REQUEST_FAILED:  { status: 500, message: 'Could not submit the client request.' },
+  CLIENT_NOT_FOUND:       { status: 404, message: 'Client not found — it may have been removed.' },
+  CLIENT_UPDATE_FAILED:   { status: 500, message: 'Could not save changes to this client.' },
+  CLIENT_DELETE_FAILED:   { status: 500, message: 'Could not delete this client.' },
+  CLIENT_HAS_OPPS:        { status: 409, message: 'This client has opportunities — reassign or remove them before deleting.' },
   POC_DELETE_FAILED:      { status: 500, message: 'Failed to remove this contact.' },
   POC_CREATE_FAILED:      { status: 500, message: 'Could not add this contact. Try again.' },
   POC_NAME_REQUIRED:      { status: 400, message: 'Contact name is required.' },

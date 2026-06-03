@@ -10,6 +10,7 @@ import { PricingDrawer } from './PricingDrawer'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { TabSoW } from './TabSoW'
+import { EditOpportunityModal } from './EditOpportunityModal'
 
 type User = { id: string; name: string; role: string }
 
@@ -72,11 +73,18 @@ export function OpportunityTabs({
     if (drawerVersion) {
       const res = await fetch(`/api/pricing-versions/${drawerVersion.id}`)
       if (res.ok) {
-        const updated = await res.json() as PricingVersion & { opportunity?: { primaryLob?: string | null } }
+        const updated = await res.json() as PricingVersion & { opportunity?: { primaryLob?: string | null; stage?: string } }
         // Pick up the server's recomputed primaryLob (only set when the
         // pricing was marked final; otherwise stays as it was).
         if (updated.opportunity?.primaryLob !== undefined) {
           setPrimaryLob(updated.opportunity.primaryLob ?? null)
+        }
+        // Sync the live stage with the server. Marking a different version as
+        // final can roll the opportunity back to PRICE_LINKED (invalidating a
+        // prior approval); without this, oppStage stays stale and the newly
+        // final version is wrongly shown as "Locked · Approved".
+        if (updated.opportunity?.stage) {
+          setOppStage(updated.opportunity.stage)
         }
         // If the edited version came back as final, mirror the server's
         // sibling-unset locally — otherwise the previously-final version
@@ -166,6 +174,9 @@ export function OpportunityTabs({
 
   const { data: session } = useSession()
   const sessionUserId = (session?.user as any)?.id as string | undefined
+  const isAdmin       = (session?.user as any)?.role === 'ADMIN'
+  const canEditDetails = isAdmin || (!!sessionUserId && sessionUserId === opp.ownerId)
+  const [editingDetails, setEditingDetails] = useState(false)
 
   const [oppStage, setOppStage]   = useState<string>(opp.stage as string)
   const LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
@@ -409,7 +420,20 @@ export function OpportunityTabs({
           <div className="lg:col-span-2 space-y-5">
             {/* Core info */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-5 text-xs font-semibold uppercase tracking-widest text-slate-500">Core Details</h2>
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Core Details</h2>
+                {canEditDetails && (
+                  <button
+                    onClick={() => setEditingDetails(true)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+              </div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId} />
@@ -1332,6 +1356,19 @@ export function OpportunityTabs({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Edit opportunity details (owner / admin) */}
+      {editingDetails && (
+        <EditOpportunityModal
+          opportunityId={opp.opportunityId}
+          stage={oppStage}
+          initialBusinessUnit={opp.businessUnit ?? null}
+          initialStarConnect={opp.starConnect}
+          initialStartDate={opp.startDate as unknown as string}
+          initialEndDate={opp.endDate as unknown as string}
+          onClose={() => setEditingDetails(false)}
+        />
       )}
 
       {/* Pricing Drawer */}
