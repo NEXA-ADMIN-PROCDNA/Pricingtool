@@ -128,6 +128,16 @@ const focusHandlers = {
   },
 }
 
+// Open the native date picker when the user clicks anywhere on a date input,
+// not just the small calendar icon. Guarded for browsers without showPicker
+// and for the "already open" case (clicking the icon itself).
+const openDatePicker = (e: React.MouseEvent<HTMLInputElement>) => {
+  const el = e.currentTarget
+  if (typeof el.showPicker === 'function') {
+    try { el.showPicker() } catch { /* picker already open or blocked */ }
+  }
+}
+
 // ─── Form ────────────────────────────────────────────────────────────────────
 
 export function NewOpportunityForm({ clients }: { clients: Client[] }) {
@@ -470,7 +480,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
 
         <div>
           <FieldLabel text="Start Date" required />
-          <input name="startDate" type="date" required style={inputBase} {...focusHandlers} />
+          <input name="startDate" type="date" required style={inputBase} onClick={openDatePicker} {...focusHandlers} />
         </div>
 
         <div>
@@ -480,6 +490,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
             type="date"
             required
             style={dateError ? inputErr : inputBase}
+            onClick={openDatePicker}
             onChange={e => {
               const form = e.currentTarget.form
               const start = (form?.elements.namedItem('startDate') as HTMLInputElement)?.value ?? ''

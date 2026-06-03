@@ -542,7 +542,12 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
             {visible.map(row => {
               const revStr   = fmtRevenue(row)
               const isFinal  = hasFinalPricing(row)
-              const prob     = row.probability != null ? Number(row.probability) : null
+              // Once SoW verification is approved (stage advances to TO_BE_ARCHIVED)
+              // the deal is effectively certain — show 100% regardless of the
+              // stored probability.
+              const prob     = row.stage === 'TO_BE_ARCHIVED'
+                ? 100
+                : (row.probability != null ? Number(row.probability) : null)
               const start    = fmtDate(row.startDate)
               const end      = fmtDate(row.endDate)
               const nextStep = STAGE_NEXT_STEPS[row.stage] ?? '—'
