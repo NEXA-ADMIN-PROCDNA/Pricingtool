@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, RateCardItem, OtherCostRow, ComputedMetrics } from './pricing/types'
-import { computeFromRows, getWeekColumns, weekKey } from './pricing/utils'
+import { computeFromRows, getWeekColumns, weekKey, proratedWeekHours, workingDaysInWindow } from './pricing/utils'
 import { TabBasicDetails } from './pricing/TabBasicDetails'
 import { TabEfforts }      from './pricing/TabEfforts'
 import { TabOtherCost }    from './pricing/TabOtherCost'
@@ -22,7 +22,7 @@ const SUB_TABS = [
 type SubTab = typeof SUB_TABS[number]
 
 // Visually de-emphasised tabs (work-in-progress) — still clickable
-const DIMMED: Set<SubTab> = new Set(['Financial', 'Schedule of Payments'])
+const DIMMED: Set<SubTab> = new Set<SubTab>()
 
 const LOCKED_STAGES = new Set(['APPROVAL_PENDING', 'SOW_PENDING', 'SOW_SUBMITTED', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED'])
 
@@ -129,8 +129,8 @@ export function PricingDrawer({
   // ── Staffing callbacks (local) ───────────────────────────────────
   const addRow = useCallback((rc: RateCardItem) => {
     const id = newTempId()
-    const hoursPerWeek = 40 // default 100% utilization
-    const weekEntries  = weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+    const fullWeek = 40 // default 100% utilization (5 days × 8h); edges prorated by in-window days
+    const weekEntries  = weeks.map(w => ({ weekStartDate: weekKey(w), hours: proratedWeekHours(w, opp.startDate, opp.endDate, fullWeek) }))
     const newRow: StaffRow = {
       id,
       rateCardId: rc.id,
@@ -160,21 +160,26 @@ export function PricingDrawer({
 
   const commitHours = useCallback((srId: string, wk: string, val: string) => {
     const hours = Math.max(0, parseFloat(val) || 0)
+    const workingDays = workingDaysInWindow(opp.startDate, opp.endDate)
     setStaffRows(prev => prev.map(r => {
       if (r.id !== srId) return r
       const existing = r.weeklyHours.find(w => w.weekStartDate === wk)
-      return {
-        ...r,
-        weeklyHours: existing
-          ? r.weeklyHours.map(w => w.weekStartDate === wk ? { ...w, hours } : w)
-          : [...r.weeklyHours, { weekStartDate: wk, hours }],
-      }
+      const weeklyHours = existing
+        ? r.weeklyHours.map(w => w.weekStartDate === wk ? { ...w, hours } : w)
+        : [...r.weeklyHours, { weekStartDate: wk, hours }]
+      // Reverse link: derive utilization from the manually-entered hours so the
+      // Util % column stays in sync. util% = Σ hours / (workingDays × 8) × 100.
+      const totalHrs = weeklyHours.reduce((s, w) => s + (w.hours || 0), 0)
+      const utilization = workingDays > 0
+        ? Math.round((totalHrs / (workingDays * 8)) * 100 * 100) / 100
+        : null
+      return { ...r, weeklyHours, utilization }
     }))
     setEditCell(null)
     if (!srId.startsWith('tmp_')) {
       setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
     }
-  }, [])
+  }, [opp.startDate, opp.endDate])
 
   const commitEffectiveRate = useCallback((srId: string, val: string) => {
     setEditRateCell(null)
@@ -217,21 +222,21 @@ export function PricingDrawer({
   }, [])
 
   const applyUtilization = useCallback((srId: string, util: number | null) => {
-    const hoursPerWeek = util != null ? Math.round((util / 100) * 40) : 0
+    const fullWeek = util != null ? (util / 100) * 40 : 0
     setStaffRows(prev => prev.map(r => {
       if (r.id !== srId) return r
       return {
         ...r,
         utilization: util,
         weeklyHours: util != null
-          ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: hoursPerWeek }))
+          ? weeks.map(w => ({ weekStartDate: weekKey(w), hours: proratedWeekHours(w, opp.startDate, opp.endDate, fullWeek) }))
           : r.weeklyHours,
       }
     }))
     if (!srId.startsWith('tmp_')) {
       setDirtyStaffIds(prev => prev.has(srId) ? prev : new Set(prev).add(srId))
     }
-  }, [weeks])
+  }, [weeks, opp.startDate, opp.endDate])
 
   // ── Other Cost callbacks (local) ─────────────────────────────────
   const addOtherCost = useCallback(() => {

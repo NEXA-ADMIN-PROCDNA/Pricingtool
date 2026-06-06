@@ -144,8 +144,9 @@ export function EditOpportunityModal({
 
             {datesChanged && !datesLocked && (
               <div className="text-xs text-amber-800 rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 leading-relaxed">
-                <strong>Changing the dates resets this opportunity to “Price Linked”</strong> and recomputes all pricing.
-                Staffing weeks outside the new window will be removed (their hours are lost), and metrics + the majority LoB are recalculated.
+                <strong>Changing the dates resets the pricing.</strong> All staffing hours will be cleared and the
+                opportunity returns to “Price Linked” — the pricing must be re-built for the new window and sent for
+                approval again from the beginning.
               </div>
             )}
           </div>

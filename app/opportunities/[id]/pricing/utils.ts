@@ -11,6 +11,13 @@ export function fmt(n: number | null | undefined) {
   return `$${n.toFixed(0)}`
 }
 
+// Exact money — full value with US thousands separators, no K/M rounding.
+// e.g. 8787 → "$8,787", 8787.5 → "$8,787.5"
+export function fmtMoneyExact(n: number | null | undefined) {
+  if (n == null) return '$0'
+  return `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+}
+
 export function fmtDate(d: string | Date | null | undefined) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
@@ -41,20 +48,28 @@ export function computeFromRows(rows: StaffRow[]): ComputedMetrics {
   return { totalHours, billedHours, unbilledHours, totalCost, proposedBillings, recommendedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour, discountPremiumPct }
 }
 
+// Normalize any date / ISO string to UTC midnight of its calendar day. ALL week
+// and working-day math runs in UTC so it's identical on every browser and server,
+// independent of local timezone. (Stored dates are already UTC midnight because
+// date-only strings like "2026-06-01" parse as UTC.)
+function utcDateOnly(d: string | Date): Date {
+  const x = new Date(d)
+  return new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()))
+}
+
 export function getWeekColumns(start: string | Date, end: string | Date): Date[] {
   const weeks: Date[] = []
-  const s = new Date(start)
-  const day = s.getDay()
+  const s = utcDateOnly(start)
+  const day = s.getUTCDay()              // 0=Sun … 6=Sat
   const diff = day === 0 ? -6 : 1 - day
-  s.setDate(s.getDate() + diff)
-  s.setHours(0, 0, 0, 0)
-  const e = new Date(end)
-  let cur = new Date(s)
+  s.setUTCDate(s.getUTCDate() + diff)    // back up to Monday (UTC)
+  const e = utcDateOnly(end)
+  const cur = new Date(s)
   // Cap at 520 weeks (~10 years) as a safety against accidental end-date typos.
   // Real-world projects terminate via the cur <= e check well before this.
   while (cur <= e && weeks.length < 520) {
     weeks.push(new Date(cur))
-    cur.setDate(cur.getDate() + 7)
+    cur.setUTCDate(cur.getUTCDate() + 7)
   }
   return weeks
 }
@@ -63,15 +78,57 @@ export function weekKey(d: Date) {
   return d.toISOString().slice(0, 10)
 }
 
+// Fraction (0..1) of a week's 5 working days (Mon–Fri starting at weekStart)
+// that fall inside the project window [start, end]. Partial first/last weeks
+// return < 1 so auto-filled hours can be prorated by actual in-window days.
+export function weekWindowFraction(weekStart: Date, start: string | Date, end: string | Date): number {
+  const s = utcDateOnly(start)
+  const e = utcDateOnly(end)
+  let inWindow = 0
+  for (let i = 0; i < 5; i++) {
+    const d = utcDateOnly(weekStart)
+    d.setUTCDate(d.getUTCDate() + i)       // Monday + 0..4 = Mon..Fri (UTC)
+    if (d >= s && d <= e) inWindow++
+  }
+  return inWindow / 5
+}
+
+// Auto-fill hours for one week: full-week hours (e.g. 40 at 100% utilization)
+// prorated by the working days that fall within the project window. Kept to 2
+// decimals (matches the Decimal(6,2) hours column) so the unitary util→hours
+// link is exact: 100% → 40h, 50.5% → 20.2h, and a 2-day edge week → × 2/5
+// (e.g. 16h at 100%, 8.08h at 50.5%). 8h/day assumption.
+export function proratedWeekHours(
+  weekStart: Date, start: string | Date, end: string | Date, fullWeekHours: number,
+): number {
+  return Math.round(fullWeekHours * weekWindowFraction(weekStart, start, end) * 100) / 100
+}
+
+// Total Mon–Fri working days within the project window [start, end] inclusive.
+// Used for the reverse link — deriving utilization from manually-entered hours:
+//   utilization% = Σ(all week hours) / (workingDays × 8) × 100
+export function workingDaysInWindow(start: string | Date, end: string | Date): number {
+  const s = utcDateOnly(start)
+  const e = utcDateOnly(end)
+  let count = 0
+  const cur = new Date(s)
+  while (cur <= e) {
+    const day = cur.getUTCDay()
+    if (day >= 1 && day <= 5) count++   // Mon(1) … Fri(5), UTC
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  }
+  return count
+}
+
 export function getProjectMonths(start: string | Date, end: string | Date): string[] {
-  const s = new Date(start)
-  const e = new Date(end)
-  const cur = new Date(s.getFullYear(), s.getMonth(), 1)
-  const last = new Date(e.getFullYear(), e.getMonth(), 1)
+  const s = utcDateOnly(start)
+  const e = utcDateOnly(end)
+  const cur  = new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), 1))
+  const last = new Date(Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), 1))
   const months: string[] = []
   while (cur <= last) {
-    months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`)
-    cur.setMonth(cur.getMonth() + 1)
+    months.push(`${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}`)
+    cur.setUTCMonth(cur.getUTCMonth() + 1)
   }
   return months
 }
@@ -83,8 +140,8 @@ export function distributeWeekToMonths(weekStartDate: string, value: number): [s
   const acc = new Map<string, number>()
   const [y, mo, d] = weekStartDate.split('-').map(Number)
   for (let i = 0; i < 5; i++) {
-    const day = new Date(y, mo - 1, d + i)
-    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}`
+    const day = new Date(Date.UTC(y, mo - 1, d + i))
+    const key = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}`
     acc.set(key, (acc.get(key) ?? 0) + perDay)
   }
   return [...acc.entries()]

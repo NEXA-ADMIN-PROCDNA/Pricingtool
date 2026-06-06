@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { toast } from 'sonner'
 import type { StaffRow, RateCardItem, ComputedMetrics } from './types'
-import { fmt, fmtRole, weekKey } from './utils'
+import { fmtMoneyExact, fmtRole, weekKey } from './utils'
 
 // LoB display labels — match the LineOfBusiness enum used in rate-card domains
 const LOB_LABELS: Record<string, string> = {
@@ -108,8 +108,8 @@ export function TabEfforts({
           {[
             { label: 'Billed Hours',    value: `${versionMetrics.billedHours.toLocaleString()} h`,   color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
             { label: 'Unbilled Hours',  value: `${versionMetrics.unbilledHours.toLocaleString()} h`, color: 'bg-slate-50 border-slate-200 text-slate-500' },
-            { label: 'Employee Cost',   value: fmt(versionMetrics.totalCost),                        color: 'bg-slate-50 border-slate-200 text-slate-800' },
-            { label: 'Implied Revenue', value: fmt(versionMetrics.proposedBillings),                 color: 'bg-slate-50 border-slate-200 text-slate-800' },
+            { label: 'Employee Cost',   value: fmtMoneyExact(versionMetrics.totalCost),              color: 'bg-slate-50 border-slate-200 text-slate-800' },
+            { label: 'Implied Revenue', value: fmtMoneyExact(versionMetrics.proposedBillings),       color: 'bg-slate-50 border-slate-200 text-slate-800' },
             { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '0.0%', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
           ].map(({ label, value, color }) => (
             <div key={label} className={`rounded-xl border px-4 py-3 ${color}`}>
@@ -265,7 +265,7 @@ export function TabEfforts({
                         </span>
                       ) : (
                         <input
-                          type="number" min={0} max={100} step={5}
+                          type="number" min={0} max={100} step="any"
                           placeholder="—"
                           value={sr.utilization ?? ''}
                           onChange={e => {
@@ -290,7 +290,7 @@ export function TabEfforts({
                         <td key={i} className="px-1 py-2 text-center">
                           {isEditing ? (
                             <input
-                              autoFocus type="number" min={0} step={1}
+                              autoFocus type="number" min={0} step="any"
                               value={editVal}
                               onChange={e => setEditVal(e.target.value)}
                               onBlur={() => commitHours(sr.id, wk, editVal)}
@@ -319,7 +319,7 @@ export function TabEfforts({
                     })}
                     {/* Total Cost */}
                     <td className="px-4 py-2.5 text-right font-semibold text-slate-800 whitespace-nowrap">
-                      {sr.isActive && rowCost > 0 ? fmt(rowCost) : <span className="text-slate-300 font-normal">$0</span>}
+                      {sr.isActive && rowCost > 0 ? fmtMoneyExact(rowCost) : <span className="text-slate-300 font-normal">$0</span>}
                     </td>
                     {/* Delete */}
                     <td className="px-2 py-2.5">
@@ -359,7 +359,7 @@ export function TabEfforts({
                       </td>
                     )
                   })}
-                  <td className="px-4 py-3 text-right font-bold text-indigo-700">{fmt(versionMetrics.totalCost)}</td>
+                  <td className="px-4 py-3 text-right font-bold text-indigo-700">{fmtMoneyExact(versionMetrics.totalCost)}</td>
                   <td />
                 </tr>
               )}
