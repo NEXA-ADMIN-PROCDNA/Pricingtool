@@ -106,11 +106,11 @@ export function TabEfforts({
       {staffRows.some(r => r.isActive) && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
+            { label: 'Implied Revenue', value: fmtMoneyExact(versionMetrics.proposedBillings),       color: 'bg-slate-50 border-slate-200 text-slate-800' },
+            { label: 'Employee Cost',   value: fmtMoneyExact(versionMetrics.totalCost),              color: 'bg-slate-50 border-slate-200 text-slate-800' },
+            { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '0.0%', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
             { label: 'Billed Hours',    value: `${versionMetrics.billedHours.toLocaleString()} h`,   color: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
             { label: 'Unbilled Hours',  value: `${versionMetrics.unbilledHours.toLocaleString()} h`, color: 'bg-slate-50 border-slate-200 text-slate-500' },
-            { label: 'Employee Cost',   value: fmtMoneyExact(versionMetrics.totalCost),              color: 'bg-slate-50 border-slate-200 text-slate-800' },
-            { label: 'Implied Revenue', value: fmtMoneyExact(versionMetrics.proposedBillings),       color: 'bg-slate-50 border-slate-200 text-slate-800' },
-            { label: 'Gross Margin',    value: versionMetrics.proposedBillings > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%` : '0.0%', color: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
           ].map(({ label, value, color }) => (
             <div key={label} className={`rounded-xl border px-4 py-3 ${color}`}>
               <p className="text-[9px] font-semibold uppercase tracking-widest opacity-60 mb-0.5">{label}</p>
@@ -355,7 +355,7 @@ export function TabEfforts({
                     }, 0)
                     return (
                       <td key={i} className="px-1 py-3 text-center font-bold text-slate-700">
-                        {wt > 0 ? wt : <span className="font-normal text-slate-300 text-xs">·</span>}
+                        {wt > 0 ? Math.round(wt * 100) / 100 : <span className="font-normal text-slate-300 text-xs">·</span>}
                       </td>
                     )
                   })}

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
 import { ApprovalStatus } from '@prisma/client'
@@ -68,6 +69,7 @@ export function OpportunityTabs({
   const [creatingVersion, setCreatingVersion] = useState(false)
   const [markingFinal, setMarkingFinal]       = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const router = useRouter()
 
   async function closeDrawer() {
     if (drawerVersion) {
@@ -99,6 +101,10 @@ export function OpportunityTabs({
       }
     }
     setDrawer(null)
+    // Other costs live on the opportunity (not the version GET above), so re-sync
+    // the server component to pick up added/edited/removed costs with their real
+    // ids — otherwise the drawer reopens from the stale opp.otherCosts prop.
+    router.refresh()
   }
 
   async function deleteVersion(versionId: string) {

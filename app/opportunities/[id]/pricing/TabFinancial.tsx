@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, OtherCostRow, Version } from './types'
-import { fmt, getProjectMonths, distributeWeekToMonths, monthLabel } from './utils'
+import { fmtMoneyExact, getProjectMonths, distributeWeekToMonths, monthLabel } from './utils'
 
 interface Props {
   staffRows: StaffRow[]
@@ -100,7 +100,7 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
   tot.j    = tot.indiaHrsAll > 0 ? tot.indiaRev / tot.indiaHrsAll : 0
   tot.k    = tot.usHrsAll > 0 ? tot.usRev / tot.usHrsAll : 0
 
-  function fmtM(n: number): ReactNode { return n !== 0 ? fmt(n) : <span className="text-slate-300">—</span> }
+  function fmtM(n: number): ReactNode { return n !== 0 ? fmtMoneyExact(n) : <span className="text-slate-300">—</span> }
   function fmtRate(n: number): ReactNode { return n > 0 ? `$${n.toFixed(2)}/hr` : <span className="text-slate-300">—</span> }
   function fmtHrs(n: number): ReactNode { return n > 0 ? `${n.toFixed(1)} h` : <span className="text-slate-300">—</span> }
   function fmtPct(n: number, colored?: boolean): ReactNode {
