@@ -42,7 +42,7 @@ function ClientCard({ client, isAdmin, onEdit, onDelete }: {
 
   return (
     <Link
-      href={`/clients/${client.clientId}`}
+      href={`/clients/${client.id}`}
       style={{
         background: '#ffffff',
         border: `1px solid ${C.inkMuted}`,
@@ -63,8 +63,8 @@ function ClientCard({ client, isAdmin, onEdit, onDelete }: {
         justifyContent: 'space-between',
         gap: 12,
       }}>
-        <span style={{ ...MONO, fontSize: 10.5, color: C.inkMuted, letterSpacing: '0.08em' }}>
-          {client.clientId}
+        <span style={{ ...MONO, fontSize: 10.5, color: client.clientId ? C.inkMuted : C.inkFaint, letterSpacing: '0.08em' }}>
+          {client.clientId ?? 'Pending ID'}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {client.industry && (
@@ -272,7 +272,7 @@ export function ClientsBrowser({ clients, isAdmin }: { clients: ClientRow[]; isA
     if (!q) return clients
     return clients.filter(c =>
       c.name.toLowerCase().includes(q) ||
-      c.clientId.toLowerCase().includes(q) ||
+      (c.clientId?.toLowerCase().includes(q) ?? false) ||
       (c.industry?.toLowerCase().includes(q) ?? false) ||
       (c.region?.toLowerCase().includes(q) ?? false) ||
       (c.businessUnit?.toLowerCase().includes(q) ?? false)
@@ -362,7 +362,7 @@ export function ClientsBrowser({ clients, isAdmin }: { clients: ClientRow[]; isA
             {dropdownItems.map((c, i) => (
               <Link
                 key={c.id}
-                href={`/clients/${c.clientId}`}
+                href={`/clients/${c.id}`}
                 onMouseDown={e => e.preventDefault()} // keep input focused until click resolves
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
@@ -390,7 +390,7 @@ export function ClientsBrowser({ clients, isAdmin }: { clients: ClientRow[]; isA
                     ...MONO, fontSize: 10, color: C.inkMuted,
                     letterSpacing: '0.06em', marginTop: 2,
                   }}>
-                    {c.clientId}
+                    {c.clientId ?? 'Pending ID'}
                     {c.industry && ` · ${c.industry.toUpperCase()}`}
                     {c.region && ` · ${c.region.toUpperCase()}`}
                   </div>

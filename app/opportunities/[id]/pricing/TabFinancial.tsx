@@ -16,13 +16,13 @@ type MRow = {
   b: number; c: number; d: number; dPct: number; ePct: number
   f1: number; f2: number; f: number
   g: number; h: number; i: number; j: number; k: number
-  indiaRev: number; indiaHrs: number; usRev: number; usHrs: number; recRev: number
+  indiaRev: number; indiaHrs: number; indiaHrsAll: number; usRev: number; usHrs: number; usHrsAll: number; recRev: number
 }
 
 const zero = (): MRow => ({
   a1: 0, a2: 0, a: 0, b: 0, c: 0, d: 0, dPct: 0, ePct: 0,
   f1: 0, f2: 0, f: 0, g: 0, h: 0, i: 0, j: 0, k: 0,
-  indiaRev: 0, indiaHrs: 0, usRev: 0, usHrs: 0, recRev: 0,
+  indiaRev: 0, indiaHrs: 0, indiaHrsAll: 0, usRev: 0, usHrs: 0, usHrsAll: 0, recRev: 0,
 })
 
 type RowDef = { id: string; label: string; get: (r: MRow) => ReactNode; bold?: boolean; indent?: boolean }
@@ -41,6 +41,9 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
         const r = byMonth.get(month)
         if (!r) continue
         r.b += hours * (row.costRatePerHour ?? 0)
+        // Total hours by location across ALL active rows (billed + unbilled) — used by rows J & K.
+        if (row.location === 'INDIA') r.indiaHrsAll += hours
+        else                          r.usHrsAll += hours
         if (row.isBillable) {
           const rev    = hours * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
           const recRev = hours * (row.systemBillRatePerHour ?? 0)
@@ -75,16 +78,16 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
     r.g    = r.f       > 0 ? (r.indiaHrs / r.f)       * 100 : 0
     r.h    = r.f       > 0 ? r.a1 / r.f               : 0
     r.i    = r.f1      > 0 ? r.a1 / r.f1              : 0
-    r.j    = r.indiaHrs > 0 ? r.indiaRev / r.indiaHrs : 0
-    r.k    = r.usHrs   > 0 ? r.usRev    / r.usHrs     : 0
+    r.j    = r.indiaHrsAll > 0 ? r.indiaRev / r.indiaHrsAll : 0
+    r.k    = r.usHrsAll > 0 ? r.usRev / r.usHrsAll : 0
   }
 
   const tot = zero()
   for (const r of byMonth.values()) {
     tot.a1 += r.a1; tot.a2 += r.a2; tot.b += r.b; tot.c += r.c
     tot.f1 += r.f1; tot.f2 += r.f2; tot.recRev += r.recRev
-    tot.indiaRev += r.indiaRev; tot.indiaHrs += r.indiaHrs
-    tot.usRev    += r.usRev;    tot.usHrs    += r.usHrs
+    tot.indiaRev += r.indiaRev; tot.indiaHrs += r.indiaHrs; tot.indiaHrsAll += r.indiaHrsAll
+    tot.usRev    += r.usRev;    tot.usHrs    += r.usHrs;    tot.usHrsAll += r.usHrsAll
   }
   tot.a    = tot.a1 + tot.a2
   tot.d    = tot.a - tot.b - tot.c
@@ -94,8 +97,8 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
   tot.g    = tot.f       > 0 ? (tot.indiaHrs / tot.f)       * 100 : 0
   tot.h    = tot.f       > 0 ? tot.a1 / tot.f               : 0
   tot.i    = tot.f1      > 0 ? tot.a1 / tot.f1              : 0
-  tot.j    = tot.indiaHrs > 0 ? tot.indiaRev / tot.indiaHrs : 0
-  tot.k    = tot.usHrs   > 0 ? tot.usRev    / tot.usHrs     : 0
+  tot.j    = tot.indiaHrsAll > 0 ? tot.indiaRev / tot.indiaHrsAll : 0
+  tot.k    = tot.usHrsAll > 0 ? tot.usRev / tot.usHrsAll : 0
 
   function fmtM(n: number): ReactNode { return n !== 0 ? fmt(n) : <span className="text-slate-300">—</span> }
   function fmtRate(n: number): ReactNode { return n > 0 ? `$${n.toFixed(2)}/hr` : <span className="text-slate-300">—</span> }
@@ -121,8 +124,8 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
     { id: 'g',    label: 'G   — Offshore Ratio (India hrs / total hrs)',      get: r => fmtPct(r.g) },
     { id: 'h',    label: 'H   — Blended Rate / Hr  (A1 / total hrs)',         get: r => fmtRate(r.h) },
     { id: 'i',    label: 'I   — Effective Rate / Hr  (A1 / billed hrs)',      get: r => fmtRate(r.i) },
-    { id: 'j',    label: 'J   — India Rate  (India revenue / India hrs)',     get: r => fmtRate(r.j) },
-    { id: 'k',    label: 'K   — US Rate  (US revenue / US hrs)',              get: r => fmtRate(r.k) },
+    { id: 'j',    label: 'J   — India Rate  (India revenue / total India hrs)', get: r => fmtRate(r.j) },
+    { id: 'k',    label: 'K   — US Rate  (US revenue / total US hrs)',         get: r => fmtRate(r.k) },
   ]
 
   const hasData = staffRows.some(r => r.isActive && r.weeklyHours.some(wh => wh.hours > 0))

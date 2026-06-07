@@ -277,7 +277,7 @@ export function TabEfforts({
                             applyUtilization(sr.id, val)
                           }}
                           onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                          className="w-14 text-right text-xs rounded-lg border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-transparent placeholder-slate-300"
+                          className="w-16 text-right text-xs rounded-lg border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-transparent placeholder-slate-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                       )}
                     </td>

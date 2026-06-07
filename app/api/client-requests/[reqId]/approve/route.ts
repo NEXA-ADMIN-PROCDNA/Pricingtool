@@ -3,15 +3,8 @@ import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
 import { apiError } from '@/lib/errors'
 
-async function nextClientId(): Promise<string> {
-  const last = await prisma.client.findFirst({
-    orderBy: { clientId: 'desc' },
-    select: { clientId: true },
-  })
-  if (!last) return 'CL-001'
-  const n = parseInt(last.clientId.replace('CL-', ''), 10)
-  return `CL-${String(n + 1).padStart(3, '0')}`
-}
+// Client IDs are assigned manually by finance/admins later (e.g. 1004VL3002),
+// so new clients are created without one — see the edit form on the client page.
 
 export async function POST(
   req: NextRequest,
@@ -32,12 +25,9 @@ export async function POST(
       return NextResponse.json({ error: 'Request already reviewed' }, { status: 409 })
     }
 
-    const clientId = await nextClientId()
-
     await prisma.$transaction([
       prisma.client.create({
         data: {
-          clientId,
           name: clientReq.name,
           businessUnit: clientReq.businessUnit,
           industry: clientReq.industry,

@@ -136,7 +136,7 @@ model User {
 
 model Client {
   id            String   @id @default(cuid())
-  clientId      String   @unique   // system generated e.g. CL-001
+  clientId      String?  @unique   // admin-assigned, e.g. 1004VL3002 — nullable until finance assigns it
   name          String
   businessUnit  String?
   industry      String?
@@ -322,7 +322,7 @@ model StaffingResource {
   discountPremiumPct     Decimal?       @db.Decimal(8, 4)
   effectiveBillRate      Decimal?       @db.Decimal(10, 2)  // manual if set, else system
   costRatePerHour        Decimal?       @db.Decimal(10, 2)
-  utilization            Int?                                // 1–100, drives auto-fill of 40 h/week
+  utilization            Decimal?       @db.Decimal(6, 2)   // 0–100 (decimals ok), drives auto-fill of weekly hours
 
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt @db.Timestamptz(3)

@@ -19,7 +19,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json().catch(() => ({})) as {
-    name?: string; businessUnit?: string; industry?: string; region?: string
+    name?: string; businessUnit?: string; industry?: string; region?: string; clientId?: string
   }
   if (!body.name?.trim()) return apiError('CLIENT_UPDATE_FAILED', 'Client name is required')
 
@@ -31,10 +31,13 @@ export async function PATCH(
         businessUnit: clean(body.businessUnit),
         industry:     clean(body.industry),
         region:       clean(body.region),
+        clientId:     clean(body.clientId),   // admin-assigned ID (nullable); unique enforced by DB
       },
     })
     return NextResponse.json(updated)
-  } catch {
+  } catch (err) {
+    // Unique-constraint violation on clientId → friendly "already taken" message
+    if ((err as { code?: string })?.code === 'P2002') return apiError('CLIENT_ID_TAKEN')
     return apiError('CLIENT_UPDATE_FAILED')
   }
 }

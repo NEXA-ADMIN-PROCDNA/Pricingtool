@@ -11,7 +11,7 @@ const REGIONS = ['North America', 'Europe', 'Asia Pacific', 'Middle East', 'Indi
 
 type EditableClient = {
   id: string
-  clientId: string
+  clientId: string | null
   name: string
   businessUnit: string | null
   industry: string | null
@@ -25,7 +25,7 @@ export function EditClientModal({
   onClose: () => void
 }) {
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', businessUnit: '', industry: '', region: '' })
+  const [form, setForm] = useState({ name: '', clientId: '', businessUnit: '', industry: '', region: '' })
   const [customIndustry, setCustomIndustry] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
@@ -36,6 +36,7 @@ export function EditClientModal({
     const known = !!client.industry && INDUSTRIES.includes(client.industry)
     setForm({
       name:         client.name ?? '',
+      clientId:     client.clientId ?? '',
       businessUnit: client.businessUnit ?? '',
       industry:     client.industry ? (known ? client.industry : 'Other') : '',
       region:       client.region ?? '',
@@ -59,6 +60,7 @@ export function EditClientModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name,
+          clientId: form.clientId,
           businessUnit: form.businessUnit,
           industry,
           region: form.region,
@@ -90,7 +92,7 @@ export function EditClientModal({
             <div>
               <h2 className="text-base font-bold text-slate-900">Edit Client</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Changes are saved directly to <span className="font-mono">{client.clientId}</span> — references stay intact.
+                Changes are saved directly to <span className="font-mono">{client.clientId ?? client.name}</span> — references stay intact.
               </p>
             </div>
             <button
@@ -115,6 +117,19 @@ export function EditClientModal({
                 value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">
+                Client ID <span className="font-normal normal-case tracking-normal text-slate-400">(assigned by finance — leave blank if pending)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 1004VL3002"
+                value={form.clientId}
+                onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-mono text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
               />
             </div>
 

@@ -436,7 +436,7 @@ export function OpportunityTabs({
               </div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <Field label="Client"       value={opp.client.name} />
-                <Field label="Client ID"    value={opp.client.clientId} />
+                <Field label="Client ID"    value={opp.client.clientId ?? 'Pending ID'} />
                 <Field label="Business Unit" value={opp.businessUnit ?? opp.client.businessUnit} />
                 <Field label="Owner"        value={opp.owner.name} />
                 <Field label="LOB"          value={primaryLob ? (LOB_LABELS[primaryLob] ?? primaryLob) : null} />

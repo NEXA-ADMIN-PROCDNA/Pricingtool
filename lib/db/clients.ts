@@ -13,9 +13,11 @@ export async function getClients() {
   })
 }
 
-export async function getClientDetail(clientId: string) {
+// Looked up by internal record id (cuid) — the client detail route keys on `id`
+// now that the business clientId is nullable/admin-assigned.
+export async function getClientDetail(id: string) {
   return prisma.client.findUnique({
-    where: { clientId },
+    where: { id },
     include: {
       pocs: true,
       opportunities: {

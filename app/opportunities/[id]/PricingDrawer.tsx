@@ -47,7 +47,7 @@ export function PricingDrawer({
     resourceDesignation: sr.resourceDesignation,
     location: sr.location,
     domain: sr.domain ?? null,
-    utilization: sr.utilization ?? null,
+    utilization: sr.utilization != null ? Number(sr.utilization) : null,
     costRatePerHour: sr.costRatePerHour != null ? Number(sr.costRatePerHour) : null,
     systemBillRatePerHour: sr.systemBillRatePerHour != null ? Number(sr.systemBillRatePerHour) : null,
     effectiveBillRate: sr.effectiveBillRate != null ? Number(sr.effectiveBillRate) : null,

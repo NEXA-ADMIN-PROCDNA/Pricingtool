@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 
 type POC    = { id: string; name: string; email: string | null; phone: string | null; jobTitle: string | null }
 type Client = {
-  id: string; name: string; clientId: string
+  id: string; name: string; clientId: string | null
   businessUnit: string | null; industry: string | null; region: string | null
   pocs: POC[]
 }
@@ -299,7 +299,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
           }}>
             {selectedClient
               ? <span style={{ ...MONO, fontSize: 10, color: C.inkFaint, letterSpacing: '0.06em' }}>
-                  {selectedClient.clientId}
+                  {selectedClient.clientId ?? 'Pending ID'}
                 </span>
               : <span />
             }

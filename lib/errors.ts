@@ -50,6 +50,7 @@ export const APP_ERRORS = {
   CLIENT_UPDATE_FAILED:   { status: 500, message: 'Could not save changes to this client.' },
   CLIENT_DELETE_FAILED:   { status: 500, message: 'Could not delete this client.' },
   CLIENT_HAS_OPPS:        { status: 409, message: 'This client has opportunities — reassign or remove them before deleting.' },
+  CLIENT_ID_TAKEN:        { status: 409, message: 'That Client ID is already assigned to another client.' },
   POC_DELETE_FAILED:      { status: 500, message: 'Failed to remove this contact.' },
   POC_CREATE_FAILED:      { status: 500, message: 'Could not add this contact. Try again.' },
   POC_NAME_REQUIRED:      { status: 400, message: 'Contact name is required.' },

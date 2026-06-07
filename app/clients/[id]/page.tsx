@@ -104,7 +104,7 @@ export default async function ClientDetailPage({
           }}>
             <Link href="/clients" style={{ color: C.inkMuted, textDecoration: 'none' }}>Client Master</Link>
             <span style={{ color: C.inkFaint }}>/</span>
-            <span style={{ color: C.accent }}>{client.clientId}</span>
+            <span style={{ color: C.accent }}>{client.clientId ?? 'Pending ID'}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
@@ -126,7 +126,7 @@ export default async function ClientDetailPage({
                 <span style={{
                   ...MONO, fontSize: 11, color: C.accentDeep,
                   background: C.accentSoft, padding: '3px 9px', borderRadius: 4, letterSpacing: '0.04em',
-                }}>{client.clientId}</span>
+                }}>{client.clientId ?? 'Pending ID'}</span>
                 {client.industry && (
                   <span style={{
                     ...MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
