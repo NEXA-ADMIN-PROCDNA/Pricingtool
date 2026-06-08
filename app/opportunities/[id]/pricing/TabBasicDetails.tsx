@@ -1,7 +1,7 @@
 'use client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { Version, ComputedMetrics, OtherCostRow } from './types'
-import { fmt, fmtDate } from './utils'
+import { fmtMoneyExact, fmtDate } from './utils'
 
 const DOMAIN_LABELS: Record<string, string> = {
   ANALYTICS: 'Analytics',
@@ -102,11 +102,11 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
             )}
           </div>
           {[
-            { label: 'Proposed Billings',  value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
-            { label: 'Total Cost',         value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
+            { label: 'Proposed Billings',  value: fmtMoneyExact(versionMetrics.totalHours > 0 ? versionMetrics.proposedBillings    : (version.proposedBillings    != null ? Number(version.proposedBillings)    : null)), hi: true },
+            { label: 'Total Cost',         value: fmtMoneyExact(versionMetrics.totalHours > 0 ? versionMetrics.totalCost            : (version.totalCost            != null ? Number(version.totalCost)            : null)) },
             { label: 'Gross Margin %',     value: versionMetrics.totalHours > 0 ? `${versionMetrics.grossMarginPct.toFixed(1)}%`      : (version.grossMarginPct      != null ? `${Number(version.grossMarginPct).toFixed(1)}%`      : '0.0%'), hi: true },
             { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '0.0%') },
-            { label: 'Eff. Rate / Hour',   value: fmt(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
+            { label: 'Eff. Rate / Hour',   value: fmtMoneyExact(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
             { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '0 h') },
             { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '0%') },
           ].map(({ label, value, hi }) => (
@@ -143,10 +143,10 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
                 {version.scheduleOfPayments.map((sop: any) => (
                   <tr key={sop.id} className="hover:bg-slate-50">
                     <td className="px-3 py-2 font-medium text-slate-700">{fmtDate(sop.month)}</td>
-                    <td className="px-3 py-2 text-slate-600">{fmt(sop.recommendedBillings  != null ? Number(sop.recommendedBillings)  : null)}</td>
-                    <td className="px-3 py-2 text-slate-600">{fmt(sop.recommendedOtherCost != null ? Number(sop.recommendedOtherCost) : null)}</td>
-                    <td className="px-3 py-2 font-semibold text-slate-800">{fmt(sop.proposedBillings != null ? Number(sop.proposedBillings) : null)}</td>
-                    <td className="px-3 py-2 text-slate-600">{fmt(sop.proposedOtherCost    != null ? Number(sop.proposedOtherCost)    : null)}</td>
+                    <td className="px-3 py-2 text-slate-600">{fmtMoneyExact(sop.recommendedBillings  != null ? Number(sop.recommendedBillings)  : null)}</td>
+                    <td className="px-3 py-2 text-slate-600">{fmtMoneyExact(sop.recommendedOtherCost != null ? Number(sop.recommendedOtherCost) : null)}</td>
+                    <td className="px-3 py-2 font-semibold text-slate-800">{fmtMoneyExact(sop.proposedBillings != null ? Number(sop.proposedBillings) : null)}</td>
+                    <td className="px-3 py-2 text-slate-600">{fmtMoneyExact(sop.proposedOtherCost    != null ? Number(sop.proposedOtherCost)    : null)}</td>
                     <td className="px-3 py-2 text-slate-600">{sop.discountPct != null ? `${Number(sop.discountPct).toFixed(1)}%` : '—'}</td>
                     <td className="px-3 py-2 text-slate-600">{sop.premiumPct  != null ? `${Number(sop.premiumPct).toFixed(1)}%`  : '—'}</td>
                   </tr>

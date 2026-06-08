@@ -107,6 +107,24 @@ export function proratedWeekHours(
 // Total Mon–Fri working days within the project window [start, end] inclusive.
 // Used for the reverse link — deriving utilization from manually-entered hours:
 //   utilization% = Σ(all week hours) / (workingDays × 8) × 100
+// Working days (Mon–Fri) per calendar month within [start, end], keyed 'YYYY-MM'.
+// Used to split monthly figures by each month's working-day count (not by week).
+export function workingDaysByMonth(start: string | Date, end: string | Date): Map<string, number> {
+  const s = utcDateOnly(start)
+  const e = utcDateOnly(end)
+  const map = new Map<string, number>()
+  const cur = new Date(s)
+  while (cur <= e) {
+    const day = cur.getUTCDay()
+    if (day >= 1 && day <= 5) {
+      const key = `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}`
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  }
+  return map
+}
+
 export function workingDaysInWindow(start: string | Date, end: string | Date): number {
   const s = utcDateOnly(start)
   const e = utcDateOnly(end)

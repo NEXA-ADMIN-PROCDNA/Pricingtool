@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, OtherCostRow } from './types'
-import { getProjectMonths, distributeWeekToMonths, monthLabel } from './utils'
+import { getProjectMonths, workingDaysByMonth, monthLabel } from './utils'
 
 interface Props {
   staffRows: StaffRow[]
@@ -26,6 +26,12 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
   const projectMonths = getProjectMonths(opp.startDate, opp.endDate)
   const numMonths = projectMonths.length || 1
 
+  // Working-days share per month (same basis as the Financial tab) — efforts and
+  // other costs are both split by each month's working-day count, not by week.
+  const wdByMonth = workingDaysByMonth(opp.startDate, opp.endDate)
+  const totalWorkingDays = [...wdByMonth.values()].reduce((s, d) => s + d, 0)
+  const wdShare = (m: string) => totalWorkingDays > 0 ? (wdByMonth.get(m) ?? 0) / totalWorkingDays : 1 / numMonths
+
   const recEffortsMap  = new Map<string, number>()
   const propEffortsMap = new Map<string, number>()
   const billHoursMap   = new Map<string, number>()
@@ -38,18 +44,15 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
   for (const row of staffRows.filter(r => r.isActive && r.isBillable)) {
     const sysRate = row.systemBillRatePerHour ?? 0
     const effRate = row.effectiveBillRate ?? sysRate
-    for (const wh of row.weeklyHours) {
-      if (!wh.hours) continue
-      for (const [month, hours] of distributeWeekToMonths(wh.weekStartDate, wh.hours)) {
-        if (!recEffortsMap.has(month)) continue
-        recEffortsMap.set(month,  recEffortsMap.get(month)!  + hours * sysRate)
-        propEffortsMap.set(month, propEffortsMap.get(month)! + hours * effRate)
-        billHoursMap.set(month,   billHoursMap.get(month)!   + hours)
-      }
+    const rowHours = row.weeklyHours.reduce((s, wh) => s + (wh.hours || 0), 0)
+    if (rowHours <= 0) continue
+    for (const m of projectMonths) {
+      const monthHours = rowHours * wdShare(m)
+      recEffortsMap.set(m,  recEffortsMap.get(m)!  + monthHours * sysRate)
+      propEffortsMap.set(m, propEffortsMap.get(m)! + monthHours * effRate)
+      billHoursMap.set(m,   billHoursMap.get(m)!   + monthHours)
     }
   }
-
-  const totalBillableHours = [...billHoursMap.values()].reduce((s, h) => s + h, 0)
 
   const totalRecOther  = otherCosts.reduce((s, oc) => s + oc.amount, 0)
   const totalPropOther = otherCosts.reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
@@ -57,11 +60,8 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
   const recOtherMap  = new Map<string, number>()
   const propOtherMap = new Map<string, number>()
   for (const m of projectMonths) {
-    const weight = totalBillableHours > 0
-      ? (billHoursMap.get(m)! / totalBillableHours)
-      : (1 / numMonths)
-    recOtherMap.set(m,  totalRecOther  * weight)
-    propOtherMap.set(m, totalPropOther * weight)
+    recOtherMap.set(m,  totalRecOther  * wdShare(m))
+    propOtherMap.set(m, totalPropOther * wdShare(m))
   }
 
   const totRecEfforts  = [...recEffortsMap.values()].reduce((s, v) => s + v, 0)

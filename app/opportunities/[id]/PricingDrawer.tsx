@@ -31,11 +31,13 @@ export function PricingDrawer({
   opp,
   currentStage,
   onClose,
+  onOtherCostsChanged,
 }: {
   version: Version
   opp: OpportunityDetail
   currentStage: string
   onClose: () => void
+  onOtherCostsChanged?: () => void
 }) {
   const locked = version.isFinal && LOCKED_STAGES.has(currentStage)
   const [sub, setSub] = useState<SubTab>('Basic Details')
@@ -412,6 +414,12 @@ export function PricingDrawer({
       if (!res.ok) throw new Error('Failed to save pricing metrics')
 
       toast.success(markFinal ? 'Saved & marked as Final' : 'Saved')
+      // Other costs are opportunity-level (not in the version GET the parent does
+      // on close). Only when they actually changed do we ask the parent to re-sync
+      // server data — this keeps the Efforts-only save/close path unchanged.
+      const otherCostsChanged =
+        deletedCostIds.size > 0 || dirtyCostIds.size > 0 || otherCosts.some(c => c.id.startsWith('tmp_'))
+      if (otherCostsChanged) onOtherCostsChanged?.()
       onClose()
     } catch (err) {
       console.error(err)
@@ -419,7 +427,7 @@ export function PricingDrawer({
     } finally {
       setSaving(false)
     }
-  }, [saving, locked, version.id, opp.opportunityId, deletedStaffIds, deletedCostIds, dirtyStaffIds, dirtyCostIds, staffRows, otherCosts, versionMetrics, onClose])
+  }, [saving, locked, version.id, opp.opportunityId, deletedStaffIds, deletedCostIds, dirtyStaffIds, dirtyCostIds, staffRows, otherCosts, versionMetrics, onClose, onOtherCostsChanged])
 
   // ── Save & Mark Final — gated by stage ───────────────────────────
   const handleSaveAndMarkFinal = useCallback(() => {

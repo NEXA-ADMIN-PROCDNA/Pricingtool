@@ -101,10 +101,6 @@ export function OpportunityTabs({
       }
     }
     setDrawer(null)
-    // Other costs live on the opportunity (not the version GET above), so re-sync
-    // the server component to pick up added/edited/removed costs with their real
-    // ids — otherwise the drawer reopens from the stale opp.otherCosts prop.
-    router.refresh()
   }
 
   async function deleteVersion(versionId: string) {
@@ -1384,6 +1380,7 @@ export function OpportunityTabs({
           opp={opp}
           currentStage={oppStage}
           onClose={closeDrawer}
+          onOtherCostsChanged={() => router.refresh()}
         />
       )}
     </>

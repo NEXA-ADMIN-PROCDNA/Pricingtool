@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, OtherCostRow, Version } from './types'
-import { fmtMoneyExact, getProjectMonths, distributeWeekToMonths, monthLabel } from './utils'
+import { fmtMoneyExact, getProjectMonths, workingDaysByMonth, monthLabel } from './utils'
 
 interface Props {
   staffRows: StaffRow[]
@@ -34,27 +34,40 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
   const byMonth = new Map<string, MRow>()
   for (const m of projectMonths) byMonth.set(m, zero())
 
+  // Split each resource's TOTAL hours across months by the number of working days
+  // (Mon–Fri) each month has within the project window — i.e. monthly hours =
+  // (working days in month) × (hours per working day). This avoids the old
+  // per-week spread, which leaked partial-week hours into the wrong (or even
+  // out-of-window) month and skewed A1, B and F.
+  const wdByMonth = workingDaysByMonth(opp.startDate, opp.endDate)
+  const totalWorkingDays = [...wdByMonth.values()].reduce((sum, d) => sum + d, 0)
+
   for (const row of staffRows.filter(r => r.isActive)) {
-    for (const wh of row.weeklyHours) {
-      if (!wh.hours) continue
-      for (const [month, hours] of distributeWeekToMonths(wh.weekStartDate, wh.hours)) {
-        const r = byMonth.get(month)
-        if (!r) continue
-        r.b += hours * (row.costRatePerHour ?? 0)
-        // Total hours by location across ALL active rows (billed + unbilled) — used by rows J & K.
-        if (row.location === 'INDIA') r.indiaHrsAll += hours
-        else                          r.usHrsAll += hours
-        if (row.isBillable) {
-          const rev    = hours * (row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0)
-          const recRev = hours * (row.systemBillRatePerHour ?? 0)
-          r.a1     += rev
-          r.recRev += recRev
-          r.f1     += hours
-          if (row.location === 'INDIA') { r.indiaRev += rev; r.indiaHrs += hours }
-          else                          { r.usRev    += rev; r.usHrs    += hours }
-        } else {
-          r.f2 += hours
-        }
+    const rowHours = row.weeklyHours.reduce((s, wh) => s + (wh.hours || 0), 0)
+    if (rowHours <= 0 || totalWorkingDays <= 0) continue
+    const cost = row.costRatePerHour ?? 0
+    const eff  = row.effectiveBillRate ?? row.systemBillRatePerHour ?? 0
+    const sys  = row.systemBillRatePerHour ?? 0
+    for (const m of projectMonths) {
+      const wd = wdByMonth.get(m) ?? 0
+      if (wd === 0) continue
+      const hours = rowHours * (wd / totalWorkingDays)
+      const r = byMonth.get(m)
+      if (!r) continue
+      r.b += hours * cost
+      // Total hours by location across ALL active rows (billed + unbilled) — used by rows J & K.
+      if (row.location === 'INDIA') r.indiaHrsAll += hours
+      else                          r.usHrsAll += hours
+      if (row.isBillable) {
+        const rev    = hours * eff
+        const recRev = hours * sys
+        r.a1     += rev
+        r.recRev += recRev
+        r.f1     += hours
+        if (row.location === 'INDIA') { r.indiaRev += rev; r.indiaHrs += hours }
+        else                          { r.usRev    += rev; r.usHrs    += hours }
+      } else {
+        r.f2 += hours
       }
     }
   }
@@ -65,8 +78,10 @@ export function TabFinancial({ staffRows, otherCosts, opp, version }: Props) {
     .reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
   for (const m of projectMonths) {
     const r = byMonth.get(m)!
-    r.c  += totalOtherCostRaw    / numMonths
-    r.a2 += totalOtherCostBilled / numMonths
+    // Other costs split by the same working-days share as staffing (not evenly).
+    const wdShare = totalWorkingDays > 0 ? (wdByMonth.get(m) ?? 0) / totalWorkingDays : 1 / numMonths
+    r.c  += totalOtherCostRaw    * wdShare
+    r.a2 += totalOtherCostBilled * wdShare
   }
 
   for (const r of byMonth.values()) {
