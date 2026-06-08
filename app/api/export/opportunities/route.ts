@@ -61,7 +61,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
     'Account Manager', 'Account Manager Email',
     'Client Stakeholder Name', 'Client Stakeholder Email',
     'Signed Project Budget ($)', 'Estimated Total Hours', 'Discount / Premium %',
-    'Approving Partner', 'Line of Business', 'Status', 'Stage',
+    'Approving Partner', 'Line of Business', 'Star Connect', 'Status', 'Stage',
     'Gross Margin %', 'Offshore %',
   ]
 
@@ -80,7 +80,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
       pv?.proposedBillings   != null ? Number(pv.proposedBillings)   : '',
       pv?.totalHours         != null ? Number(pv.totalHours)         : '',
       pv?.discountPremiumPct != null ? Number(pv.discountPremiumPct) : '',
-      ar?.approver.name ?? '', opp.primaryLob ?? '', opp.status, opp.stage,
+      ar?.approver.name ?? '', opp.primaryLob ?? '', opp.starConnect ? 'Yes' : 'No', opp.status, opp.stage,
       pv?.grossMarginPct != null ? Number(pv.grossMarginPct) : '',
       pv?.offshorePct    != null ? Number(pv.offshorePct)    : '',
     ]
@@ -91,7 +91,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
     { wch: 14 }, { wch: 30 }, { wch: 25 },
     { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 28 }, { wch: 22 },
     { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
-    { wch: 18 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
+    { wch: 18 }, { wch: 13 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
   ]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Opportunities')

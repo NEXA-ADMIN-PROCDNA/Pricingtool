@@ -194,12 +194,15 @@ export function OpportunityTabs({
       const pricingRequested = approvals.some((ar: any) => ar.approvalType === 'PRICING')
       return !(pricingRequested || SOW_UNLOCKED_STAGES.has(oppStage))
     }
-    if (t === 'Project Code')   return oppStage !== 'TO_BE_ARCHIVED'
+    // A Lost/Abandoned opportunity never gets a project code, so block the tab regardless of stage.
+    if (t === 'Project Code')   return oppStage !== 'TO_BE_ARCHIVED' || oppStatus === 'LOST' || oppStatus === 'ABANDONED'
     return false
   }
   const tabTooltip = (t: Tab) => {
     if (t === 'SOW / PO')     return 'Available once a pricing approval request is submitted'
-    if (t === 'Project Code') return 'Available after SOW Verification'
+    if (t === 'Project Code') return (oppStatus === 'LOST' || oppStatus === 'ABANDONED')
+      ? `Not available — this opportunity is marked ${oppStatus === 'LOST' ? 'Lost' : 'Abandoned'}`
+      : 'Available after SOW Verification'
     return undefined
   }
 

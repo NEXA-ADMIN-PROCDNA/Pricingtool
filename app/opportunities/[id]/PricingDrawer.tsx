@@ -85,6 +85,7 @@ export function PricingDrawer({
   const [newAmount, setNewAmount]       = useState('')
   const [newMarkup, setNewMarkup]       = useState('')
   const [newLob, setNewLob]             = useState<string>('')
+  const [newBillable, setNewBillable]   = useState(true)
   const [editCostCell, setEditCostCell] = useState<{ id: string; field: 'markup' | 'billed' } | null>(null)
   const [editCostVal, setEditCostVal]   = useState('')
 
@@ -251,15 +252,16 @@ export function PricingDrawer({
       description: newDesc.trim(),
       amount: amt,
       markupPct: markupVal,
-      isBillable: true,
+      isBillable: newBillable,
       lineOfBusiness: newLob || null,
     }])
     setNewDesc('')
     setNewAmount('')
     setNewMarkup('')
     setNewLob('')
+    setNewBillable(true)
     setShowAddCost(false)
-  }, [newDesc, newAmount, newMarkup, newLob])
+  }, [newDesc, newAmount, newMarkup, newLob, newBillable])
 
   const toggleBillable = useCallback((costId: string, billable: boolean) => {
     setOtherCosts(prev => prev.map(oc => oc.id === costId ? { ...oc, isBillable: billable } : oc))
@@ -616,6 +618,7 @@ export function PricingDrawer({
                 newAmount={newAmount}
                 newMarkup={newMarkup}
                 newLob={newLob}
+                newBillable={newBillable}
                 editCostCell={editCostCell}
                 editCostVal={editCostVal}
                 setShowAddCost={setShowAddCost}
@@ -623,6 +626,7 @@ export function PricingDrawer({
                 setNewAmount={setNewAmount}
                 setNewMarkup={setNewMarkup}
                 setNewLob={setNewLob}
+                setNewBillable={setNewBillable}
                 setEditCostCell={setEditCostCell}
                 setEditCostVal={setEditCostVal}
                 addOtherCost={addOtherCost}

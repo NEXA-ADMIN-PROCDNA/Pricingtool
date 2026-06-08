@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEXA — Knowledge Transfer (Project Manager Handover)</title>
+<style>
+  :root{
+    --ink:#001E96; --accent:#005CD9; --ink-soft:#3A4A6A;
+    --muted:#7B7C7F; --faint:#A5A7AA; --rule:#D6DCE8; --rule-soft:#E2E6EE;
+    --bg:#F4F6FB; --bg-soft:#EAEEF6;
+    --won:#36A463; --won-soft:#E1F1E9; --won-deep:#1F6B3C;
+    --warn:#B7791F; --warn-soft:#FBF3E2; --warn-deep:#8A5A0E;
+    --danger:#D6454A; --danger-soft:#FBE9E7; --danger-deep:#8A2A1F;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink-soft);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif; line-height:1.6; font-size:15px;}
+  .wrap{max-width:900px; margin:0 auto; padding:0 24px 90px;}
+  header.hero{background:#0B1C3D; color:#fff; padding:46px 24px 40px; margin-bottom:34px; border-bottom:3px solid var(--accent);}
+  header.hero .inner{max-width:900px; margin:0 auto;}
+  .eyebrow{font-family:'Courier New',monospace; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:#7DA6E3; font-weight:600; margin-bottom:10px;}
+  header.hero h1{font-size:33px; font-weight:600; margin:0 0 8px; letter-spacing:-0.02em;}
+  header.hero p{margin:0; color:rgba(255,255,255,0.65); font-size:14px; max-width:620px;}
+  h2{font-size:13px; letter-spacing:0.16em; text-transform:uppercase; color:var(--ink); font-weight:700;
+    margin:46px 0 6px; padding-bottom:10px; border-bottom:1.5px solid var(--ink); display:flex; align-items:baseline; gap:10px;}
+  h2 .n{font-family:'Courier New',monospace; font-size:12px; color:var(--faint); font-weight:600;}
+  h3{font-size:16px; color:var(--ink); font-weight:600; margin:24px 0 6px;}
+  p{margin:8px 0;} ul{margin:8px 0; padding-left:22px;} li{margin:5px 0;}
+  strong{color:var(--ink);}
+  .lead{font-size:16px; color:var(--ink-soft);}
+  .card{background:#fff; border:1px solid var(--rule); border-radius:8px; padding:18px 20px; margin:14px 0;}
+  .callout{border-radius:8px; padding:14px 16px; margin:14px 0; border:1px solid var(--rule); border-left:3px solid var(--accent); background:#fff; font-size:14px;}
+  .callout .tag{font-family:'Courier New',monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; font-weight:700; display:block; margin-bottom:5px;}
+  .callout.important{border-left-color:var(--danger);} .callout.important .tag{color:var(--danger-deep);}
+  .callout.heads{border-left-color:var(--warn);} .callout.heads .tag{color:var(--warn-deep);}
+  .callout.tip{border-left-color:var(--won);} .callout.tip .tag{color:var(--won-deep);}
+  .callout.note .tag{color:var(--accent);}
+  .flow{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:14px 0; font-family:'Courier New',monospace; font-size:12px;}
+  .flow .stage{background:var(--bg-soft); border:1px solid var(--rule); border-radius:999px; padding:5px 12px; color:var(--ink); white-space:nowrap;}
+  .flow .arr{color:var(--faint);}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14px;}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--rule-soft); vertical-align:top;}
+  th{font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); font-weight:600;}
+  td:first-child{font-weight:600; color:var(--ink); white-space:nowrap;}
+  .toc{columns:2; column-gap:28px; font-size:14px; margin:6px 0 0;}
+  .toc a{color:var(--accent); text-decoration:none; display:block; padding:3px 0;}
+  .toc a:hover{text-decoration:underline;}
+  .pill{display:inline-block; font-family:'Courier New',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:var(--bg-soft); border:1px solid var(--rule); color:var(--ink-soft);}
+  .pill.admin{background:var(--danger-soft); border-color:#F1C4C0; color:var(--danger-deep);}
+  .pill.owner{background:var(--accent-soft,#DCE7F5); border-color:#Bcd; color:var(--ink);}
+  footer{margin-top:54px; padding-top:18px; border-top:1px solid var(--rule); font-size:12.5px; color:var(--faint);}
+  code{font-family:'Courier New',monospace; background:var(--bg-soft); padding:1px 5px; border-radius:3px; font-size:13px; color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <div class="eyebrow">ProcDNA · NEXA · Knowledge Transfer</div>
+    <h1>Project Manager Handover</h1>
+    <p>A walkthrough of how NEXA works — the lifecycle, the screens, what you can do on each, and the rules &amp; gotchas a PM should know. No code, just the product.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <strong>Contents</strong>
+    <div class="toc">
+      <a href="#what">1 · What NEXA is</a>
+      <a href="#roles">2 · Roles &amp; visibility</a>
+      <a href="#lifecycle">3 · The lifecycle (stages)</a>
+      <a href="#status">4 · Status vs. Stage</a>
+      <a href="#screens">5 · Screens &amp; what you can do</a>
+      <a href="#pricing">6 · The pricing engine (logic)</a>
+      <a href="#approvals">7 · Approvals flow</a>
+      <a href="#rules">8 · Key rules &amp; behaviours</a>
+      <a href="#notes">9 · Important notes &amp; gotchas</a>
+      <a href="#glossary">10 · Quick glossary</a>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <h2 id="what"><span class="n">01</span> What NEXA is</h2>
+  <p class="lead">NEXA is ProcDNA's internal tool to track a business-development <strong>opportunity</strong> from first lead through <strong>pricing → approval → SoW/PO → project-code generation</strong>. It replaces spreadsheets for building a staffing-based price, getting it approved, attaching contract documents, and reporting pipeline.</p>
+  <p>The spine of the product is: create an opportunity → build one or more <strong>pricing versions</strong> (staffing + other costs) → mark one final → get it approved → upload signed SoW/PO → verify → archive. Almost everything is driven off that flow.</p>
+
+  <!-- 2 -->
+  <h2 id="roles"><span class="n">02</span> Roles &amp; visibility</h2>
+  <p>Sign-in is via ProcDNA Microsoft (Azure) SSO. What a person sees depends on their role:</p>
+  <table>
+    <tr><th>Role</th><th>Sees</th></tr>
+    <tr><td>SEL</td><td>Their own opportunities only</td></tr>
+    <tr><td>DIRECTOR</td><td>Own + SEL-owned</td></tr>
+    <tr><td>ED</td><td>Own + Director + SEL (two levels down)</td></tr>
+    <tr><td>PARTNER</td><td>Everything</td></tr>
+    <tr><td>ADMIN</td><td>Everything + admin-only actions (approve client requests, edit/delete clients, assign Client IDs, OneDrive sync, rate-card upload)</td></tr>
+  </table>
+  <p>Throughout this guide, <span class="pill admin">admin only</span> and <span class="pill">owner / admin</span> tags mark who can perform an action.</p>
+
+  <!-- 3 -->
+  <h2 id="lifecycle"><span class="n">03</span> The lifecycle (stages)</h2>
+  <p>Every opportunity moves through a fixed <strong>stage</strong> sequence. The stage advances automatically as each step is completed — you don't set it by hand.</p>
+  <div class="flow">
+    <span class="stage">WLBU Pending</span><span class="arr">→</span>
+    <span class="stage">Price Linking</span><span class="arr">→</span>
+    <span class="stage">Price Linked</span><span class="arr">→</span>
+    <span class="stage">Approval Pending</span><span class="arr">→</span>
+    <span class="stage">SOW Pending</span><span class="arr">→</span>
+    <span class="stage">SOW Submitted</span><span class="arr">→</span>
+    <span class="stage">SOW Under Review</span><span class="arr">→</span>
+    <span class="stage">Archiving</span>
+  </div>
+  <table>
+    <tr><th>Stage</th><th>Means</th><th>Next step</th></tr>
+    <tr><td>WLBU Pending</td><td>New lead, no pricing yet</td><td>Create a pricing version</td></tr>
+    <tr><td>Price Linking</td><td>A version exists, not finalised</td><td>Mark a version as final</td></tr>
+    <tr><td>Price Linked</td><td>A final version is set</td><td>Send for pricing approval</td></tr>
+    <tr><td>Approval Pending</td><td>Pricing sent, awaiting approver</td><td>Approver approves / rejects</td></tr>
+    <tr><td>SOW Pending</td><td>Pricing approved</td><td>Upload SoW/PO or mark pre-contract</td></tr>
+    <tr><td>SOW Submitted</td><td>A document / pre-contract is in</td><td>Send for SoW verification</td></tr>
+    <tr><td>SOW Under Review</td><td>Verification requested</td><td>Approver verifies / returns</td></tr>
+    <tr><td>Archiving</td><td>Verified — deal complete</td><td>Authorise project code</td></tr>
+  </table>
+
+  <!-- 4 -->
+  <h2 id="status"><span class="n">04</span> Status vs. Stage — two separate things</h2>
+  <p><strong>Stage</strong> = workflow position (above), moves automatically. <strong>Status</strong> = the business outcome, set <em>manually</em>: <strong>Open · Won · Lost · Abandoned</strong>.</p>
+  <div class="callout note">
+    <span class="tag">Remember</span>
+    Approving SoW verification does <strong>not</strong> auto-mark the deal "Won" — someone sets the status deliberately. <strong>Lost</strong> and <strong>Abandoned</strong> opportunities are excluded from the dashboard's pipeline-revenue figures.
+  </div>
+
+  <!-- 5 -->
+  <h2 id="screens"><span class="n">05</span> Screens &amp; what you can do on each</h2>
+
+  <h3>Dashboard</h3>
+  <ul>
+    <li>KPI strip: Pipeline Revenue, Weighted Revenue (× win probability), Active Engagements, Won·YTD (+win rate / lost count).</li>
+    <li>Opportunities table with <strong>search</strong> and column <strong>filters</strong> (status, win %, time window, next step).</li>
+    <li><strong>Win %</strong> column shows the deal's probability — it jumps to <strong>100%</strong> once SoW verification is accepted.</li>
+    <li><span class="pill admin">admin only</span> <strong>Sync to OneDrive</strong> (updates the shared Excel) and <strong>Download</strong> a timestamped local copy.</li>
+    <li>A version badge (e.g. <code>V1.2</code>) shows the deployed app version.</li>
+  </ul>
+
+  <h3>New Opportunity</h3>
+  <ul>
+    <li><strong>Create</strong> an opportunity: pick client, name it, set <strong>start &amp; end dates (both required)</strong>, Star Connect, POCs.</li>
+    <li>The BD ID (<code>BD-NNN</code>) is auto-assigned on save. Primary Line of Business is <em>derived later</em> from the final pricing, not chosen here.</li>
+  </ul>
+
+  <h3>Opportunity Detail — tabs</h3>
+  <table>
+    <tr><th>Tab</th><th>What you can do</th></tr>
+    <tr><td>Details</td><td>View core info; set <strong>Status</strong> (Open/Won/Lost/Abandoned). <span class="pill">owner / admin</span> <strong>Edit</strong> Business Unit, Star Connect, Start/End dates.</td></tr>
+    <tr><td>Pricing</td><td>Create / duplicate / delete pricing versions; mark one <strong>Final</strong>; open a version to edit it (drawer below).</td></tr>
+    <tr><td>Pricing Approval</td><td>Send (or re-send) the pricing for approval; <strong>withdraw</strong> a pending request (owner); see approval history.</td></tr>
+    <tr><td>SOW / PO</td><td>Upload signed SoW &amp; PO documents <em>or</em> tick pre-contract agreement; submit for verification. (Opens once a pricing approval has been requested.)</td></tr>
+    <tr><td>Project Code</td><td>Authorise the project code (final, irreversible confirmation). Opens after SoW verification.</td></tr>
+    <tr><td>Comments</td><td>Threaded discussion on the opportunity.</td></tr>
+  </table>
+
+  <h3>Pricing drawer (inside the Pricing tab) — sub-tabs</h3>
+  <table>
+    <tr><th>Sub-tab</th><th>What you can do</th></tr>
+    <tr><td>Basic Details</td><td>Read-only summary: pricing metrics, LoB revenue mix, schedule of payments.</td></tr>
+    <tr><td>Efforts</td><td>Add/remove staffing rows (by LoB → Location → Role from rate card); set <strong>utilization</strong> (auto-fills weekly hours) or type hours per week directly; set effective rate / discount-premium; mark rows active/billable.</td></tr>
+    <tr><td>Other Cost</td><td>Add cost lines with description, Line of Business, amount, markup, and <strong>billable</strong> tick; edit/remove existing ones.</td></tr>
+    <tr><td>Financial</td><td>Read-only monthly P&amp;L (rows A–K) + business justification.</td></tr>
+    <tr><td>Schedule of Payments</td><td>Read-only monthly billing schedule (recommended vs proposed).</td></tr>
+  </table>
+
+  <h3>Clients (Client Master)</h3>
+  <ul>
+    <li>Browse / <strong>search</strong> client cards.</li>
+    <li><strong>Add Client</strong> — anyone can submit a request; <span class="pill admin">admin only</span> approves it in the requests panel (which creates the client).</li>
+    <li><span class="pill admin">admin only</span> per-card menu → <strong>Edit</strong> (incl. assign the Client ID) or <strong>Delete</strong> (blocked if the client has opportunities — a popup explains why).</li>
+  </ul>
+
+  <h3>Client Detail</h3>
+  <ul>
+    <li>KPIs, the client's opportunities table, and contacts.</li>
+    <li><strong>Add a contact (POC)</strong> — open to anyone.</li>
+  </ul>
+
+  <h3>Approvals (inbox)</h3>
+  <ul>
+    <li>Toggle between <strong>Pending</strong> and <strong>Historical</strong>.</li>
+    <li><strong>Approve</strong> or <strong>Reject</strong> (with a reason) pricing and SoW/PO/PCA verification requests.</li>
+    <li>Approvers can also act straight from the <strong>email</strong> they receive (one-click Approve/Reject), without logging in.</li>
+  </ul>
+
+  <!-- 6 -->
+  <h2 id="pricing"><span class="n">06</span> The pricing engine (the logic to understand)</h2>
+  <ul>
+    <li><strong>Staffing → money.</strong> Each resource has a cost rate, a bill rate, and weekly hours. The tool sums these into Proposed Billings, Cost, Gross Margin, Hours, Offshore %, etc.</li>
+    <li><strong>Utilization ↔ hours are linked (both ways).</strong> 100% = 40h in a full 5-day week (8h/day). 50.5% → 20.2h. Enter a utilization and the weekly hours auto-fill; type hours manually and the utilization is back-calculated as <code>Σ hours / (working-days × 8) × 100</code>.</li>
+    <li><strong>Edge weeks are prorated.</strong> A partial first/last week is filled by its real working days — e.g. a project starting Thursday gets a 2-day (16h) first week, not 40h.</li>
+    <li><strong>Monthly split is by working days.</strong> Financial &amp; Schedule-of-Payments figures divide across months by each month's working-day count — not by calendar weeks — so partial months are accurate and totals always reconcile.</li>
+    <li><strong>Primary LoB is auto-computed</strong> as the dominant Line of Business (by revenue) in the final pricing's staffing mix.</li>
+  </ul>
+
+  <!-- 7 -->
+  <h2 id="approvals"><span class="n">07</span> Approvals flow</h2>
+  <ul>
+    <li>Two kinds: <strong>Pricing Approval</strong> and <strong>SoW / PO / PCA Verification</strong>.</li>
+    <li>The chosen approver gets an email with Approve / Reject buttons (CC'd people are notified only).</li>
+    <li>Approve advances the stage; reject returns it for revision; the requester can withdraw a pending request.</li>
+    <li>Verifying SoW/PO/PCA moves the deal to project-code generation — it does <strong>not</strong> set the status to Won.</li>
+  </ul>
+
+  <!-- 8 -->
+  <h2 id="rules"><span class="n">08</span> Key rules &amp; behaviours</h2>
+  <div class="callout important">
+    <span class="tag">Important</span>
+    <strong>Changing an opportunity's dates resets its pricing.</strong> All staffing hours are cleared and the opportunity goes back to "Price Linked" — the pricing must be rebuilt for the new window and sent for approval again. (Blocked while an approval is actively in progress.)
+  </div>
+  <div class="callout important">
+    <span class="tag">Important — mutually exclusive</span>
+    A deal progresses on <strong>either</strong> uploaded SoW/PO documents <strong>or</strong> a pre-contract agreement — <strong>never both</strong>. Picking one disables the other.
+  </div>
+  <ul>
+    <li><strong>Pricing locks</strong> once a version is final and an approval is in progress, so numbers can't shift mid-review. To change pricing after approval, mark a different version final — this invalidates the prior approval and needs a fresh request.</li>
+    <li><strong>Win % → 100%</strong> automatically once SoW verification is accepted.</li>
+    <li><strong>Client IDs are assigned by finance/admins</strong> (e.g. <code>1004VL3002</code>), not auto-generated. Until assigned, the client shows <strong>"Pending ID"</strong>.</li>
+    <li>Documents accepted: PDF / Word / Excel / PNG / JPEG, up to ~49&nbsp;MB each.</li>
+  </ul>
+
+  <!-- 9 -->
+  <h2 id="notes"><span class="n">09</span> Important notes &amp; gotchas for the PM</h2>
+  <div class="callout heads">
+    <span class="tag">OneDrive sync</span>
+    Before syncing, the shared OneDrive/SharePoint Excel <strong>must be closed everywhere</strong> (browser, desktop, colleagues) or it's locked and the sync fails. The sync is a <strong>full overwrite</strong> — manual edits to that file are lost — and it includes only the <strong>most recent 5,000</strong> opportunities.
+  </div>
+  <div class="callout heads">
+    <span class="tag">Performance</span>
+    Opportunities with a <strong>long time window</strong> (multi-year, many weeks of staffing) take noticeably longer to open and save — there's a lot to compute. The save/finalise popups say so; give it a moment rather than re-clicking.
+  </div>
+  <table>
+    <tr><th>Topic</th><th>What to remember</th></tr>
+    <tr><td>Status</td><td>Always set manually (Open/Won/Lost/Abandoned); nothing auto-marks Won.</td></tr>
+    <tr><td>Pipeline revenue</td><td>Excludes Lost/Abandoned.</td></tr>
+    <tr><td>Line of Business</td><td>Auto-derived from the final pricing's dominant LoB.</td></tr>
+    <tr><td>Date edits</td><td>Reset the pricing &amp; require re-approval (see §8).</td></tr>
+    <tr><td>SoW vs pre-contract</td><td>Use one route, not both.</td></tr>
+    <tr><td>Rate cards</td><td><span class="pill admin">admin only</span> uploaded from an Excel in the specified format; add new entries as new rows below the existing ones.</td></tr>
+    <tr><td>Client deletion</td><td>Blocked while the client has opportunities (protects references).</td></tr>
+    <tr><td>Login</td><td>ProcDNA Microsoft SSO only.</td></tr>
+  </table>
+
+  <!-- 10 -->
+  <h2 id="glossary"><span class="n">10</span> Quick glossary</h2>
+  <table>
+    <tr><td>BD-NNN</td><td>Opportunity ID, auto-assigned (e.g. BD-014).</td></tr>
+    <tr><td>Client ID</td><td>Finance-assigned client code (e.g. 1004VL3002); "Pending ID" until set.</td></tr>
+    <tr><td>LoB</td><td>Line of Business (Technology, Analytics, Managed Services, Data Science, Design, Auxo).</td></tr>
+    <tr><td>Pricing version</td><td>One costed scenario for an opportunity; one is marked "Final".</td></tr>
+    <tr><td>SoW / PO / PCA</td><td>Statement of Work / Purchase Order / Pre-Contract Agreement.</td></tr>
+    <tr><td>Utilization</td><td>% of a full 40h week a resource is staffed (100% = 40h).</td></tr>
+    <tr><td>Star Connect</td><td>A flag on the opportunity (set in Details / create form).</td></tr>
+  </table>
+
+  <footer>
+    NEXA — Project Manager Knowledge Transfer · ProcDNA Business Development &amp; Pricing Tool ·
+    For access or questions contact <strong>nexa_admin@procdna.com</strong>.
+  </footer>
+
+</div>
+</body>
+</html>

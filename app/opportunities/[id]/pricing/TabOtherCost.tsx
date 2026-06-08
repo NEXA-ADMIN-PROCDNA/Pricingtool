@@ -18,6 +18,7 @@ interface Props {
   newAmount: string
   newMarkup: string
   newLob: string
+  newBillable: boolean
   editCostCell: { id: string; field: 'markup' | 'billed' } | null
   editCostVal: string
   setShowAddCost: (v: boolean) => void
@@ -25,6 +26,7 @@ interface Props {
   setNewAmount: (v: string) => void
   setNewMarkup: (v: string) => void
   setNewLob: (v: string) => void
+  setNewBillable: (v: boolean) => void
   setEditCostCell: (v: { id: string; field: 'markup' | 'billed' } | null) => void
   setEditCostVal: (v: string) => void
   addOtherCost: () => void
@@ -37,8 +39,8 @@ interface Props {
 }
 
 export function TabOtherCost({
-  otherCosts, showAddCost, newDesc, newAmount, newMarkup, newLob, editCostCell, editCostVal,
-  setShowAddCost, setNewDesc, setNewAmount, setNewMarkup, setNewLob, setEditCostCell, setEditCostVal,
+  otherCosts, showAddCost, newDesc, newAmount, newMarkup, newLob, newBillable, editCostCell, editCostVal,
+  setShowAddCost, setNewDesc, setNewAmount, setNewMarkup, setNewLob, setNewBillable, setEditCostCell, setEditCostVal,
   addOtherCost, removeOtherCost, toggleBillable, updateLob, commitMarkup, commitBilled,
   readOnly = false,
 }: Props) {
@@ -168,7 +170,15 @@ export function TabOtherCost({
           {!readOnly && <tr className="border-t border-dashed border-slate-200 bg-white">
             {showAddCost ? (
               <>
-                <td />
+                <td className="px-2 py-2.5 text-center">
+                  <input
+                    type="checkbox"
+                    checked={newBillable}
+                    onChange={e => setNewBillable(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    title="Billable"
+                  />
+                </td>
                 <td className="px-3 py-2.5">
                   <input
                     autoFocus
@@ -227,7 +237,7 @@ export function TabOtherCost({
                       </svg>
                     </button>
                     <button
-                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount(''); setNewMarkup(''); setNewLob('') }}
+                      onClick={() => { setShowAddCost(false); setNewDesc(''); setNewAmount(''); setNewMarkup(''); setNewLob(''); setNewBillable(true) }}
                       className="flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-100 transition-colors"
                       title="Cancel"
                     >
