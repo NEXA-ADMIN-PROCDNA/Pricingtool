@@ -8,14 +8,15 @@ import type { NextRequest } from 'next/server'
 // them explicitly here forces Next.js to inline NEXTAUTH_SECRET at build time
 // and removes the cookie-name guessing entirely.
 export function getAuthToken(req: NextRequest) {
-  // Mirror NextAuth's own cookie-security rule, which keys off the NEXTAUTH_URL
-  // protocol: https → Secure "__Secure-next-auth.session-token"; http → plain
-  // "next-auth.session-token". Reading it here at runtime keeps getToken in
-  // lockstep with the cookie NextAuth actually wrote, so auth works behind HTTPS
-  // (Vercel) AND over plain HTTP (e.g. an EC2 box that has no TLS in front yet —
-  // the browser refuses to store a Secure cookie over http, which silently
-  // breaks login otherwise).
-  const useSecureCookies = (process.env.NEXTAUTH_URL ?? '').startsWith('https://')
+  // Pick the session-cookie name from the cookie the request actually carries —
+  // NOT from NEXTAUTH_URL. On Vercel's Edge runtime env vars aren't reliably
+  // inlined (the reason the secret is passed explicitly below), so deriving the
+  // name from process.env would read `undefined` and break. Detecting from the
+  // incoming cookie keeps getToken in lockstep with whatever NextAuth wrote, on
+  // either transport, with zero env dependency:
+  //   • HTTPS (e.g. Vercel)   → "__Secure-next-auth.session-token"
+  //   • plain HTTP (e.g. EC2) → "next-auth.session-token"
+  const useSecureCookies = req.cookies.has('__Secure-next-auth.session-token')
   return getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
