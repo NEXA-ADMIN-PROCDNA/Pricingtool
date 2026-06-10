@@ -54,6 +54,9 @@ ALTER TABLE procdna_database.clients ALTER COLUMN "clientId" DROP NOT NULL;
 
 -- Utilization stores decimals (50.5%, not 50).
 ALTER TABLE procdna_database.staffing_resources ALTER COLUMN "utilization" TYPE numeric(6,2);
+
+-- Full Time Equivalent per pricing version = total hours ÷ (8 × working days).
+ALTER TABLE procdna_database.pricing_versions ADD COLUMN "fte" numeric(10,2);
 ```
 
 After any schema SQL: **run `prisma generate`** so the client types match the DB, then deploy.

@@ -8,6 +8,7 @@ import type { OpportunityDetail } from '@/lib/db/opportunities'
 import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 import { StageBadge } from '@/components/ui/StageBadge'
 import { PricingDrawer } from './PricingDrawer'
+import { computeFte } from './pricing/utils'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { MultiSelect } from '@/components/ui/MultiSelect'
 import { TabSoW } from './TabSoW'
@@ -668,6 +669,7 @@ export function OpportunityTabs({
             {pricingVersions.map(v => {
               const billings = v.proposedBillings != null ? Number(v.proposedBillings) : null
               const margin   = v.grossMarginPct   != null ? Number(v.grossMarginPct)   : null
+              const fte      = v.totalHours != null ? computeFte(Number(v.totalHours), opp.startDate, opp.endDate) : null
               return (
                 <div
                   key={v.id}
@@ -717,6 +719,12 @@ export function OpportunityTabs({
                           <p className="text-slate-400">Hours</p>
                           <p className="font-bold text-slate-800">
                             {v.totalHours != null ? `${Number(v.totalHours).toLocaleString()} h` : '—'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-slate-400">FTE</p>
+                          <p className="font-bold text-slate-800">
+                            {fte != null ? fte.toFixed(2) : '—'}
                           </p>
                         </div>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors">

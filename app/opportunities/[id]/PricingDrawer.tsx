@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, RateCardItem, OtherCostRow, ComputedMetrics } from './pricing/types'
-import { computeFromRows, getWeekColumns, weekKey, proratedWeekHours, workingDaysInWindow } from './pricing/utils'
+import { computeFromRows, computeFte, getWeekColumns, weekKey, proratedWeekHours, workingDaysInWindow } from './pricing/utils'
 import { TabBasicDetails } from './pricing/TabBasicDetails'
 import { TabEfforts }      from './pricing/TabEfforts'
 import { TabOtherCost }    from './pricing/TabOtherCost'
@@ -410,6 +410,7 @@ export function PricingDrawer({
           offshorePct:          versionMetrics.offshorePct,
           effectiveRatePerHour: versionMetrics.effectiveRatePerHour,
           discountPremiumPct:   versionMetrics.discountPremiumPct,
+          fte:                  computeFte(versionMetrics.totalHours, opp.startDate, opp.endDate),
           ...(markFinal ? { isFinal: true } : {}),
         }),
       })

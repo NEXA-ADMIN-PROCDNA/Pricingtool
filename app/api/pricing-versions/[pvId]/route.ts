@@ -170,6 +170,7 @@ export async function PATCH(
         ...(body.offshorePct         != null && { offshorePct:         body.offshorePct         }),
         ...(body.effectiveRatePerHour!= null && { effectiveRatePerHour:body.effectiveRatePerHour}),
         ...(body.discountPremiumPct  != null && { discountPremiumPct:  body.discountPremiumPct  }),
+        ...(body.fte                 != null && { fte:                 body.fte                 }),
         ...(body.revenueSharePct    != null && { revenueSharePct:     body.revenueSharePct     }),
       },
     })

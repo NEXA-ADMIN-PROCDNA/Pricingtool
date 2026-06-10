@@ -1,7 +1,7 @@
 'use client'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { Version, ComputedMetrics, OtherCostRow } from './types'
-import { fmtMoneyExact, fmtDate } from './utils'
+import { fmtMoneyExact, fmtDate, computeFte } from './utils'
 
 const DOMAIN_LABELS: Record<string, string> = {
   ANALYTICS: 'Analytics',
@@ -54,6 +54,13 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
   const primaryLobLabel = majorityDomain
     ? (DOMAIN_LABELS[majorityDomain] ?? majorityDomain)
     : (opp.primaryLob ? (DOMAIN_LABELS[opp.primaryLob] ?? opp.primaryLob) : null)
+
+  // Full Time Equivalent — computed live from the displayed total hours so it
+  // tracks edits before save (falls back to the stored version totals).
+  const liveTotalHours = versionMetrics.totalHours > 0
+    ? versionMetrics.totalHours
+    : (version.totalHours != null ? Number(version.totalHours) : 0)
+  const fteValue = computeFte(liveTotalHours, opp.startDate, opp.endDate)
 
   return (
     <div className="space-y-5">
@@ -108,6 +115,7 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
             { label: 'Discount / Premium', value: versionMetrics.totalHours > 0 ? `${versionMetrics.discountPremiumPct.toFixed(1)}%`  : (version.discountPremiumPct  != null ? `${Number(version.discountPremiumPct).toFixed(1)}%`  : '0.0%') },
             { label: 'Eff. Rate / Hour',   value: fmtMoneyExact(versionMetrics.totalHours > 0 ? versionMetrics.effectiveRatePerHour             : (version.effectiveRatePerHour != null ? Number(version.effectiveRatePerHour)                   : null)) },
             { label: 'Total Hours',        value: versionMetrics.totalHours > 0 ? `${versionMetrics.totalHours.toLocaleString()} h`   : (version.totalHours          != null ? `${Number(version.totalHours).toLocaleString()} h`      : '0 h') },
+            { label: 'Full Time Equivalent', value: fteValue.toFixed(2), hi: true },
             { label: 'Offshore %',         value: versionMetrics.totalHours > 0 ? `${versionMetrics.offshorePct.toFixed(0)}%`         : (version.offshorePct          != null ? `${Number(version.offshorePct).toFixed(0)}%`           : '0%') },
           ].map(({ label, value, hi }) => (
             <div key={label} className={`rounded-xl p-3 ${

@@ -48,6 +48,16 @@ export function computeFromRows(rows: StaffRow[]): ComputedMetrics {
   return { totalHours, billedHours, unbilledHours, totalCost, proposedBillings, recommendedBillings, grossMargin, grossMarginPct, offshorePct, effectiveRatePerHour, discountPremiumPct }
 }
 
+// Full-Time Equivalent — total active hours ÷ the maximum billable hours for the
+// project window (8h × Mon–Fri working days, the same working-day basis used for
+// utilization). e.g. one full-time person for the whole window ≈ 1.00. Rounded to
+// 2 dp; returns 0 when the window has no working days.
+export function computeFte(totalHours: number, start: string | Date, end: string | Date): number {
+  const standardHours = workingDaysInWindow(start, end) * 8
+  if (standardHours <= 0) return 0
+  return Math.round((totalHours / standardHours) * 100) / 100
+}
+
 // Normalize any date / ISO string to UTC midnight of its calendar day. ALL week
 // and working-day math runs in UTC so it's identical on every browser and server,
 // independent of local timezone. (Stored dates are already UTC midnight because

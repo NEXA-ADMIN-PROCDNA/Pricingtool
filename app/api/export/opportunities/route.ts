@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import * as XLSX from 'xlsx'
 import { ClientSecretCredential } from '@azure/identity'
 import { apiError } from '@/lib/errors'
+import { computeFte } from '@/app/opportunities/[id]/pricing/utils'
 
 // The single SharePoint document the sync targets. We deliberately store the
 // `doc.aspx` URL the user shared rather than the resolved drive-item ID so any
@@ -60,7 +61,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
     'Start Date', 'End Date',
     'Account Manager', 'Account Manager Email',
     'Client Stakeholder Name', 'Client Stakeholder Email',
-    'Signed Project Budget ($)', 'Estimated Total Hours', 'Discount / Premium %',
+    'Signed Project Budget ($)', 'Estimated Total Hours', 'FTE', 'Discount / Premium %',
     'Approving Partner', 'BU', 'Star Connect', 'Status', 'Stage',
     'Gross Margin %', 'Offshore %',
   ]
@@ -79,6 +80,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
       poc?.name ?? '', poc?.email ?? '',
       pv?.proposedBillings   != null ? Number(pv.proposedBillings)   : '',
       pv?.totalHours         != null ? Number(pv.totalHours)         : '',
+      pv?.totalHours         != null ? computeFte(Number(pv.totalHours), opp.startDate, opp.endDate) : '',
       pv?.discountPremiumPct != null ? Number(pv.discountPremiumPct) : '',
       ar?.approver.name ?? '', opp.primaryLob ?? '', opp.starConnect ? 'Yes' : 'No', opp.status, opp.stage,
       pv?.grossMarginPct != null ? Number(pv.grossMarginPct) : '',
@@ -90,7 +92,7 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
   ws['!cols'] = [
     { wch: 14 }, { wch: 30 }, { wch: 25 },
     { wch: 16 }, { wch: 16 }, { wch: 22 }, { wch: 28 }, { wch: 22 },
-    { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 22 },
+    { wch: 28 }, { wch: 22 }, { wch: 18 }, { wch: 10 }, { wch: 14 }, { wch: 22 },
     { wch: 18 }, { wch: 13 }, { wch: 14 }, { wch: 22 }, { wch: 14 }, { wch: 12 },
   ]
   const wb = XLSX.utils.book_new()

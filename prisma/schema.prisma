@@ -284,6 +284,7 @@ model PricingVersion {
   effectiveRatePerHour  Decimal?    @db.Decimal(10, 2)
   totalHours            Decimal?    @db.Decimal(10, 2)
   offshorePct           Decimal?    @db.Decimal(8, 4)
+  fte                   Decimal?    @db.Decimal(10, 2)   // total hours ÷ (8 × working days)
   businessJustification String?     @db.Text    // row L — used in approval email
 
  createdAt DateTime @default(now()) @db.Timestamptz(3)
