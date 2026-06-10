@@ -134,7 +134,7 @@ export function TabEfforts({
                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[250px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
                   Location
                 </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">Domain</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[90px]">BU</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Cost Rate</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Bill Rate</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[96px]">Eff. Rate</th>
@@ -310,7 +310,12 @@ export function TabEfforts({
                                   inactive ? 'bg-slate-100 text-slate-400' : readOnly ? 'bg-indigo-50 text-indigo-700' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
                                 }`}>{h}</span>
                               ) : (
-                                <span className="text-slate-300 text-xs">·</span>
+                                // Empty cell: a shaded, dashed "ghost" cell signals it's clickable to add hours.
+                                <span className={`inline-flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-xs transition-colors ${
+                                  readOnly
+                                    ? 'text-slate-300'
+                                    : 'bg-slate-50 text-slate-300 border border-dashed border-slate-200 hover:bg-indigo-50 hover:text-indigo-500 hover:border-indigo-300'
+                                }`}>{readOnly ? '·' : '+'}</span>
                               )}
                             </span>
                           )}
@@ -376,7 +381,7 @@ export function TabEfforts({
                         onChange={e => { setAddLob(e.target.value); setAddLocation(''); setAddRole('') }}
                         className="text-xs rounded-lg border border-indigo-300 px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 min-w-[140px]"
                       >
-                        <option value="">LoB…</option>
+                        <option value="">BU…</option>
                         {lobOptions.map(lob => (
                           <option key={lob} value={lob}>{LOB_LABELS[lob] ?? lob}</option>
                         ))}

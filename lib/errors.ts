@@ -22,6 +22,7 @@ export const APP_ERRORS = {
   PV_DUPLICATE_FAILED:    { status: 500, message: 'Failed to duplicate the pricing version.' },
   PV_DELETE_FAILED:       { status: 500, message: 'Could not delete this version.' },
   PV_FINAL_CONFLICT:      { status: 409, message: 'Another version is already marked as final.' },
+  PRICING_LOCKED:         { status: 409, message: 'Pricing is locked — an approval is in progress or the pricing and SOW have both been approved. The final version can no longer be changed.' },
 
   // Staffing
   RATE_CARD_NOT_FOUND:    { status: 404, message: 'Rate card entry not found — it may have been removed.' },

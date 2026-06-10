@@ -51,9 +51,24 @@ These schema changes are applied by hand (run in Supabase now, or RDS post-migra
 ```sql
 -- Client IDs are admin-assigned (e.g. 1004VL3002), nullable until assigned.
 ALTER TABLE procdna_database.clients ALTER COLUMN "clientId" DROP NOT NULL;
+
+-- Utilization stores decimals (50.5%, not 50).
+ALTER TABLE procdna_database.staffing_resources ALTER COLUMN "utilization" TYPE numeric(6,2);
 ```
 
 After any schema SQL: **run `prisma generate`** so the client types match the DB, then deploy.
+
+### BU rename — physical DB + code identifiers (paired change)
+The **user-facing labels** for "Line of Business / Domain" are already renamed to **"BU"** (and the client's field to **"Client BU"**). The internal code identifiers + DB columns/enum still use the old names. To finish the "in the DB too" rename, run this SQL **in the same deploy window** as the matching `schema.prisma` + code-identifier changes (it can't be half-applied — the moment a column is renamed, old-named queries break until redeploy):
+
+```sql
+ALTER TYPE  procdna_database."LineOfBusiness" RENAME TO "BU";
+ALTER TABLE procdna_database.opportunities      RENAME COLUMN "primaryLob"     TO "primaryBu";
+ALTER TABLE procdna_database.rate_cards         RENAME COLUMN "domain"         TO "bu";
+ALTER TABLE procdna_database.staffing_resources RENAME COLUMN "domain"         TO "bu";
+ALTER TABLE procdna_database.other_costs        RENAME COLUMN "lineOfBusiness" TO "bu";
+```
+Matching code changes (then `prisma generate` + redeploy, all together): enum `LineOfBusiness → BU`; fields `primaryLob → primaryBu`, `domain → bu` (RateCard & StaffingResource), `lineOfBusiness → bu` (OtherCost); helper/map renames (`normalizeLob`, `LOB_LABELS`/`DOMAIN_LABELS`, `computeMajorityLob`); and the API request/response JSON keys + the frontend send/read of those keys. ~34 files. The enum **values** (TECH, ANALYTICS, MS, DS, DESIGN, AUXO) do **not** change.
 
 ---
 

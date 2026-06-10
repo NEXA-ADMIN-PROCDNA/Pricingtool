@@ -61,7 +61,7 @@ export default async function NewOpportunityPage() {
             margin: 0,
           }}>Create Opportunity</h1>
           <p style={{ ...MONO, fontSize: 11, color: C.inkFaint, letterSpacing: '0.04em', marginTop: 2 }}>
-            BD ID auto-assigned on save · Primary LoB derived from final pricing
+            BD ID auto-assigned on save · Primary BU derived from final pricing
           </p>
         </div>
 

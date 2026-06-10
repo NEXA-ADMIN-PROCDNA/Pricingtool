@@ -67,7 +67,7 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
           <ReadField label="Opportunity Name" value={opp.opportunityName} />
           <ReadField label="Start Date"       value={new Date(opp.startDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />
           <ReadField label="End Date"         value={new Date(opp.endDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} />
-          <ReadField label="Primary LOB"      value={primaryLobLabel} highlight />
+          <ReadField label="Primary BU"       value={primaryLobLabel} highlight />
         </dl>
       </div>
 
@@ -84,7 +84,7 @@ export function TabBasicDetails({ version, opp, versionMetrics, otherCosts }: Pr
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {/* Domain Revenue Mix — spans full row */}
           <div className="col-span-2 sm:col-span-4 rounded-xl bg-slate-50 p-3">
-            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-2">LoB Revenue Mix</p>
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-400 mb-2">BU Revenue Mix</p>
             {domainPcts.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {domainPcts.map(({ domain, label, pct }) => (

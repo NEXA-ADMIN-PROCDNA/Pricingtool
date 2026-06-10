@@ -321,7 +321,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
         </div>
 
         <div>
-          <FieldLabel text="Business Unit" />
+          <FieldLabel text="Client BU" />
           <input
             name="businessUnit"
             type="text"

@@ -171,7 +171,7 @@ export function EditClientModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Business Unit</label>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Client BU</label>
               <input
                 type="text"
                 placeholder="e.g. Oncology"

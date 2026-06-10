@@ -113,7 +113,7 @@ function LoginForm() {
             <img src={NEXA_LOGO_DATA_URL} alt="NEXA" style={{ height: 36, width: 'auto', objectFit: 'contain', display: 'block', borderRadius: 6 }} />
           </div>
           <span style={{ fontSize: 13, color: '#8A93A6', lineHeight: 1.5, display: 'block' }}>
-            Sign in with your ProcDNA Microsoft account<br />to access the approval portal.
+            Sign in with your ProcDNA Microsoft account<br />to access the NEXA approval portal.
           </span>
         </div>
 
@@ -139,21 +139,6 @@ function LoginForm() {
           </div>
           {loading ? 'Redirecting…' : 'Sign in with Microsoft'}
         </button>
-
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0 20px' }}>
-          <div style={{ flex: 1, height: 0.5, background: '#E4E8F0' }} />
-          <span style={{ fontSize: 11, color: '#B0B8C8', fontWeight: 500, letterSpacing: '0.5px' }}>need help?</span>
-          <div style={{ flex: 1, height: 0.5, background: '#E4E8F0' }} />
-        </div>
-
-        <p style={{ fontSize: 12, color: '#8A93A6', textAlign: 'center', lineHeight: 1.6 }}>
-          Having trouble signing in? Contact your<br />
-          IT administrator or{' '}
-          <a href="mailto:nexa_admin@procdna.com" style={{ color: '#1A6EFF', textDecoration: 'none', fontWeight: 500 }}>
-            nexa_admin@procdna.com
-          </a>
-        </p>
 
       </div>
     </div>

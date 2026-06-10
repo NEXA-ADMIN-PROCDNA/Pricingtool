@@ -56,12 +56,12 @@ async function buildBuffer(): Promise<{ buf: Uint8Array; count: number }> {
   })
 
   const headers = [
-    'Project Code', 'Project Name', 'Client Organization',
-    'Project Start Date', 'Project End Date',
+    'Opportunity Code', 'Opportunity Name', 'Client Organization',
+    'Start Date', 'End Date',
     'Account Manager', 'Account Manager Email',
     'Client Stakeholder Name', 'Client Stakeholder Email',
     'Signed Project Budget ($)', 'Estimated Total Hours', 'Discount / Premium %',
-    'Approving Partner', 'Line of Business', 'Star Connect', 'Status', 'Stage',
+    'Approving Partner', 'BU', 'Star Connect', 'Status', 'Stage',
     'Gross Margin %', 'Offshore %',
   ]
 

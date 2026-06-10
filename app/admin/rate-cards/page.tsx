@@ -185,7 +185,7 @@ export default function RateCardUploadPage() {
               { label: 'File format',  value: '.xlsx or .xls' },
               { label: 'Sheet name',   value: 'Must contain "Rate Card"' },
               { label: 'Header row',   value: 'Auto-detected (any row)' },
-              { label: 'Columns',      value: 'A: Location · B: Position · C: Domain · E: Billing · F: Cost' },
+              { label: 'Columns',      value: 'A: Location · B: Position · C: BU · E: Billing · F: Cost' },
             ].map(({ label, value }) => (
               <div key={label} style={{ display: 'flex', gap: 10 }}>
                 <span style={{

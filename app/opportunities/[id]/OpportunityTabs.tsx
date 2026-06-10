@@ -442,9 +442,9 @@ export function OpportunityTabs({
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId ?? 'Pending ID'} />
-                <Field label="Business Unit" value={opp.businessUnit ?? opp.client.businessUnit} />
+                <Field label="Client BU"    value={opp.businessUnit ?? opp.client.businessUnit} />
                 <Field label="Owner"        value={opp.owner.name} />
-                <Field label="LOB"          value={primaryLob ? (LOB_LABELS[primaryLob] ?? primaryLob) : null} />
+                <Field label="BU"           value={primaryLob ? (LOB_LABELS[primaryLob] ?? primaryLob) : null} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
                 <Field label="Start Date"   value={fmtDate(opp.startDate)} />
                 <Field label="End Date"     value={fmtDate(opp.endDate)} />
@@ -529,7 +529,11 @@ export function OpportunityTabs({
         const targetV               = pricingVersions.find(v => v.id === finalWarningId)
         const isPricingPending      = oppStage === 'APPROVAL_PENDING'
         const isSowVerifyPending    = oppStage === 'SOW_REVIEW_PENDING'
-        const isBlocked             = isPricingPending || isSowVerifyPending
+        // Once both the pricing approval and the SOW verification are approved
+        // (TO_BE_ARCHIVED), the pricing is sealed — changing the final version is
+        // blocked entirely, not merely reset.
+        const isFullyApproved       = oppStage === 'TO_BE_ARCHIVED'
+        const isBlocked             = isPricingPending || isSowVerifyPending || isFullyApproved
         return (
           <>
             <div
@@ -567,6 +571,16 @@ export function OpportunityTabs({
                       </p>
                       <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
                         A SOW / PO verification request is pending with the approver. The pricing version cannot be changed until they approve or reject it.
+                      </p>
+                    </>
+                  )}
+                  {isFullyApproved && (
+                    <>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: '#001E96', marginBottom: 6 }}>
+                        Pricing is locked
+                      </p>
+                      <p style={{ fontSize: 13, color: '#3A4A6A', lineHeight: 1.6 }}>
+                        This engagement&apos;s pricing and SOW have both been approved. The pricing version can no longer be changed.
                       </p>
                     </>
                   )}
@@ -623,6 +637,10 @@ export function OpportunityTabs({
               {creatingVersion ? 'Creating…' : 'New Version'}
             </button>
           </div>
+
+          <p className="text-xs text-red-600">
+            * SOW/Change Order details like Efforts, Effective Rate, Levels should be in line to Opportunity Pricing.
+          </p>
 
           {pricingVersions.length === 0 && (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-16 text-center">

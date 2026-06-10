@@ -8,6 +8,7 @@ import { STAGE_NEXT_STEPS } from '@/lib/stageNextSteps'
 
 // V8 palette
 const C = {
+  bg:        '#F4F6FB',
   ink:       '#001E96',
   inkSoft:   '#3A4A6A',
   inkMuted:  '#7B7C7F',
@@ -25,6 +26,73 @@ const MONO: React.CSSProperties = {
 
 const SERIF: React.CSSProperties = {
   fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
+}
+
+function fmtMoney(n: number) {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
+  return `$${n}`
+}
+
+type KpiStats = {
+  total: number; open: number; won: number; lost: number
+  estimatedRevenue: number; weightedRevenue: number
+}
+
+// KPI strip — computed from the *currently visible* (filtered) rows so every
+// dashboard filter (status tab, search, and column filters) flows into the cards.
+function KPIStrip({ stats }: { stats: KpiStats }) {
+  const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0
+
+  const items = [
+    { label: 'Pipeline Revenue',   value: fmtMoney(stats.estimatedRevenue), sub: 'Final pricing + estimate' },
+    { label: 'Weighted Revenue',   value: fmtMoney(stats.weightedRevenue),  sub: 'Revenue × win probability' },
+    { label: 'Active Engagements', value: String(stats.open),               sub: `of ${stats.total} total in cycle` },
+    { label: 'Won · YTD',          value: String(stats.won),                sub: `${winRate}% win rate · ${stats.lost} lost` },
+  ]
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      borderTop: `1px solid ${C.rule}`,
+      borderBottom: `1px solid ${C.rule}`,
+      padding: '24px 0',
+    }}>
+      {items.map((it, i) => (
+        <div key={i} style={{
+          padding: '0 36px',
+          borderRight: i < 3 ? `1px solid ${C.rule}` : 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}>
+          <div style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontSize: 11,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: C.inkMuted,
+            fontWeight: 500,
+          }}>{it.label}</div>
+
+          <div style={{
+            ...SERIF,
+            fontSize: 44,
+            fontWeight: 400,
+            letterSpacing: '-0.02em',
+            color: C.ink,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>{it.value}</div>
+
+          <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, color: C.inkMuted }}>
+            {it.sub}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 const STATUS_FILTERS: { label: string; value: 'ALL' | OpportunityStatus }[] = [
@@ -388,6 +456,31 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
     return true
   }), [rows, active, columnFilters])
 
+  // ── KPI stats derived from the visible (filtered) rows ─────────────────────
+  // Mirrors the server-side getDashboardStats logic, but driven entirely off the
+  // filtered set so the cards always describe exactly what the table shows.
+  const kpi = useMemo<KpiStats>(() => {
+    let open = 0, won = 0, lost = 0
+    let estimatedRevenue = 0, weightedRevenue = 0
+    for (const r of visible) {
+      if      (r.status === 'OPEN') open++
+      else if (r.status === 'WON')  won++
+      else if (r.status === 'LOST') lost++
+
+      // Lost/Abandoned stay listed but must not inflate pipeline/weighted revenue.
+      if (r.status === 'LOST' || r.status === 'ABANDONED') continue
+
+      const finalBillings = r.pricingVersions[0]?.proposedBillings
+      const raw = finalBillings != null ? Number(finalBillings) : Number(r.estimatedRevenue ?? 0)
+      estimatedRevenue += raw
+      // WON + project code confirmed → effectively certain, treat as 100%.
+      const certain = r.status === 'WON' && (r as any).projectCodeProceed
+      const probPct = certain ? 100 : (r.probability != null ? Number(r.probability) : 100)
+      weightedRevenue += raw * (probPct / 100)
+    }
+    return { total: visible.length, open, won, lost, estimatedRevenue, weightedRevenue }
+  }, [visible])
+
   const hasActiveFilters = Object.values(columnFilters).some(v => v?.length > 0)
 
   // ── Column definitions ─────────────────────────────────────────────────────
@@ -433,6 +526,14 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
           </div>
         </div>
       )}
+
+      {/* ─── KPI strip — reflects every active filter ─── */}
+      <div style={{ background: C.bg, flexShrink: 0, padding: '0 44px' }}>
+        <KPIStrip stats={kpi} />
+      </div>
+
+      {/* ─── Filters + table + footer (padded body) ─── */}
+      <div style={{ padding: '0 44px' }} className="flex flex-1 flex-col min-h-0">
 
       {/* ─── Status tabs + clear ─── */}
       <div style={{
@@ -700,6 +801,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
         <span style={{ ...MONO, fontSize: 10.5, letterSpacing: '0.12em', color: C.inkFaint }}>
           {active !== 'ALL' && `FILTERED BY ${active}`}
         </span>
+      </div>
       </div>
     </div>
   )

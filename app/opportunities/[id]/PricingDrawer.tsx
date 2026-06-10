@@ -434,7 +434,15 @@ export function PricingDrawer({
   // ── Save & Mark Final — gated by stage ───────────────────────────
   const handleSaveAndMarkFinal = useCallback(() => {
     if (saving) return
-    if (currentStage === 'APPROVAL_PENDING' || currentStage === 'SOW_REVIEW_PENDING') {
+    // Stages where the final pricing version is immutable:
+    //  • APPROVAL_PENDING / SOW_REVIEW_PENDING — an approval is mid-flight
+    //  • TO_BE_ARCHIVED — pricing AND SOW verification are both approved; the
+    //    pricing is sealed and can no longer be changed.
+    if (
+      currentStage === 'APPROVAL_PENDING' ||
+      currentStage === 'SOW_REVIEW_PENDING' ||
+      currentStage === 'TO_BE_ARCHIVED'
+    ) {
       setMarkFinalConfirm('block')
       return
     }
@@ -704,10 +712,14 @@ export function PricingDrawer({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-slate-900">Approval in progress</h3>
+              <h3 className="text-base font-bold text-slate-900">
+                {currentStage === 'TO_BE_ARCHIVED' ? 'Pricing is locked' : 'Approval in progress'}
+              </h3>
             </div>
             <p className="text-sm text-slate-500">
-              You can&apos;t mark a different version as final while an approval is pending. Wait for the approver to decide, or withdraw the existing request first.
+              {currentStage === 'TO_BE_ARCHIVED'
+                ? 'This engagement’s pricing and SOW have both been approved. The pricing version can no longer be changed.'
+                : 'You can’t mark a different version as final while an approval is pending. Wait for the approver to decide, or withdraw the existing request first.'}
             </p>
             <div className="mt-5 flex justify-end">
               <button

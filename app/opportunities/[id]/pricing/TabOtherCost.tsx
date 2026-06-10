@@ -51,7 +51,7 @@ export function TabOtherCost({
           <tr className="border-b border-slate-200 bg-slate-50">
             <th className="px-2 py-3 w-10 text-xs font-semibold uppercase tracking-wide text-slate-500 text-center">Bill</th>
             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Nature of Expense</th>
-            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 w-28">Line of Business</th>
+            <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 w-28">BU</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 w-36">Cost</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-28">Markup %</th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 w-36">Billed</th>

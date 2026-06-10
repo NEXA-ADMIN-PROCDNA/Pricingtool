@@ -116,15 +116,25 @@ export async function PATCH(
         select: { opportunityId: true, isFinal: true },
       })
       if (current) {
+        const opp = await prisma.opportunity.findUnique({
+          where:  { id: current.opportunityId },
+          select: { stage: true },
+        })
+
+        // Defense in depth (the UI also blocks these): the final pricing version
+        // is immutable once an approval is mid-flight or both the pricing and SOW
+        // verification are approved. Reject promoting a *different* (non-final)
+        // version to final at these stages so the approved pricing can't be
+        // silently swapped out from under a granted approval.
+        const IMMUTABLE_STAGES = ['APPROVAL_PENDING', 'SOW_REVIEW_PENDING', 'TO_BE_ARCHIVED']
+        if (!current.isFinal && IMMUTABLE_STAGES.includes(opp?.stage ?? '')) {
+          return apiError('PRICING_LOCKED')
+        }
+
         // Unset isFinal on all sibling versions
         await prisma.pricingVersion.updateMany({
           where: { opportunityId: current.opportunityId, isFinal: true },
           data:  { isFinal: false },
-        })
-
-        const opp = await prisma.opportunity.findUnique({
-          where:  { id: current.opportunityId },
-          select: { stage: true },
         })
 
         // Recompute Primary LoB from this version's staffing; only overwrite when we get

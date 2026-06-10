@@ -4,11 +4,10 @@ import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
-import { getOpportunities, getDashboardStats } from '@/lib/db/opportunities'
+import { getOpportunities } from '@/lib/db/opportunities'
 import { OpportunityTable } from './OpportunityTable'
 import { SearchBar } from './SearchBar'
 import { ExportButton } from './ExportButton'
-import { OpportunityStatus } from '@prisma/client'
 import pkg from '../../package.json'
 
 const APP_VERSION = pkg.version
@@ -22,12 +21,6 @@ const C = {
   inkMuted: '#7B7C7F',
   inkFaint: '#A5A7AA',
   accent:   '#005CD9',
-}
-
-function fmt(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`
-  return `$${n}`
 }
 
 // Maps DB role enum → banner display label + restriction copy
@@ -75,87 +68,12 @@ function NexaWordmark() {
   )
 }
 
-function KPIStrip({ stats }: { stats: Awaited<ReturnType<typeof getDashboardStats>> }) {
-  const winRate = stats.total > 0 ? Math.round((stats.won / stats.total) * 100) : 0
-
-  const items = [
-    {
-      label: 'Pipeline Revenue',
-      value: fmt(stats.estimatedRevenue),
-      sub: 'Final pricing + estimate',
-    },
-    {
-      label: 'Weighted Revenue',
-      value: fmt(stats.weightedRevenue),
-      sub: 'Revenue × win probability',
-    },
-    {
-      label: 'Active Engagements',
-      value: String(stats.open),
-      sub: `of ${stats.total} total in cycle`,
-    },
-    {
-      label: 'Won · YTD',
-      value: String(stats.won),
-      sub: `${winRate}% win rate · ${stats.lost} lost`,
-    },
-  ]
-
-  return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      borderTop: `1px solid ${C.rule}`,
-      borderBottom: `1px solid ${C.rule}`,
-      padding: '24px 0',
-    }}>
-      {items.map((it, i) => (
-        <div key={i} style={{
-          padding: '0 36px',
-          borderRight: i < 3 ? `1px solid ${C.rule}` : 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-        }}>
-          <div style={{
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: 11,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            color: C.inkMuted,
-            fontWeight: 500,
-          }}>{it.label}</div>
-
-          <div style={{
-            fontFamily: "var(--font-instrument-serif), 'Fraunces', Georgia, serif",
-            fontSize: 44,
-            fontWeight: 400,
-            letterSpacing: '-0.02em',
-            color: C.ink,
-            lineHeight: 1,
-            fontVariantNumeric: 'tabular-nums',
-          }}>{it.value}</div>
-
-          <div style={{ fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, color: C.inkMuted }}>
-            {it.sub}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-const VALID_STATUS = new Set<string>(['OPEN', 'WON', 'LOST', 'ABANDONED', 'ARCHIVED'])
-
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; q?: string }>
 }) {
-  const { status: rawStatus, q } = await searchParams
-  const status = rawStatus && VALID_STATUS.has(rawStatus)
-    ? (rawStatus as OpportunityStatus)
-    : undefined
+  const { q } = await searchParams
 
   const session = await getServerSession(authOptions)
   const sessionUser = session?.user as { id?: string; role?: string } | undefined
@@ -163,10 +81,10 @@ export default async function DashboardPage({
   const role    = sessionUser?.role ?? ''
   const auth    = userId && role ? { userId, role } : undefined
 
-  const [rows, stats] = await Promise.all([
-    getOpportunities(status ?? 'ALL', q, auth),
-    getDashboardStats(auth),
-  ])
+  // Fetch the full role-scoped set (status filtering happens client-side in the
+  // table). This keeps the status-tab count badges accurate for every status —
+  // server-side status filtering would zero out the non-active tabs.
+  const rows = await getOpportunities('ALL', q, auth)
 
   const banner  = ROLE_BANNER[role] ?? { label: 'Nexa', restriction: '' }
 
@@ -258,18 +176,12 @@ export default async function DashboardPage({
       </div>
 
       {/* ─── Body ─── */}
+      {/* KPI strip + filter tabs + table all live in OpportunityTable so the
+          KPI cards stay in sync with every active filter. */}
       <div className="flex flex-1 flex-col overflow-hidden min-h-0">
-        {/* KPI Strip */}
-        <div style={{ background: C.bg, flexShrink: 0, padding: '0 44px' }}>
-          <KPIStrip stats={stats} />
-        </div>
-
-        {/* Filter tabs + Table */}
-        <div style={{ padding: '0 44px' }} className="flex flex-1 flex-col min-h-0">
-          <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
-            <OpportunityTable rows={rows} roleLabel={banner.label} />
-          </Suspense>
-        </div>
+        <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
+          <OpportunityTable rows={rows} roleLabel={banner.label} />
+        </Suspense>
       </div>
     </MainLayout>
   )
