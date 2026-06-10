@@ -1,14 +1,11 @@
-import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getAuthToken } from '@/lib/getAuthToken'
 
 export async function proxy(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: true,
-    cookieName: '__Secure-next-auth.session-token',
-  })
+  // Uses the shared helper so the cookie name/security it looks for always
+  // matches what NextAuth set (https → Secure cookie, http → plain cookie).
+  const token = await getAuthToken(req)
 
   if (!token) {
     const loginUrl = new URL('/login', req.url)
