@@ -15,7 +15,7 @@ type Doc = {
 
 type Verification = {
   id: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
   approver: { name: string }
 }
 
@@ -296,7 +296,9 @@ export function TabSoW({
   // never both. (SoW + PO together is fine.)
   const hasDocs = sowCount > 0 || poCount > 0
   const anyCondition = precontract || hasDocs
-  const canSubmit = anyCondition && (!verification || verification.status === 'REJECTED')
+  // A WITHDRAWN verification is one that was auto-invalidated when the pricing
+  // approval was rejected/withdrawn — like a rejection, it re-opens resubmission.
+  const canSubmit = anyCondition && (!verification || verification.status === 'REJECTED' || verification.status === 'WITHDRAWN')
 
   useEffect(() => {
     fetch('/api/users')
@@ -516,6 +518,18 @@ export function TabSoW({
             }}>
               <span style={{ fontSize: 12, color: '#BE123C', fontWeight: 500 }}>
                 Previous verification was rejected. You can submit again.
+              </span>
+            </div>
+          )}
+
+          {/* Auto-invalidated (pricing approval was reset) — allow resubmit */}
+          {verification?.status === 'WITHDRAWN' && (
+            <div style={{
+              padding: '10px 14px', borderRadius: 8, marginBottom: 16,
+              background: '#FFFBEB', border: '1px solid #FDE68A',
+            }}>
+              <span style={{ fontSize: 12, color: '#92400E', fontWeight: 500 }}>
+                The previous verification was invalidated because the pricing approval was reset. Submit again once the pricing is re-approved.
               </span>
             </div>
           )}

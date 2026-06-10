@@ -37,6 +37,26 @@ export async function POST(
     },
   })
 
+  // A PRICING rejection invalidates the whole downstream SOW track: pricing and
+  // SOW verification can be requested in parallel, so a SOW verification may
+  // already be pending or even approved. Withdraw any such SOW verification so
+  // the opportunity resets cleanly to PRICE_LINKED and the owner can redo the
+  // flow once pricing is re-approved. (A SOW rejection only rolls its own track.)
+  if (approval.approvalType === 'PRICING') {
+    await prisma.approvalRequest.updateMany({
+      where: {
+        opportunityId: approval.opportunityId,
+        approvalType:  'SOW_VERIFICATION',
+        status:        { in: ['PENDING', 'APPROVED'] },
+      },
+      data: {
+        status:           'WITHDRAWN',
+        decidedAt:        new Date(),
+        withdrawalReason: 'Auto-invalidated — the pricing approval was rejected.',
+      },
+    })
+  }
+
   const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
   await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: rollbackStage } })
 

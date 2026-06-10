@@ -36,10 +36,33 @@ export async function POST(
       data:  { status: 'WITHDRAWN' as ApprovalStatus, decidedAt: new Date(), withdrawalReason: reason },
     })
 
-    await prisma.opportunity.update({
-      where: { id: approval.opportunityId },
-      data:  { stage: 'PRICE_LINKED' },
-    })
+    if (approval.approvalType === 'PRICING') {
+      // Withdrawing the pricing request invalidates the downstream SOW track too
+      // (the two can be requested in parallel), so any pending/approved SOW
+      // verification is withdrawn and the opportunity resets to PRICE_LINKED.
+      await prisma.approvalRequest.updateMany({
+        where: {
+          opportunityId: approval.opportunityId,
+          approvalType:  'SOW_VERIFICATION',
+          status:        { in: ['PENDING', 'APPROVED'] },
+        },
+        data: {
+          status:           'WITHDRAWN' as ApprovalStatus,
+          decidedAt:        new Date(),
+          withdrawalReason: 'Auto-invalidated — the pricing approval was withdrawn.',
+        },
+      })
+      await prisma.opportunity.update({
+        where: { id: approval.opportunityId },
+        data:  { stage: 'PRICE_LINKED' },
+      })
+    } else {
+      // SOW verification withdrawal only rolls its own track back.
+      await prisma.opportunity.update({
+        where: { id: approval.opportunityId },
+        data:  { stage: 'SOW_SUBMITTED' },
+      })
+    }
   } catch (err) {
     console.error('[withdraw] DB error:', err)
     const msg = err instanceof Error ? err.message : String(err)

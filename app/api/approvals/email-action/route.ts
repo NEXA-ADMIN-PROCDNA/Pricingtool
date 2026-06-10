@@ -188,7 +188,18 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'approve') {
-    const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+    // Track-aware (pricing + SOW verification can be approved in parallel, in
+    // either order). Mirrors app/api/approvals/[id]/approve/route.ts.
+    let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
+    if (approval.approvalType === 'SOW_VERIFICATION') {
+      newStage = 'TO_BE_ARCHIVED'
+    } else {
+      const sowApproved = await prisma.approvalRequest.findFirst({
+        where:  { opportunityId: approval.opportunityId, approvalType: 'SOW_VERIFICATION', status: 'APPROVED' },
+        select: { id: true },
+      })
+      newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+    }
     await prisma.approvalRequest.update({
       where: { id: approvalId },
       data:  { status: 'APPROVED', decidedAt: new Date() },
@@ -219,6 +230,22 @@ export async function POST(req: NextRequest) {
     where: { id: approvalId },
     data:  { status: 'REJECTED', decidedAt: new Date(), rejectionReason: reason || null },
   })
+  // A PRICING rejection invalidates the downstream SOW track (parallel approvals).
+  // Mirrors app/api/approvals/[id]/reject/route.ts.
+  if (approval.approvalType === 'PRICING') {
+    await prisma.approvalRequest.updateMany({
+      where: {
+        opportunityId: approval.opportunityId,
+        approvalType:  'SOW_VERIFICATION',
+        status:        { in: ['PENDING', 'APPROVED'] },
+      },
+      data: {
+        status:           'WITHDRAWN',
+        decidedAt:        new Date(),
+        withdrawalReason: 'Auto-invalidated — the pricing approval was rejected.',
+      },
+    })
+  }
   const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
   await prisma.opportunity.update({
     where: { id: approval.opportunityId },

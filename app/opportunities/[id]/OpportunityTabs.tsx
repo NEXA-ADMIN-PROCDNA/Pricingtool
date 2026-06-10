@@ -305,6 +305,9 @@ export function OpportunityTabs({
       setOppStage('PRICE_LINKED')
       setWithdrawConfirm(false)
       setWithdrawReason('')
+      // Withdrawing pricing also invalidates any SOW verification on the server
+      // (parallel track). Re-sync so the SOW tab reflects the reset this session.
+      router.refresh()
     } catch {
       toast.error('Network error — failed to withdraw approval')
     } finally {

@@ -32,7 +32,22 @@ export async function POST(
     data:  { status: 'APPROVED', decidedAt: new Date() },
   })
 
-  const newStage = approval.approvalType === 'SOW_VERIFICATION' ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+  // Stage transition is track-aware because pricing and SOW verification can be
+  // approved in parallel (in either order):
+  //  • SOW_VERIFICATION approved → engagement is verified → TO_BE_ARCHIVED.
+  //  • PRICING approved → normally SOW_PENDING, but if a SOW verification was
+  //    already approved on the parallel track, the deal is fully done, so go
+  //    straight to TO_BE_ARCHIVED instead of bouncing the stage backwards.
+  let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
+  if (approval.approvalType === 'SOW_VERIFICATION') {
+    newStage = 'TO_BE_ARCHIVED'
+  } else {
+    const sowApproved = await prisma.approvalRequest.findFirst({
+      where:  { opportunityId: approval.opportunityId, approvalType: 'SOW_VERIFICATION', status: 'APPROVED' },
+      select: { id: true },
+    })
+    newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+  }
   await prisma.opportunity.update({
     where: { id: approval.opportunityId },
     data:  { stage: newStage },
