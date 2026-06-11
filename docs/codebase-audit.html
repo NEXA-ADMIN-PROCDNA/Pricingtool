@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA — Codebase Audit (vulnerabilities, crash points, AWS, redundancy)</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --card:#fff;
+    --crit:#B91C1C; --crit-bg:#FEE2E2; --high:#D6454A; --high-bg:#FDECEC;
+    --med:#B45309; --med-bg:#FEF3E2; --low:#1F6B3C; --low-bg:#E9F7EF;
+    --code-bg:#0E1B33; --code-ink:#E7ECF6; --del:#5B2A2E; --add:#1C3A2A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:260px 1fr;max-width:1240px;margin:0 auto;gap:0;}
+  /* Sidebar */
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 18px;border-right:1px solid var(--line);background:#fff;}
+  nav h1{font:700 13px/1.2 'Segoe UI';letter-spacing:.16em;text-transform:uppercase;color:var(--ink);margin:0 0 4px;}
+  nav .sub{font-size:11px;color:var(--muted);margin-bottom:18px;}
+  nav a{display:block;font-size:12.5px;color:var(--ink2);padding:3px 0;border-radius:6px;}
+  nav .grp{font:700 10.5px/1 'Segoe UI';letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px;}
+  /* Main */
+  main{padding:34px 40px 120px;min-width:0;}
+  header.page{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:8px;}
+  header.page .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+  header.page h1{font-size:30px;margin:10px 0 6px;letter-spacing:-.01em;}
+  header.page p{color:var(--ink2);margin:.3em 0;max-width:70ch;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 8px;}
+  .summary{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 30px;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:96px;}
+  .stat b{display:block;font-size:22px;line-height:1.1;}
+  .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+  h2.section{font-size:21px;margin:46px 0 6px;padding-top:10px;border-top:1px solid var(--line);}
+  h2.section .tag{font:600 11px/1 'Courier New',monospace;color:var(--muted);letter-spacing:.1em;}
+  .section-note{color:var(--ink2);max-width:74ch;margin:.2em 0 10px;}
+  /* Finding card */
+  .f{background:var(--card);border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:16px 18px;margin:14px 0;}
+  .f.crit{border-left-color:var(--crit)} .f.high{border-left-color:var(--high)}
+  .f.med{border-left-color:var(--med)} .f.low{border-left-color:var(--low)}
+  .f h3{margin:0 0 6px;font-size:16px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .f h3 .id{font:700 12px/1 'Courier New',monospace;color:var(--muted);}
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.08em;text-transform:uppercase;padding:4px 8px;border-radius:99px;border:1px solid;}
+  .pill.crit{color:var(--crit);background:var(--crit-bg);border-color:#F5B5B5}
+  .pill.high{color:var(--high);background:var(--high-bg);border-color:#F3C4C4}
+  .pill.med{color:var(--med);background:var(--med-bg);border-color:#EAD3A6}
+  .pill.low{color:var(--low);background:var(--low-bg);border-color:#B6E2C7}
+  .conf{display:inline-block;font:600 10px/1 'Courier New',monospace;letter-spacing:.06em;padding:3px 7px;border-radius:6px;background:#EEF2F9;color:var(--ink2);border:1px solid var(--line);}
+  .loc{font:600 12px/1.5 'Courier New',monospace;color:var(--ink);background:#EEF2F9;padding:2px 7px;border-radius:6px;display:inline-block;margin:2px 0;}
+  .f p{margin:.5em 0}
+  .lbl{font:700 11px/1 'Segoe UI';letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:12px;}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:8px;padding:13px 15px;overflow:auto;font:12.5px/1.55 'Cascadia Code','Consolas','Courier New',monospace;margin:6px 0;}
+  pre .c{color:#7C89A8} /* comment */
+  pre .del{color:#FF9A9A} pre .add{color:#9DE8B4}
+  code.inl{background:#EEF2F9;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code',monospace;color:#9a2a86;}
+  .why{background:#F8FAFE;border:1px dashed var(--line);border-radius:8px;padding:8px 12px;margin:8px 0;color:var(--ink2);font-size:14px;}
+  table.drift{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.5px;}
+  table.drift th,table.drift td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top;}
+  table.drift th{background:#EEF2F9;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);}
+  .callout{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:10px;padding:14px 18px;margin:16px 0;}
+  footer{margin-top:60px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}nav{display:none}main{padding:24px 18px 80px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <h1>NEXA Audit</h1>
+  <div class="sub">Internal working notes · do not ship</div>
+  <a href="#how">How to read this</a>
+  <div class="grp">Current — Security</div>
+  <a href="#sec">Security vulnerabilities</a>
+  <div class="grp">Current — Reliability</div>
+  <a href="#crash">Crash &amp; failure points</a>
+  <div class="grp">AWS migration</div>
+  <a href="#aws">New risks on EC2/RDS/S3</a>
+  <div class="grp">Cleanup</div>
+  <a href="#dead">Redundant files &amp; dead code</a>
+  <a href="#drift">AGENTS.md drift</a>
+  <div class="grp">Plan</div>
+  <a href="#prio">Priority order</a>
+</nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">NEXA · Business Development &amp; Pricing Tool · Static code audit</div>
+  <h1>Codebase audit: vulnerabilities, crash points &amp; AWS readiness</h1>
+  <p>Personal working notes. Covers (1) security holes, (2) places the current <strong>Supabase + Vercel</strong> build can break under future conditions, (3) <strong>new</strong> risks the proposed <strong>EC2 / Nginx / RDS / S3</strong> stack introduces, and (4) redundant/dead files. Nothing here has been changed in code — every item lists a suggested fix only.</p>
+  <p style="font-size:12.5px;color:var(--muted)">Generated 2026-06-12 · scope: app/, lib/, prisma/, proxy.ts, configs · excludes node_modules.</p>
+</header>
+
+<section id="how">
+  <div class="legend">
+    <span class="pill crit">Critical</span>
+    <span class="pill high">High</span>
+    <span class="pill med">Medium</span>
+    <span class="pill low">Low</span>
+    <span class="conf">CONFIDENCE: HIGH/LOW — used for dead-code calls</span>
+  </div>
+  <div class="summary">
+    <div class="stat"><b>2</b><span>Critical</span></div>
+    <div class="stat"><b>9</b><span>High</span></div>
+    <div class="stat"><b>15</b><span>Medium</span></div>
+    <div class="stat"><b>8</b><span>Low</span></div>
+    <div class="stat"><b>17</b><span>Cleanup</span></div>
+  </div>
+  <div class="callout">
+    <strong>The one-line theme:</strong> every API route authenticates (<code class="inl">getAuthToken</code>) but most don't <em>authorise</em> — they act on any record by ID with no owner/role check. That's the largest single class of bug here (IDOR). The second theme is "works on Vercel serverless, will bite on a long-lived EC2 process" — connection pool size, in-memory caches, CPU-bound parsing, and TLS-termination assumptions all change.
+  </div>
+</section>
+
+<!-- ============================ SECURITY ============================ -->
+<h2 class="section" id="sec">1 · Security vulnerabilities <span class="tag">// current build, also carry to AWS</span></h2>
+<p class="section-note">These are exploitable today on Supabase+Vercel. They get worse on raw EC2 (no platform DDoS/rate-limit shield) — see §3.</p>
+
+<div class="f crit">
+  <h3><span class="id">S1</span> Shared-password login = sign in as anyone <span class="pill crit">Critical</span></h3>
+  <span class="loc">lib/auth.js:31–42</span> &nbsp; <span class="loc">app/login2/page.tsx</span> &nbsp; <span class="loc">/login2 (excluded from proxy)</span>
+  <p>The credentials provider compares the submitted password against a single shared <code class="inl">CREDENTIALS_SECRET</code> and then logs you in as <em>whatever email you typed</em>, as long as that user exists and is active. There is no per-user password.</p>
+  <div class="why"><strong>Why it matters:</strong> one leaked env value → full account takeover of <em>any</em> user, including an ADMIN. <code class="inl">/login2</code> is public (proxy matcher excludes it). This is the single highest-impact issue in the repo.</div>
+  <div class="lbl">Current</div>
+<pre><span class="c">// lib/auth.js — authorize()</span>
+const secret = process.env.CREDENTIALS_SECRET
+if (!secret || !credentials?.password || credentials.password !== secret) return null
+const user = await prisma.user.findUnique({ where: { email: credentials.email }, ... })
+<span class="c">// → anyone who knows the one secret can become any email</span></pre>
+  <div class="lbl">Suggested fix</div>
+<pre>1. Add a <span class="add">passwordHash</span> column; store a bcrypt/argon2 hash per user.
+2. Compare with <span class="add">await bcrypt.compare(credentials.password, user.passwordHash)</span>.
+3. If you only want SSO: <span class="del">delete the CredentialsProvider + /login2 entirely</span>
+   and keep Azure AD as the sole path (you already gate on provisioned users).
+4. Interim: scope /login2 to a tiny allow-list of emails AND rotate CREDENTIALS_SECRET,
+   put it behind IP allow-list / WAF (see A8).</pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">S2</span> Emergency endpoint: admin session from a URL token <span class="pill high">High</span></h3>
+  <span class="loc">app/api/emergency/route.ts:5–49</span>
+  <p>A <code class="inl">GET</code> with <code class="inl">?token=EMERGENCY_TOKEN</code> mints an 8-hour ADMIN session cookie for the first admin user. No expiry on the token, no rate limit, no IP gate, and it's deliberately excluded from proxy auth.</p>
+  <div class="why"><strong>Why it matters:</strong> the secret travels in the URL → it lands in server/proxy access logs, browser history, the <code class="inl">Referer</code> header, and (given your mail flows) potentially Safe-Links scanners. A static, long-lived admin bypass. On Vercel there's some shielding; on EC2 (§A8) it's directly brute-forceable.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Make it <span class="add">POST</span> only, body (not query) for the token, so it can't be logged via URL.
+• Add a short TTL: sign a time-limited token (reuse lib/approval-tokens style) instead of a static env string.
+• Restrict by source IP (office/VPN) at Nginx/WAF.
+• Rate-limit (e.g. 5/min) and alert on use.
+• Best: remove it once SSO is stable in prod, or guard behind <span class="add">NODE_ENV !== 'production'</span>.</pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">S3</span> Stored XSS in the email-action pages <span class="pill high">High</span></h3>
+  <span class="loc">app/api/approvals/email-action/route.ts:35–113, 220–269</span>
+  <p>The branded confirm/approved/rejected HTML pages interpolate <code class="inl">opportunityName</code> and <code class="inl">approverName</code> straight into markup with no escaping. <code class="inl">opportunityName</code> is free user input set at opportunity-creation time.</p>
+  <div class="why"><strong>Why it matters:</strong> name an opportunity <code class="inl">&lt;img src=x onerror=...&gt;</code> and the script runs in the approver's browser when they open the email link — the one page in the app served to a privileged user, with no auth wall in front. Classic stored XSS.</div>
+  <div class="lbl">Current</div>
+<pre><span class="c">// values dropped into HTML unescaped</span>
+`...you are approving the request for &lt;strong&gt;${opportunityName}&lt;/strong&gt;.`
+resultPage('approved', 'Approved.', oppId, `...${opportunityName}...`)</pre>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="c">// escape every interpolated value before it touches HTML</span>
+const esc = (s) =&gt; String(s).replace(/[&amp;&lt;&gt;"']/g,
+  c =&gt; ({'&amp;':'&amp;amp;','&lt;':'&amp;lt;','&gt;':'&amp;gt;','"':'&amp;quot;',"'":'&amp;#39;'}[c]))
+<span class="add">approveConfirmPage(token, esc(opportunityName), esc(approverName))</span>
+<span class="c">// apply to opportunityName, approverName, requesterName, and the reject `reason`</span></pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">S4</span> Broken access control: approval creation trusts the client <span class="pill high">High</span></h3>
+  <span class="loc">app/api/opportunities/[id]/approvals/route.ts:61–116</span>
+  <p>The route reads <code class="inl">requestedById</code> and <code class="inl">approverId</code> from the request <em>body</em>, not from the session. It never checks that the caller owns the opportunity, nor that they are the requester they claim to be.</p>
+  <div class="why"><strong>Why it matters:</strong> any signed-in user can open an approval "as" someone else, route it to an arbitrary approver, and advance any opportunity's stage by guessing its <code class="inl">OPP-YY-NNNN</code> id. The trusted <code class="inl">token.id</code> is available but unused.</div>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="del">const { approverId, requestedById, ... } = await req.json()</span>
+<span class="add">const requestedById = token.id as string            // never from the body</span>
+<span class="add">// load opp, then enforce ownership/role before creating:</span>
+<span class="add">if (opp.ownerId !== token.id &amp;&amp; token.role !== 'ADMIN') return apiError('OPP_EDIT_FORBIDDEN')</span>
+<span class="add">// validate approverId is a real, eligible approver (role gate)</span></pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">S5</span> IDOR everywhere: authenticated ≠ authorised <span class="pill high">High</span></h3>
+  <span class="loc">sow/route.ts · po/route.ts · sow/confirm · po/confirm · other-costs · comments · pricing-versions/* · staffing/*</span>
+  <p>These routes check <em>that</em> you're logged in, then operate on whatever <code class="inl">opportunityId</code> / <code class="inl">pvId</code> / <code class="inl">docId</code> you pass. No <code class="inl">resolveOwnerFilter</code> equivalent is applied. IDs are sequential and enumerable.</p>
+  <div class="why"><strong>Why it matters:</strong> a SEL can read/upload/delete SOW &amp; PO documents, edit pricing, and add costs on another team's deal just by changing the id in the URL. The RBAC you built in <code class="inl">lib/db/opportunities.ts</code> only guards the read/list path, not the mutations.</div>
+  <div class="lbl">Suggested fix — one shared guard, call it at the top of every mutating route</div>
+<pre><span class="c">// lib/authz.ts (new)</span>
+export async function assertCanEditOpp(token, opportunityId) {
+  const opp = await prisma.opportunity.findUnique({ where:{ opportunityId }, select:{ id:true, ownerId:true }})
+  if (!opp) throw apiError('OPP_NOT_FOUND')
+  const role = token.role as string
+  if (role === 'ADMIN' || role === 'PARTNER') return opp
+  if (opp.ownerId === token.id) return opp
+  <span class="c">// optional: DIRECTOR/ED team checks here</span>
+  throw apiError('OPP_EDIT_FORBIDDEN')
+}</pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">S6</span> PATCH opportunity: status / projectCode / preContract not owner-gated <span class="pill high">High</span></h3>
+  <span class="loc">app/api/opportunities/[id]/route.ts:34–70</span>
+  <p>Only the "details" fields (BU, Star Connect, dates) are behind the owner/admin gate. <code class="inl">status</code> (OPEN/WON/LOST/ABANDONED), <code class="inl">preContractAgreed</code>, and the <em>permanent</em> <code class="inl">projectCodeProceed</code> commit are reachable by any authenticated user on any opportunity.</p>
+  <div class="why"><strong>Why it matters:</strong> someone can mark a rival team's deal WON, push it to SOW, or fire the irreversible project-code commit. <code class="inl">projectCodeProceed</code> is described as permanent in AGENTS.md — no undo.</div>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="c">// move the gate ABOVE all branches, not just the details branch</span>
+<span class="add">const opp = await prisma.opportunity.findUnique({ where:{opportunityId} })
+if (!opp) return apiError('OPP_NOT_FOUND')
+const isOwner = opp.ownerId === token.id, isAdmin = token.role === 'ADMIN'
+if (!isOwner &amp;&amp; !isAdmin) return apiError('OPP_EDIT_FORBIDDEN')</span>
+<span class="c">// then handle status / preContractAgreed / projectCodeProceed</span></pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S7</span> Pipeline revenue leaks company-wide totals to every role <span class="pill med">Medium</span></h3>
+  <span class="loc">app/api/pipeline-revenue/route.ts:10–28</span>
+  <p>Authenticated, but it sums <code class="inl">estimatedRevenue</code> / final billings across <em>all</em> active opps with no owner filter, while <code class="inl">getDashboardStats</code> (the same numbers) <em>does</em> apply <code class="inl">resolveOwnerFilter</code>.</p>
+  <div class="why"><strong>Why it matters:</strong> a SEL hitting this endpoint sees total company pipeline value they're not entitled to. Also note: it appears to have <em>no client caller</em> (see R12) — may be deletable rather than fixable.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Either delete the route (if unused) or thread the same auth + <span class="add">resolveOwnerFilter(auth)</span>
+into its <span class="inl">where</span> clause exactly like getDashboardStats does.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S8</span> Directors/EDs see every team's deals (no team scoping) <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/db/opportunities.ts:30–53</span>
+  <p><code class="inl">resolveOwnerFilter</code> gives DIRECTOR "own + <em>any</em> SEL-owned" and ED "own + <em>any</em> DIRECTOR/SEL-owned" — there is no <code class="inl">managerId</code> subtree, so it's company-wide, not team-wide. AGENTS.md admits this ("No managerId traversal").</p>
+  <div class="why"><strong>Why it matters:</strong> horizontal data exposure between teams. Fine if that's the business intent; a real hole if directors are meant to see only their own org.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Walk the manager tree: collect report ids via <span class="inl">managerId</span> and filter
+<span class="add">{ ownerId: { in: [self, ...descendantIds] } }</span> instead of <span class="del">{ owner: { role: 'SEL' } }</span>.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S9</span> Stale role / disabled account survives up to 8h <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/auth.js:75–104 (jwt re-fetch only on signIn) · session maxAge 8h</span>
+  <p>Role and location are baked into the JWT at sign-in and only refreshed on the next sign-in. Deactivating a user (<code class="inl">isActive=false</code>) or downgrading a role doesn't take effect until the token expires (8h) — there's no server-side session check on each request.</p>
+  <div class="why"><strong>Why it matters:</strong> off-boarding / role changes aren't enforceable in real time. A fired user keeps access for hours.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>In the API guard (or proxy), periodically re-check the DB:
+<span class="add">const u = await prisma.user.findUnique({ where:{id: token.id}, select:{isActive:true, role:true}})
+if (!u?.isActive) return apiError('UNAUTHORIZED')</span>
+<span class="c">// or shorten maxAge, or set jwt callback to re-fetch when token age &gt; N min</span></pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S10</span> <code class="inl">xlsx</code> 0.18.5 has known high-severity CVEs <span class="pill med">Medium</span></h3>
+  <span class="loc">package.json:37 · used in rate-cards/upload &amp; export/opportunities</span>
+  <p>SheetJS <code class="inl">xlsx@0.18.5</code> (npm) is affected by prototype-pollution (CVE-2023-30533) and a ReDoS (CVE-2024-22363). The fix ships only via SheetJS's own CDN build, not the npm registry version you have pinned.</p>
+  <div class="why"><strong>Why it matters:</strong> you parse attacker-influenced spreadsheets (admin uploads a rate card). Even admin-only, a malicious file can pollute prototypes or hang the parse.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Move to the SheetJS CDN tarball (their advisory): <span class="add">npm i https://cdn.sheetjs.com/xlsx-0.20.x/xlsx-0.20.x.tgz</span>
+• Or swap to a maintained lib (<span class="inl">exceljs</span>) for both read and write.
+• Validate parsed cells defensively regardless.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S11</span> Upload type/size trusts client-claimed values <span class="pill med">Medium</span></h3>
+  <span class="loc">app/api/opportunities/[id]/sow/route.ts:59–66 · sow/confirm:22–41 (same for PO)</span>
+  <p>The MIME allow-list and size check run against JSON fields (<code class="inl">mimeType</code>, <code class="inl">fileSize</code>) the browser sends. The bytes go browser→Supabase directly via the signed upload URL, so the server never sees the real file. <code class="inl">confirm</code> then stores whatever <code class="inl">storagePath</code>/<code class="inl">mimeType</code> the client passes.</p>
+  <div class="why"><strong>Why it matters:</strong> a client can claim <code class="inl">image/png</code> and upload HTML/SVG; if ever served inline it's XSS. Limit is also inconsistent: code says 49 MB, AGENTS.md/UI says 20 MB.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Constrain the signed upload URL to an exact content-type and max size at issue time.
+• On confirm, re-derive mimeType from the stored object (HEAD it) rather than trusting the body;
+  validate that <span class="inl">storagePath</span> starts with this opp's prefix.
+• Pick one size limit and align code + UI + error copy (DOC_TOO_LARGE says 49 MB).</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">S12</span> HTML injection into outbound emails <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/mail.ts — businessJustification, reason, names, opportunityName, clientName all unescaped</span>
+  <p>Same root cause as S3 but in the email bodies. Free-text fields (<code class="inl">businessJustification</code>, rejection <code class="inl">reason</code>) are interpolated into HTML sent to approvers/partners.</p>
+  <div class="why"><strong>Why it matters:</strong> a requester can inject markup/phishing links into a mail that lands in a partner's inbox looking like it came from NEXA. Lower severity than S3 (mail clients sandbox script) but real for link-injection.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Reuse the same <span class="inl">esc()</span> helper from S3 on every interpolated value inside wrap()/metaRow().</pre>
+</div>
+
+<div class="f low">
+  <h3><span class="id">S13</span> Email-action token: empty-secret fallback + non-constant-time compare <span class="pill low">Low</span></h3>
+  <span class="loc">lib/approval-tokens.ts:5–7, 28–31</span>
+  <p><code class="inl">secret()</code> returns <code class="inl">''</code> if <code class="inl">NEXTAUTH_SECRET</code> is unset — tokens then sign/verify under an empty key (forgeable). The HMAC check uses <code class="inl">sig !== expected</code> (string compare), not a timing-safe compare.</p>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="add">if (!process.env.NEXTAUTH_SECRET) throw new Error('NEXTAUTH_SECRET required')</span>
+<span class="c">// constant-time compare</span>
+import { timingSafeEqual } from 'crypto'
+const a = Buffer.from(sig), b = Buffer.from(expected)
+<span class="add">if (a.length !== b.length || !timingSafeEqual(a, b)) return null</span></pre>
+</div>
+
+<div class="f low">
+  <h3><span class="id">S14</span> Error detail / debug rows leak in responses <span class="pill low">Low</span></h3>
+  <span class="loc">rate-cards/upload/route.ts:64–78 (debug preview) · errors.ts apiError(detail) · export passes raw Graph errors</span>
+  <p>Parse failures return the first 30 spreadsheet rows; several routes return raw exception messages / raw Graph error bodies as <code class="inl">detail</code>.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Gate <span class="inl">detail</span>/<span class="inl">debug</span> behind <span class="add">NODE_ENV !== 'production'</span>; log full detail server-side, return a generic message to the client.</pre>
+</div>
+
+<!-- ============================ CRASH ============================ -->
+<h2 class="section" id="crash">2 · Crash &amp; failure points <span class="tag">// works now, will break later</span></h2>
+<p class="section-note">Things that are fine today but fail on a future input, scale point, or env condition — including the cookie / token issues you flagged.</p>
+
+<div class="f high">
+  <h3><span class="id">C1</span> getAuthToken cookie detection breaks on chunked cookies → login loop <span class="pill high">High</span></h3>
+  <span class="loc">lib/getAuthToken.ts:19–27</span>
+  <p>Cookie-name detection keys off the literal base name:</p>
+<pre>const useSecureCookies = req.cookies.has('__Secure-next-auth.session-token')</pre>
+  <p>When the session JWT exceeds ~4 KB, NextAuth <strong>splits it into chunks</strong> — <code class="inl">__Secure-next-auth.session-token.0</code>, <code class="inl">.1</code>, … — and does <em>not</em> set the un-suffixed base cookie. So <code class="inl">.has(base)</code> returns <code class="inl">false</code>, the helper falls through to the non-secure name, <code class="inl">getToken</code> looks for a cookie that isn't there, returns <code class="inl">null</code>, and the proxy redirects to <code class="inl">/login</code> — on every request. An infinite login loop, only for users with big tokens.</p>
+  <div class="why"><strong>Why it matters:</strong> Azure AD tokens grow with group/role claims. The day a user is in enough AD groups to cross 4 KB, they can't log in — and it'll look random. This is the "fixed string can't find the token" class you suspected.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>const useSecureCookies =
+  req.cookies.has('__Secure-next-auth.session-token') <span class="add">||
+  req.cookies.has('__Secure-next-auth.session-token.0')</span>
+<span class="c">// getToken() reassembles the .0/.1 chunks itself once given the right base name + secureCookie</span></pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">C2</span> Two Prisma clients — wrong one silently targets the default schema <span class="pill high">High</span></h3>
+  <span class="loc">lib/prisma.ts (pg adapter, schema: 'procdna_database') vs lib/prisma.js (bare new PrismaClient())</span>
+  <p>Both files export <code class="inl">prisma</code> and both answer the import <code class="inl">@/lib/prisma</code>. Today TS/the bundler resolves <code class="inl">.ts</code> first, so it works. <code class="inl">lib/prisma.js</code> has <strong>no</strong> pg adapter and <strong>no</strong> <code class="inl">schema: 'procdna_database'</code> — if extension-resolution order ever flips (tooling change, Turbopack quirk, a stray <code class="inl">.js</code> import), every query hits the <code class="inl">public</code> schema and blows up with "table does not exist".</p>
+  <div class="why"><strong>Why it matters:</strong> a latent, environment-dependent footgun that would present as a total DB outage with a confusing error. Also two different global singleton keys (<code class="inl">_prisma</code> vs <code class="inl">prisma</code>).</div>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="del">Delete lib/prisma.js</span> — nothing imports it explicitly; lib/prisma.ts is the real one (confirmed: all 30+ importers use the bare specifier).</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">C3</span> Multi-step mutations aren't transactional <span class="pill med">Medium</span></h3>
+  <span class="loc">approve/reject/withdraw routes · opportunities/[id]/approvals · email-action POST</span>
+  <p>Each does several sequential <code class="inl">prisma.*.update</code> calls (approval status → opportunity stage → sometimes cascade withdraw) outside a transaction. If the process dies or a query fails between them, you get a half-applied state: approval marked APPROVED but stage unchanged, or vice-versa.</p>
+  <div class="why"><strong>Why it matters:</strong> rare, but produces "stuck" opportunities that need manual DB surgery. More likely on EC2 if the box restarts mid-request.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Wrap the related writes in <span class="add">await prisma.$transaction(async (tx) =&gt; { ... })</span>
+(the date-reset branch in opportunities/[id]/route.ts already does this — mirror that pattern).</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">C4</span> Opportunity-ID generation can collide &amp; mis-sorts past 9999 <span class="pill med">Medium</span></h3>
+  <span class="loc">app/api/opportunities/route.ts:13–27</span>
+  <p>"Find the max <code class="inl">OPP-YY-NNNN</code>, add 1" runs as a plain read followed by an unguarded insert. Two concurrent creates compute the same number. Also <code class="inl">orderBy: opportunityId desc</code> is lexicographic — <code class="inl">OPP-26-10000</code> sorts <em>before</em> <code class="inl">OPP-26-9999</code>, so numbering breaks at 10k.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>• Use a DB sequence / counter row in a transaction with row lock, or a unique constraint + retry loop.
+• Or store the numeric part in its own int column and <span class="inl">orderBy</span> that, not the string.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">C5</span> Missing env vars fail loudly (500) or silently (login loop) <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/supabase.ts:10–12 · lib/mail.ts:12 · getAuthToken (NEXTAUTH_SECRET) · approval-tokens (S13)</span>
+  <p>Supabase and mail throw on construction if their env vars are missing; the SOW/PO/export routes 500. <code class="inl">getToken</code> with a missing/wrong <code class="inl">NEXTAUTH_SECRET</code> just returns <code class="inl">null</code> → everyone silently bounced to <code class="inl">/login</code>.</p>
+  <div class="why"><strong>Why it matters:</strong> the #1 way the AWS cut-over will "mysteriously" break — one env var typo and you get either 500s or an un-debuggable login loop. Make startup fail fast with a clear message instead.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Add a startup env check (a small <span class="inl">lib/env.ts</span> that asserts all required vars on boot and logs exactly which is missing). Run it from instrumentation / server entry.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">C6</span> <code class="inl">serialize()</code> JSON round-trip: slow on big detail, throws on BigInt, fragile Decimal check <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/db/opportunities.ts:16–22</span>
+  <p><code class="inl">JSON.parse(JSON.stringify(data, replacer))</code> runs on the full opportunity-detail graph (pricing versions × staffing × up to 520 weekly-hour rows). It detects Decimals by <code class="inl">value.constructor.name === 'Decimal'</code> (breaks under some minification) and will <em>throw</em> if any field is ever a BigInt.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Convert Decimals explicitly at the query boundary (you already do <span class="inl">Number(x)</span> elsewhere),
+or use Prisma's driver-adapter number coercion, instead of a whole-tree stringify/parse.</pre>
+</div>
+
+<div class="f low">
+  <h3><span class="id">C7</span> POST opportunity: no date-validity check; revenue <code class="inl">parseInt</code> corrupts <span class="pill low">Low</span></h3>
+  <span class="loc">app/api/opportunities/route.ts:67–86</span>
+  <p><code class="inl">new Date(startDate)</code> on garbage → <code class="inl">Invalid Date</code> → Prisma throws → generic 500. <code class="inl">parseInt('1.5M',10)</code> → <code class="inl">1</code>, silently storing wrong revenue. (The PATCH route validates dates; POST doesn't.)</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Validate <span class="inl">isNaN(d.getTime())</span> and reject; use <span class="inl">Number()</span> + finite check for money, return OPP_DATE_INVALID / 400 instead of 500.</pre>
+</div>
+
+<div class="f low">
+  <h3><span class="id">C8</span> Graph/mail fetch has no timeout; mail errors are swallowed <span class="pill low">Low</span></h3>
+  <span class="loc">lib/mail.ts:42–64 · export/opportunities Graph calls</span>
+  <p><code class="inl">fetch</code> to Microsoft Graph has no <code class="inl">AbortController</code>. On Vercel a function timeout eventually kills it; on a long-lived EC2 process a hung Graph call just ties up the request. Mail failures are logged and swallowed (intentional — don't block approvals — but silent).</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Add <span class="add">AbortSignal.timeout(10_000)</span> to Graph fetches; surface a non-fatal MAIL_FAILED hint so the UI can say "saved, email pending".</pre>
+</div>
+
+<!-- ============================ AWS ============================ -->
+<h2 class="section" id="aws">3 · New risks on the AWS stack <span class="tag">// EC2 + Nginx + RDS + S3</span></h2>
+<p class="section-note">These are <strong>not</strong> bugs today — they're created by moving off Vercel serverless onto a single long-lived Node process behind a TLS-terminating proxy, with RDS and S3 instead of Supabase. Read this section next to the migration runbook.</p>
+
+<div class="f high">
+  <h3><span class="id">A1</span> Prisma pool <code class="inl">max=1</code> in prod throttles the whole EC2 box <span class="pill high">High</span></h3>
+  <span class="loc">lib/prisma.ts:9–11</span>
+  <p>The pool is hard-capped at one connection in production — correct for Vercel (one short-lived connection per lambda, pgBouncer handles fan-out). On a single always-on EC2 Node process, <code class="inl">max=1</code> means <em>every</em> request in the whole app serialises through one DB connection.</p>
+  <div class="why"><strong>Why it matters:</strong> the app will feel fine in testing and fall over the moment two people use it at once — every query queues behind the others. This is the classic "it was instant on Vercel, why is it crawling on EC2" trap.</div>
+  <div class="lbl">Suggested fix</div>
+<pre><span class="del">const max = process.env.NODE_ENV === 'production' ? 1 : 3</span>
+<span class="add">const max = Number(process.env.DB_POOL_MAX ?? 10)   // size to RDS max_connections / #instances</span>
+<span class="c">// On RDS you connect directly (no pgBouncer), so a real pool is both safe and necessary.
+// DATABASE_URL/DIRECT_URL can converge on the same RDS endpoint; add sslmode=require (A6).</span></pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">A2</span> TLS terminates at Nginx/ALB → app sees <code class="inl">http:</code>, cookie logic misfires <span class="pill high">High</span></h3>
+  <span class="loc">app/api/emergency/route.ts:37–47 · proxy / NextAuth secure-cookie logic generally</span>
+  <p>Behind Nginx (or an ALB) the Node process receives plain HTTP internally even though the browser used HTTPS. Code that reads <code class="inl">req.nextUrl.protocol === 'https:'</code> (emergency route) will see <code class="inl">http:</code> and set the <em>non</em>-secure cookie name with <code class="inl">secure:false</code>. NextAuth's own secure-cookie behaviour depends on <code class="inl">NEXTAUTH_URL</code> being <code class="inl">https://…</code>.</p>
+  <div class="why"><strong>Why it matters:</strong> get this wrong and SSO sets a cookie the browser won't return over HTTPS, or sets the wrong name → login loop. This is the same family as C1 and is the most likely day-one breakage on EC2.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Nginx: <span class="add">proxy_set_header X-Forwarded-Proto $scheme;</span> (ALB sets it automatically).
+• Set <span class="add">NEXTAUTH_URL=https://nexa.yourdomain</span> (https, the public URL).
+• In code that needs the scheme, trust the header:
+  <span class="add">const proto = req.headers.get('x-forwarded-proto') ?? req.nextUrl.protocol.replace(':','')</span>
+  <span class="add">const isSecure = proto === 'https'</span>
+• Keep the stable domain (Elastic IP / ALB) so the redirect URI &amp; Safe-Links never change.</pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">A3</span> S3 rewrite: keep buckets private, use an instance role, match URL expiry <span class="pill high">High</span></h3>
+  <span class="loc">replaces lib/supabase.ts · sow/route.ts · po/route.ts · *_/confirm · export</span>
+  <p>Moving Supabase Storage → S3 is the one real code change. Risks introduced: a public bucket exposes every SOW/PO doc; long-lived AWS keys in <code class="inl">.env</code> can leak; presigned-URL expiry must match the current 1-hour signed-URL assumption (and the 55-min cache in <code class="inl">getSignedUrl</code>).</p>
+  <div class="why"><strong>Why it matters:</strong> a single "Block Public Access = off" misclick on the bucket and confidential pricing documents are world-readable. This is the highest-impact <em>new</em> security surface.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Bucket: Block Public Access ON; access only via presigned GET/PUT.
+• Auth: attach an <span class="add">IAM instance role</span> to EC2 (s3:GetObject/PutObject on the one bucket) —
+  the AWS SDK auto-picks rotating creds. <span class="del">No AWS keys in .env.</span>
+• Presign with <span class="inl">@aws-sdk/s3-request-presigner</span>, expiresIn: 3600; keep the 55-min cache.
+• Constrain PUT presign to content-type + content-length (fixes S11 at the same time).
+• Enable default SSE encryption + bucket versioning (A11).</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A4</span> No rate limiting / WAF in front of the secret-bearing endpoints <span class="pill med">Medium</span></h3>
+  <span class="loc">/api/emergency · /login2 · /api/approvals/email-action</span>
+  <p>Vercel gave you some platform-level abuse protection for free. On bare EC2/Nginx there's none by default, and you have three endpoints whose security rests entirely on a guessable/brute-forceable secret (S1, S2) or token.</p>
+  <div class="why"><strong>Why it matters:</strong> combined with S1/S2 this turns "needs the secret" into "brute-force the secret at 10k req/s". Rate limiting is what keeps those mediums from becoming criticals on AWS.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Nginx <span class="add">limit_req_zone</span> on /api/* and especially the three routes above.
+• Front with AWS WAF (rate-based rule + optional geo/IP allow-list for /emergency).
+• IP-allow-list /emergency and /login2 to office/VPN ranges.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A5</span> In-memory caches &amp; singletons leak on a process that never recycles <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/supabase.ts:29 (urlCache Map) · any module-level Map/global</span>
+  <p><code class="inl">urlCache</code> adds an entry per <code class="inl">bucket::path</code> and never evicts expired entries — it only checks freshness on read. On Vercel the instance recycles constantly so it's self-cleaning; a long-running EC2 process grows it without bound.</p>
+  <div class="why"><strong>Why it matters:</strong> slow memory creep → OOM after weeks of uptime, the kind of thing that pages you at 3am. Applies to anything you cache in a module-level structure once the process is long-lived.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>• Evict on read when expired, and cap size (simple LRU), or use a TTL map.
+• Or drop the cache entirely once on S3 — presigning is cheap and local.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A6</span> RDS requires SSL; pool/driver config must say so <span class="pill med">Medium</span></h3>
+  <span class="loc">lib/prisma.ts (pg Pool) · DATABASE_URL / DIRECT_URL · prisma.config.ts</span>
+  <p>RDS Postgres expects TLS. The raw <code class="inl">pg.Pool</code> won't negotiate it unless the connection string / pool says so, and you may need the RDS CA bundle for full verification. Supabase handled this for you.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>• Append <span class="add">?sslmode=require</span> to DATABASE_URL/DIRECT_URL, or pass
+  <span class="add">new Pool({ connectionString, ssl: { rejectUnauthorized: true, ca: rdsCaPem } })</span>.
+• Both URLs can point at the same RDS endpoint (no pooler split needed); see A1 for pool size.
+• Put RDS in a private subnet; SG allows 5432 only from the EC2 SG.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A7</span> CPU-bound xlsx parsing blocks the single Node event loop <span class="pill med">Medium</span></h3>
+  <span class="loc">rate-cards/upload/route.ts:37 (XLSX.read) · export/opportunities buildBuffer (≤5000 rows)</span>
+  <p>SheetJS parse/write is synchronous and CPU-heavy. On Vercel each invocation is its own isolate; on a single EC2 process, a big upload or a 5000-row export <em>freezes every other request</em> for the duration.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>• Cap upload size hard before parse; consider a worker thread / child process for parse+build.
+• Stream the export or paginate; don't hold 5000 rows × all relations in memory on the request path.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A8</span> Secrets land on disk &amp; in AMIs/snapshots <span class="pill med">Medium</span></h3>
+  <span class="loc">.env on the EC2 box (Azure secret, NEXTAUTH_SECRET, EMERGENCY_TOKEN, CREDENTIALS_SECRET, DB creds)</span>
+  <p>A plaintext <code class="inl">.env</code> on the instance gets baked into any AMI you image and any EBS snapshot you take, and is readable by anyone who can SSH in.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>• Store secrets in <span class="add">SSM Parameter Store (SecureString)</span> or Secrets Manager; load at boot.
+• If you must keep a .env: <span class="inl">chmod 600</span>, owned by the app user, never in an AMI.
+• Rotate every secret during the move (they've been in Vercel + git history-adjacent files).</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A9</span> No process manager / backups story (Vercel did both) <span class="pill med">Medium</span></h3>
+  <span class="loc">deployment · RDS · S3</span>
+  <p>On Vercel, crashes self-heal and the DB was backed up for you. On EC2 you own: keeping <code class="inl">next start</code> alive across crashes/reboots, RDS backup retention, and S3 durability/versioning.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>• Run under <span class="add">systemd</span> (Restart=always, WantedBy=multi-user.target) or PM2; verify it survives reboot.
+• RDS: automated backups + a known retention (e.g. 7d); snapshot before the cut-over.
+• S3: enable versioning (recovers overwritten/deleted docs) + lifecycle as needed.</pre>
+</div>
+
+<div class="f med">
+  <h3><span class="id">A10</span> Azure <em>sync script</em> reads different env-var names than the app <span class="pill med">Medium</span></h3>
+  <span class="loc">prisma/sync-azure-users.ts:102 vs lib/mail.ts/auth.js</span>
+  <p>You said the existing scripts must keep working post-migration — this one has a trap. The app uses <code class="inl">AZURE_AD_TENANT_ID / AZURE_AD_CLIENT_ID / AZURE_AD_CLIENT_SECRET</code>; the sync script reads <code class="inl">AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET</code> (no <code class="inl">_AD</code>). If you only set the app's names on EC2, the script prints "Missing…" and <code class="inl">process.exit(1)</code> — silently does nothing.</p>
+  <div class="why"><strong>Why it matters:</strong> directly answers "will my scripts still run?" — only if you provide <em>both</em> naming conventions in the EC2 environment, or unify them.</div>
+  <div class="lbl">Suggested fix</div>
+<pre>Either set both sets of names in the EC2 env, or change the script to read the
+<span class="add">AZURE_AD_*</span> names the rest of the app uses. Also note the script uses <span class="inl">DATABASE_URL</span> —
+point it at the RDS endpoint and it's fine (direct connection, no pooler quirks).</pre>
+  <p style="margin-top:8px;font-size:13.5px;color:var(--ink2)"><strong>Bonus bug spotted in the same file (role mapping):</strong> <code class="inl">TITLE_TO_ROLE</code> matches a lower-cased job title against entries like <code class="inl">'Co Founder'</code>, <code class="inl">'Senior Engagement Lead'</code>, <code class="inl">'D'</code> — all of which contain uppercase letters and therefore <em>never match</em>. Several rules are dead, and <code class="inl">'director'</code> is listed twice. Worth fixing before you rely on it to seed RDS.</p>
+</div>
+
+<div class="f low">
+  <h3><span class="id">A11</span> Hardcoded EC2 IP in next.config &amp; data-residency <span class="pill low">Low</span></h3>
+  <span class="loc">next.config.ts:9 (allowedDevOrigins ['13.48.196.130'])</span>
+  <p>The current EC2 public IP is committed. It's dev-only (no effect on <code class="inl">next start</code>), but it's exactly the value your "IP must not change" concern is about, and it leaks infra into git. Pair with: put RDS+S3+EC2 in <code class="inl">eu-central-1</code> to match today's <code class="inl">fra1</code> residency.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Drive it from an env var, or remove it for prod; rely on the stable domain (Elastic IP/ALB) so it never needs editing.</pre>
+</div>
+
+<div class="f low">
+  <h3><span class="id">A12</span> Logging/observability disappears with Vercel <span class="pill low">Low</span></h3>
+  <span class="loc">console.* throughout</span>
+  <p>All your diagnostics are <code class="inl">console.error/warn</code>. Vercel captured those; on EC2 they go to stdout and vanish unless you capture them.</p>
+  <div class="lbl">Suggested fix</div>
+<pre>Ship stdout to CloudWatch Logs (systemd journal → CloudWatch agent) with rotation; add a /healthz route for ALB health checks.</pre>
+</div>
+
+<!-- ============================ DEAD CODE ============================ -->
+<h2 class="section" id="dead">4 · Redundant files &amp; dead code <span class="tag">// confidence-tagged</span></h2>
+<p class="section-note">Flagged broadly per your ask — each carries a confidence tag. <span class="conf">HIGH</span> = safe to delete; <span class="conf">LOW</span> = verify it isn't referenced dynamically / by tooling first. Paths are fine structurally; this is just clutter.</p>
+
+<div class="f high">
+  <h3><span class="id">R1</span> Git-merge junk &amp; scratch files <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">dummy.txt</span> <span class="loc">test_file.txt (empty)</span> <span class="loc">app/main.txt</span>
+  <p><code class="inl">dummy.txt</code> literally contains unresolved conflict markers (<code class="inl">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</code>, "branch19 dummy" …). <code class="inl">test_file.txt</code> is empty. <code class="inl">app/main.txt</code> is "main change". All scratch — delete.</p>
+</div>
+
+<div class="f high">
+  <h3><span class="id">R2</span> Two mangled "git commit" artifact files <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">"app/errole changed(cofounder removed)…git commit -m …"</span> <span class="loc">"errole changed(cofounder removed)…"</span>
+  <p>Two tracked files whose names are a botched <code class="inl">git commit -m</code> command (a quoting error created files named after the command). Pure accident — <code class="inl">git rm</code> them.</p>
+<pre><span class="c"># remove (quote the exact paths from `git ls-files`)</span>
+git rm -- "app/errole changed(cofounder removed), database deleted)git commit -m ..."
+git rm -- "errole changed(cofounder removed), database deleted)git commit -m ..."</pre>
+</div>
+
+<div class="f high">
+  <h3><span class="id">R3</span> <code class="inl">lib/prisma.js</code> — dead duplicate client <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">lib/prisma.js</span>
+  <p>Superseded by <code class="inl">lib/prisma.ts</code>; nothing imports it explicitly and it lacks the schema/adapter config. Also a correctness footgun (C2). Delete.</p>
+</div>
+
+<div class="f high">
+  <h3><span class="id">R4</span> Unused <code class="inl">cors</code> dependency <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">package.json:24</span>
+  <p>No file imports/uses <code class="inl">cors</code> (it's Express middleware; irrelevant in App Router). Drop it: <code class="inl">npm rm cors</code>.</p>
+</div>
+
+<div class="f high">
+  <h3><span class="id">R5</span> <code class="inl">setOpportunityWon()</code> — defined, never called <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">lib/db/opportunities.ts:5–7</span>
+  <p>Leftover from the removed auto-WON-on-approval flow (AGENTS.md confirms it was replaced by a manual dropdown). No callers anywhere. Delete the function.</p>
+</div>
+
+<div class="f high">
+  <h3><span class="id">R6</span> Orphaned <code class="inl">ONEDRIVE_USER</code> / <code class="inl">ONEDRIVE_FILE_PATH</code> env vars <span class="conf">CONFIDENCE: HIGH</span></h3>
+  <span class="loc">referenced in AGENTS.md / .env only — no code uses them</span>
+  <p>The export route targets a hardcoded <code class="inl">SHAREPOINT_SYNC_URL</code> (export/opportunities/route.ts:14), not these vars. Remove from env + docs to avoid confusion during the AWS env-var setup.</p>
+</div>
+
+<div class="f med">
+  <h3><span class="id">R7</span> Duplicate config files shadowed by root <span class="conf">CONFIDENCE: MED</span></h3>
+  <span class="loc">app/tsconfig.json</span> <span class="loc">app/eslint.config.mjs</span> <span class="loc">app/postcss.config.mjs</span>
+  <p>Near-identical copies of the root configs (the root ones are what Next actually uses — root <code class="inl">tsconfig.json</code> even adds <code class="inl">baseUrl</code> and extra excludes the app/ copy lacks). Leftover from when the project lived under <code class="inl">app/</code>. Verify nothing builds from inside <code class="inl">app/</code>, then remove the app/ copies.</p>
+</div>
+
+<div class="f med">
+  <h3><span class="id">R8</span> Duplicate doc stubs <span class="conf">CONFIDENCE: MED</span></h3>
+  <span class="loc">app/AGENTS.md</span> <span class="loc">app/CLAUDE.md</span>
+  <p>Both are a 2-line stub; the real content is the root <code class="inl">AGENTS.md</code>. The root <code class="inl">CLAUDE.md</code> already <code class="inl">@AGENTS.md</code>-includes it. The app/ copies are redundant.</p>
+</div>
+
+<div class="f med">
+  <h3><span class="id">R9</span> Default Next.js boilerplate SVGs <span class="conf">CONFIDENCE: MED</span></h3>
+  <span class="loc">app/public/file.svg, globe.svg, next.svg, vercel.svg, window.svg</span>
+  <p>The create-next-app starter icons. Grep shows no references. Safe to remove (confirm none are used by a stray <code class="inl">&lt;img&gt;</code> first).</p>
+</div>
+
+<div class="f med">
+  <h3><span class="id">R10</span> <code class="inl">/api/pipeline-revenue</code> appears unused <span class="conf">CONFIDENCE: MED</span></h3>
+  <span class="loc">app/api/pipeline-revenue/route.ts</span>
+  <p>No client <code class="inl">fetch('/api/pipeline-revenue')</code> found; the dashboard computes the same totals via <code class="inl">getDashboardStats</code> server-side. If confirmed unused, delete it (also closes S7). Verify there's no external caller/cron first.</p>
+</div>
+
+<div class="f med">
+  <h3><span class="id">R11</span> Debug mail endpoints shipped to prod <span class="conf">CONFIDENCE: MED</span></h3>
+  <span class="loc">app/api/test-mail/route.ts</span> <span class="loc">app/api/test-mail-preview/route.ts</span>
+  <p>Handy in dev, but they send/preview real mail and are reachable in prod. Remove, or guard behind <code class="inl">NODE_ENV !== 'production'</code> + ADMIN.</p>
+</div>
+
+<div class="f low">
+  <h3><span class="id">R12</span> <code class="inl">lib/auth.js</code> + <code class="inl">lib/auth.d.ts</code> could be one <code class="inl">.ts</code> <span class="conf">CONFIDENCE: LOW</span></h3>
+  <span class="loc">lib/auth.js · lib/auth.d.ts</span>
+  <p>Works fine (JS module + hand-written types), but converting to a single <code class="inl">lib/auth.ts</code> removes the parallel <code class="inl">.d.ts</code> you have to keep in sync. Optional cleanup.</p>
+</div>
+
+<div class="f low">
+  <h3><span class="id">R13</span> Data/artefact files tracked in the repo <span class="conf">CONFIDENCE: LOW — verify each</span></h3>
+  <span class="loc">Headers.xlsx · client_list.xlsx · feature-tracker.xlsx · ProcPursuit Requirements.xlsx (×2) · Screenshot 2026-05-29 …png · prisma/seed/users</span>
+  <p>Spreadsheets, a screenshot, and an extension-less <code class="inl">prisma/seed/users</code> are checked in. Some may feed the seed scripts (<code class="inl">scripts/seed-clients.mjs</code>, <code class="inl">scripts/feature-tracker.mjs</code>) — check before removing. If they're just inputs, move to a <code class="inl">/data</code> folder or out of git; binary churn bloats history.</p>
+</div>
+
+<!-- ============================ DRIFT ============================ -->
+<h2 class="section" id="drift">5 · AGENTS.md drift <span class="tag">// docs vs reality</span></h2>
+<p class="section-note">Not bugs, but the spec you (and any AI tools) rely on is stale in spots. Worth a doc pass so the AWS work starts from truth.</p>
+<table class="drift">
+  <tr><th>AGENTS.md says</th><th>Code actually does</th><th>Where</th></tr>
+  <tr><td>Opportunity IDs are <code class="inl">BD-NNN</code></td><td>New scheme <code class="inl">OPP-YY-NNNN</code>, resets yearly; old BD-NNN left alone</td><td>opportunities/route.ts:13</td></tr>
+  <tr><td>SOW/PO upload max 20 MB</td><td>Code rejects only &gt;49 MB; error copy says 49 MB</td><td>sow/route.ts:66 · errors.ts:42</td></tr>
+  <tr><td>12 routes "⚠️ no auth guard"</td><td>All 33 API routes call <code class="inl">getAuthToken</code>; the gap is <em>authorisation</em> (IDOR), not authentication</td><td>§S4–S7</td></tr>
+  <tr><td><code class="inl">getAuthToken</code> uses a fixed cookie name</td><td>Now detects secure vs plain from the request cookie (but misses chunked — C1)</td><td>getAuthToken.ts:19</td></tr>
+  <tr><td>Export to OneDrive via <code class="inl">ONEDRIVE_USER/FILE_PATH</code></td><td>Overwrites a hardcoded SharePoint <code class="inl">doc.aspx</code> URL via Graph; those env vars unused</td><td>export/opportunities/route.ts:14</td></tr>
+  <tr><td>Auto-WON-on-approval removed</td><td>True — but the dead <code class="inl">setOpportunityWon()</code> remains (R5)</td><td>opportunities.ts:5</td></tr>
+</table>
+
+<!-- ============================ PRIORITY ============================ -->
+<h2 class="section" id="prio">6 · Suggested order of attack</h2>
+<div class="callout">
+  <p><strong>Before AWS (security, do regardless of platform):</strong></p>
+  <p>1. <strong>S1</strong> shared-password login &amp; <strong>S2</strong> emergency token — the two account-takeover paths. Decide: SSO-only, or real per-user creds.<br>
+     2. <strong>S4 / S5 / S6</strong> — add the one <code class="inl">assertCanEditOpp</code> guard and stop trusting body-supplied <code class="inl">requestedById</code>. Biggest bug class.<br>
+     3. <strong>S3 / S12</strong> — one <code class="inl">esc()</code> helper kills the XSS/HTML-injection in pages + mail.<br>
+     4. <strong>C2 / R3</strong> — delete <code class="inl">lib/prisma.js</code>. One-line, removes a latent outage.</p>
+  <p><strong>Part of the AWS cut-over (do as you build the box):</strong></p>
+  <p>5. <strong>A1</strong> pool size, <strong>A2</strong> X-Forwarded-Proto + NEXTAUTH_URL, <strong>C1</strong> chunked-cookie fix — these three are what make login + concurrency actually work on EC2.<br>
+     6. <strong>A3</strong> private S3 bucket + instance role (do this as you write the storage layer, not after).<br>
+     7. <strong>A6</strong> RDS SSL + private subnet, <strong>A10</strong> sync-script env names, <strong>A8</strong> secrets in SSM.<br>
+     8. <strong>A4</strong> Nginx/WAF rate limiting — the safety net that downgrades S1/S2 from "exposed" to "contained".</p>
+  <p><strong>When you have a slow afternoon:</strong> the cleanup section (R1–R13), the transaction wrapping (C3), and the AGENTS.md refresh (§5).</p>
+</div>
+
+<footer>
+  NEXA codebase audit · static analysis only, nothing executed or changed · counts are indicative.
+  Re-run after the security fixes land and again once the EC2 box is stood up — several AWS items (A2, A6) are only verifiable on the real infra.
+</footer>
+
+</main>
+</div>
+</body>
+</html>
