@@ -589,9 +589,6 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
               ✕ Clear all filters
             </button>
           )}
-          <span style={{ color: C.accent, borderBottom: `1px dotted ${C.accent}`, cursor: 'pointer', paddingBottom: 1, fontSize: 12.5 }}>
-            Export
-          </span>
         </div>
       </div>
 
