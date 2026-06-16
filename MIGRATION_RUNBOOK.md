@@ -26,7 +26,7 @@ Target architecture: **EC2** (Next.js via PM2 or Docker) + **RDS Postgres** + **
 5. You can now run `prisma migrate deploy` normally (it was broken on Vercel).
 
 ## 2. File storage (Supabase Storage → S3)
-- Recreate the two buckets (`SoW_bucket`, `PO_busket` — keep the typo) in S3/MinIO and **copy existing files over** (the DB stores `storagePath` per doc, so paths port once files are copied).
+- Recreate the two buckets (`SoW_bucket`, `PO_bucket` — keep the typo) in S3/MinIO and **copy existing files over** (the DB stores `storagePath` per doc, so paths port once files are copied).
 - Replace the storage layer in `lib/supabase.ts` + the 5 SoW/PO routes with S3 presigned PUT (upload) / presigned GET (download).
 
 ## 3. Auth + public URLs ("links to change")

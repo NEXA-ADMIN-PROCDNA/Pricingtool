@@ -122,7 +122,7 @@
     <tr><td>Source control</td><td>Personal GitHub repo, personal commit identity</td><td>Repo under the <b>ProcDNA org</b>, work identity, branch protection</td></tr>
     <tr><td>Compute</td><td>Vercel serverless functions</td><td><b>EC2</b> (Node + Nginx) to start → optionally <b>ECS Fargate</b> later</td></tr>
     <tr><td>Database</td><td>Supabase Postgres (pgBouncer pooler)</td><td><b>Amazon RDS for PostgreSQL</b>, private subnet, SSL</td></tr>
-    <tr><td>File storage</td><td>Supabase Storage (<code class="inl">SoW_bucket</code>, <code class="inl">PO_busket</code>)</td><td><b>Amazon S3</b>, private buckets, presigned URLs</td></tr>
+    <tr><td>File storage</td><td>Supabase Storage (<code class="inl">SoW_bucket</code>, <code class="inl">PO_bucket</code>)</td><td><b>Amazon S3</b>, private buckets, presigned URLs</td></tr>
     <tr><td>Public URL</td><td><code class="inl">*.vercel.app</code></td><td>Stable firm <b>subdomain</b> via Route 53 / corporate DNS + ACM TLS</td></tr>
     <tr><td>Secrets</td><td>Vercel env vars</td><td><b>SSM Parameter Store / Secrets Manager</b></td></tr>
     <tr><td>Identity (login)</td><td>Azure AD SSO — <i>unchanged</i></td><td>Azure AD SSO — <i>unchanged</i> (only the redirect URL changes)</td></tr>

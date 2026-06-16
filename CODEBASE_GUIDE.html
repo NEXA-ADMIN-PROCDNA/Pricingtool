@@ -157,7 +157,7 @@
   <tr><td>ORM</td><td>Prisma 7</td><td>Accessor casing changed: <code>prisma.sOWDocument</code>, <code>prisma.pODocument</code>. Connection config in <code>prisma.config.ts</code>, not <code>schema.prisma</code>.</td></tr>
   <tr><td>Database</td><td>PostgreSQL on Supabase</td><td>Region BOM. Pooled connection (port 6543) in prod.</td></tr>
   <tr><td>Auth</td><td>NextAuth v4</td><td>Azure AD provider + Credentials provider. JWT sessions. Cookie: <code>__Secure-next-auth.session-token</code>.</td></tr>
-  <tr><td>Storage</td><td>Supabase Storage</td><td>Buckets: <code>SoW_bucket</code> and <code>PO_busket</code> (sic). Always use <code>getSupabase()</code> from <code>lib/supabase.ts</code>.</td></tr>
+  <tr><td>Storage</td><td>Supabase Storage</td><td>Buckets: <code>SoW_bucket</code> and <code>PO_bucket</code> (sic). Always use <code>getSupabase()</code> from <code>lib/supabase.ts</code>.</td></tr>
   <tr><td>Mail</td><td>Microsoft Graph API</td><td>Client-credentials flow via <code>@azure/identity</code>. Send-as <code>MAIL_SENDER</code>.</td></tr>
   <tr><td>Export</td><td>Microsoft Graph / OneDrive</td><td><code>Files.ReadWrite.All</code> scope. Writes to one user's OneDrive (configured via env).</td></tr>
   <tr><td>Styling</td><td>Tailwind v4 + inline styles</td><td>Some pages use inline-style design tokens. Fonts: Geist Sans, Playfair Display, IBM Plex Mono, DM Sans, DM Serif Display.</td></tr>
@@ -245,7 +245,7 @@
   <tr><td><span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/other-costs/[costId]</code></td><td class="auth-y">✓</td><td>Delete cost line.</td></tr>
   <tr><td><span class="pill post">POST</span></td><td><code>/api/opportunities/[id]/pricing-versions</code></td><td class="auth-y">✓</td><td>Create pricing version (auto versionNumber).</td></tr>
   <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span> / <span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/sow</code></td><td class="auth-y">✓</td><td>SOW docs to <code>SoW_bucket</code>. Max 20 MB. PDF/Word/Excel/PNG/JPEG.</td></tr>
-  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span> / <span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/po</code></td><td class="auth-y">✓</td><td>PO docs to <code>PO_busket</code>.</td></tr>
+  <tr><td><span class="pill get">GET</span> / <span class="pill post">POST</span> / <span class="pill delete">DELETE</span></td><td><code>/api/opportunities/[id]/po</code></td><td class="auth-y">✓</td><td>PO docs to <code>PO_bucket</code>.</td></tr>
 </table>
 
 <h3>Pricing Versions</h3>
@@ -457,7 +457,7 @@
 <h4>Buckets</h4>
 <ul>
   <li><code>SoW_bucket</code> — SOW documents</li>
-  <li><code>PO_busket</code> — PO documents (typo is baked in)</li>
+  <li><code>PO_bucket</code> — PO documents (typo is baked in)</li>
 </ul>
 
 <h4>Flow</h4>
@@ -531,7 +531,7 @@
 </div>
 
 <div class="callout warn">
-  <strong>Supabase typo: <code>PO_busket</code></strong> — don't fix it without a migration plan.
+  <strong>Supabase typo: <code>PO_bucket</code></strong> — don't fix it without a migration plan.
   Existing PO docs reference this bucket name in their <code>storagePath</code>.
 </div>
 

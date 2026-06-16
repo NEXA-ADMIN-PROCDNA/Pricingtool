@@ -22,7 +22,7 @@ Deployed to two Vercel projects from the same `main` branch: `pricingtoolprimero
 
 3. **Prisma 7 model accessor casing**: `prisma.sOWDocument`, `prisma.pODocument` (not `prisma.SOWDocument`). DB connection config lives in `prisma.config.ts`, not `schema.prisma`.
 
-4. **Supabase**: use `getSupabase()` from `lib/supabase.ts` (lazy factory — never instantiate at module level). Buckets: `SoW_bucket`, `PO_busket` (typo is intentional, baked in). Service role key bypasses RLS because NextAuth (not Supabase Auth) is the auth source.
+4. **Supabase**: use `getSupabase()` from `lib/supabase.ts` (lazy factory — never instantiate at module level). Buckets: `SoW_bucket`, `PO_bucket`. Service role key bypasses RLS because NextAuth (not Supabase Auth) is the auth source.
 
 5. **No `prisma migrate` on Vercel.** Vercel runs `prisma generate` (postinstall) only. All schema changes must be applied via SQL in Supabase manually.
 
@@ -86,7 +86,7 @@ All routes live under `app/api/`. Auth uses `getAuthToken(req)` from `@/lib/getA
 | POST | `/api/opportunities/[id]/sow` | ✅ | Upload SoW to `SoW_bucket` (multipart, max 20 MB, PDF/Word/Excel/PNG/JPEG). |
 | DELETE | `/api/opportunities/[id]/sow` | ✅ | Soft-delete SoW doc (`isActive: false`). Body: `{ docId }`. |
 | GET | `/api/opportunities/[id]/po` | ✅ | List PO docs with fresh 1-hr signed URLs. |
-| POST | `/api/opportunities/[id]/po` | ✅ | Upload PO to `PO_busket` (same rules as SoW). |
+| POST | `/api/opportunities/[id]/po` | ✅ | Upload PO to `PO_bucket` (same rules as SoW). |
 | DELETE | `/api/opportunities/[id]/po` | ✅ | Soft-delete PO doc. Body: `{ docId }`. |
 
 ## Pricing Versions

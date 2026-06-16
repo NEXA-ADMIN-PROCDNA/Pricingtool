@@ -18,12 +18,11 @@
 // RISK (AWS): the urlCache Map below never evicts expired entries — on a
 // long-lived EC2 process it grows unbounded (slow memory leak). Self-cleans on
 // Vercel because instances recycle. (See audit A5.)
-// (Bucket name PO_busket is a deliberate, baked-in typo — do not "fix" it.)
 // ─────────────────────────────────────────────────────────────────────────────
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 export const SOW_BUCKET = 'SoW_bucket'
-export const PO_BUCKET  = 'PO_busket'
+export const PO_BUCKET  = 'PO_bucket'
 
 // ── Singleton client ─────────────────────────────────────────────
 const g = globalThis as unknown as { _supabase?: SupabaseClient }

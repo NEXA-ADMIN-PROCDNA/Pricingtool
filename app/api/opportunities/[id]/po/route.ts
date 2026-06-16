@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // /api/opportunities/[id]/po — PO document list / upload-URL / soft-delete.
 // Identical shape to the /sow route (browser → Supabase via signed URL, /po/confirm
-// records the row), just for Purchase Order docs in the PO_busket bucket.
+// records the row), just for Purchase Order docs in the PO_bucket bucket.
 //
 // RISK: same as SOW — auth-only (IDOR by opp id, S5) and client-claimed type/size
 // (S11). Deleting the last SOW+PO with no pre-contract rolls SOW_SUBMITTED → SOW_PENDING.
