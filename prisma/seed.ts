@@ -1,3 +1,19 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// prisma/seed.ts — local demo-data seeder (run via `prisma db seed` / tsx).
+//
+// Big picture: stands up a full sample world — users across the role hierarchy, rate
+// cards, clients + POCs, opportunities at every stage, multiple pricing versions with
+// staffing/hours/schedule/financials, approvals, comments and activity logs — so a
+// fresh DB is immediately explorable. Connects directly via DATABASE_URL + the pg
+// adapter (same procdna_database schema as the app).
+//
+// ⚠️ NOTE (likely STALE — verify before running against the CURRENT schema):
+//   • References stage names STATUS_CHANGE_PENDING / PO_PENDING that are NOT in today's
+//     OpportunityStage enum — this will fail to compile/run as-is.
+//   • The Azure sync helper writes `kindeId` (a legacy pre-Azure field name) and reads
+//     AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET (no _AD_), unlike the app.
+//   Treat as historical sample data; reconcile with schema.prisma before reusing on RDS.
+// ─────────────────────────────────────────────────────────────────────────────
 import 'dotenv/config'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'

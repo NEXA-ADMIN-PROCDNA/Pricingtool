@@ -1,3 +1,26 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// mail.ts — all outbound email, via the Microsoft Graph API.
+//
+// Big picture: NEXA emails approvers/requesters at each approval step. Mail is
+// sent AS the MAIL_SENDER mailbox using app-only (client-credentials) Graph auth —
+// there's no signed-in user in the loop. Five templates: requested / approved /
+// rejected / withdrawn (+ the shared sendMail core). Every message is wrapped in
+// the branded NEXA HTML shell (wrap()).
+//
+// Two Graph quirks baked in here:
+//   • Graph BLOCKS RFC threading headers (Message-ID/In-Reply-To), so "threading"
+//     is faked by reusing identical subject lines across a request's emails.
+//   • saveToSentItems:false keeps the shared mailbox clean.
+//
+// The approver email's Approve/Reject buttons are signed-token URLs (see
+// approval-tokens.ts) pointing at /api/approvals/email-action — that's how a click
+// from the inbox can act without logging in.
+//
+// RISK: user-supplied values (opportunityName, clientName, businessJustification,
+// rejection reason, names) are interpolated into HTML WITHOUT escaping → HTML/link
+// injection into mail sent to partners. Escape them. (See audit S12 / S3.)
+// Failures are logged and SWALLOWED so a mail outage never blocks an approval.
+// ─────────────────────────────────────────────────────────────────────────────
 import { ClientSecretCredential } from '@azure/identity'
 import { signEmailAction } from '@/lib/approval-tokens'
 

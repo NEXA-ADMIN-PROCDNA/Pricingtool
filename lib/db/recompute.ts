@@ -1,3 +1,13 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// db/recompute.ts — pricing reset when an opportunity's date window changes.
+//
+// Big picture: staffing is entered as weekly hours bucketed against specific
+// week-start dates. If the start/end dates move, those buckets no longer line up
+// with the new window — so rather than trying to re-bucket, we RESET: wipe weekly
+// hours, drop the derived monthly rows, and null out the cached summary metrics.
+// The owner then re-enters efforts. Always called inside a $transaction by the
+// caller (see opportunities/[id]/route.ts date-change branch).
+// ─────────────────────────────────────────────────────────────────────────────
 import type { Prisma } from '@prisma/client'
 
 // When an opportunity's start/end dates change, the existing pricing no longer

@@ -1,4 +1,7 @@
 'use client'
+// ClientsBrowser — searchable/filterable client table (client component). Lists clients
+// with their POC + opportunity counts, links into each client detail page, and opens the
+// EditClientModal. Client-side search/filter only.
 import { useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'

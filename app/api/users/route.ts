@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/users — GET list active users (any signed-in user); POST create user (ADMIN).
+// Big picture: powers the user/approver pickers and admin user creation. Most users
+// are provisioned by the Azure sync script; this POST is the manual fallback (role
+// defaults to 'BD').
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/pricing-versions/[pvId]/staffing/[srId]/hours — upsert ONE week's hours.
+// Big picture: the fine-grained save used when editing a single week cell in the efforts
+// grid (keyed uniquely on staffingResource + weekStartDate). The batch equivalent lives
+// in the parent staffing PATCH.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

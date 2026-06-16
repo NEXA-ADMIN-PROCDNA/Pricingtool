@@ -1,4 +1,8 @@
 'use client'
+// app/login/page.jsx — the Azure SSO sign-in page (client component). Two-panel branded
+// layout; the only action is signIn('azure-ad'). Reads ?error to show "not provisioned" /
+// "account disabled" messages raised by the auth signIn callback. (Credentials login lives
+// at /login2.) PUBLIC — excluded from the proxy.
 import { signIn } from 'next-auth/react'
 import { useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'

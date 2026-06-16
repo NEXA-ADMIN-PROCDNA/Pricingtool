@@ -1,3 +1,5 @@
+// ui/StatusBadge.tsx — colored pill for an opportunity STATUS (Open/Won/Lost/Abandoned/
+// Archived). Maps each enum value to a label + Tailwind colour classes.
 import { OpportunityStatus } from '@prisma/client'
 
 const config: Record<OpportunityStatus, { label: string; classes: string; dot: string }> = {

@@ -1,3 +1,12 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH/DELETE /api/pricing-versions/[pvId]/staffing/[srId] — update or remove one
+// staffing resource. PATCH saves the resource fields (utilisation, bill rate, active/
+// billable) AND upserts a batch of weekly-hour entries.
+//
+// Why the week upserts run as a parallel Promise.all and NOT inside a $transaction:
+// there can be 52–520 weeks; wrapping them in one interactive transaction would blow
+// past the ~5s Supabase pooler limit. Each upsert is atomic on its own. (Relaxes on RDS.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

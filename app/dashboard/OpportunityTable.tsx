@@ -1,4 +1,12 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// OpportunityTable — the dashboard pipeline table + KPI strip (client component).
+//
+// Big picture: the main landing screen. Renders the opportunity list with status-tab /
+// search / column filters, and a KPIStrip whose numbers are derived from the CURRENTLY
+// VISIBLE (filtered) rows — so every filter flows into the headline KPIs. URL search
+// params drive the filter state, so a filtered view is shareable/bookmarkable.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useMemo, useEffect, useTransition } from 'react'
 import Link from 'next/link'

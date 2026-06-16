@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// prisma/add-admin.ts — one-off utility to hand-create (or, via the commented block,
+// edit) a single user — typically to bootstrap the first ADMIN before the Azure sync
+// runs. Run with `npx tsx prisma/add-admin.ts`; edit the hardcoded email/name/role
+// inline per use. Connects directly via DATABASE_URL. Throwaway script, never imported.
+// ─────────────────────────────────────────────────────────────────────────────
 import 'dotenv/config'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'

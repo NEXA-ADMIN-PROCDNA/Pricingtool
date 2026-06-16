@@ -1,3 +1,17 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/opportunities/[id] — the multi-purpose opportunity update.
+//
+// Big picture: one endpoint handles several distinct edits, each its own branch:
+// preContractAgreed (drives SOW_PENDING ↔ SOW_SUBMITTED), status (manual OPEN/WON/
+// LOST/ABANDONED), projectCodeProceed (permanent commit), BU/Star-Connect cells, and
+// start/end dates. Changing dates invalidates pricing, so that branch runs
+// resetOpportunityPricing inside a $transaction and rolls the stage back.
+//
+// RISK (high): only the BU/Star-Connect/dates branch is owner/admin-gated. status,
+// preContractAgreed and the IRREVERSIBLE projectCodeProceed are reachable by ANY
+// authenticated user on ANY opportunity. Move the ownership gate above all branches.
+// (See audit S6.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

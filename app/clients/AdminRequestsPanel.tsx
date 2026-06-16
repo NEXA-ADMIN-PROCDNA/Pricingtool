@@ -1,4 +1,7 @@
 'use client'
+// AdminRequestsPanel — admin-only panel listing pending new-client requests with
+// approve/reject actions (→ /api/client-requests/[reqId]/approve|reject). Approving
+// creates the real Client record.
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'

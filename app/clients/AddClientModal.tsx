@@ -1,4 +1,6 @@
 'use client'
+// AddClientModal — the "request a new client" dialog. Non-admins file a ClientRequest via
+// /api/client-requests (an admin approves it later); captures name, industry, BU, region.
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'

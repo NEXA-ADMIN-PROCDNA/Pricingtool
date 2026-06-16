@@ -1,4 +1,6 @@
 'use client'
+// SearchableSelect — reusable single-select dropdown with type-to-filter search. The app's
+// standard picker (clients, users, approvers). Exports the shared SelectOption type.
 import { useState, useRef, useEffect } from 'react'
 
 export type SelectOption = { value: string; label: string; sub?: string }

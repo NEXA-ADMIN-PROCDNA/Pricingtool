@@ -1,3 +1,8 @@
+// app/opportunities/[id]/page.tsx — opportunity DETAIL page (server component).
+// Big picture: server-side it loads the session, fetches the RBAC-scoped opportunity
+// detail (getOpportunityDetail applies the owner filter) + the user list, 404s if it's
+// not found/visible, and hands everything to the client <OpportunityTabs>. force-dynamic
+// so it never statically caches per-user data.
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getServerSession } from 'next-auth'

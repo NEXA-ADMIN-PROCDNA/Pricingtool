@@ -1,4 +1,6 @@
 'use client'
+// EditClientModal — admin edit dialog for a client. PATCHes /api/clients/[id] (name, BU,
+// industry, region, and the admin-assigned clientId). Surfaces the "ID already taken" case.
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'

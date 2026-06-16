@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA — AWS Migration & Architecture Plan</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6;
+    --chipbg:#EEF2F9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:280px 1fr;max-width:1280px;margin:0 auto;}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 18px;border-right:1px solid var(--line);background:#fff;}
+  nav h1{font:800 13px/1.2 'Segoe UI';letter-spacing:.16em;text-transform:uppercase;margin:0 0 2px;}
+  nav .sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+  nav a{display:block;font-size:12.5px;color:var(--ink2);padding:3px 0;}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:12px;}
+  nav .n{color:var(--accent);font:700 11px/1 'Courier New',monospace;margin-right:6px;}
+  main{padding:34px 46px 140px;min-width:0;}
+  header.page{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:10px;}
+  header.page .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);}
+  header.page h1{font-size:31px;margin:10px 0 6px;letter-spacing:-.01em;}
+  header.page p{color:var(--ink2);max-width:78ch;margin:.35em 0;}
+  h2.s{font-size:23px;margin:52px 0 6px;padding-top:14px;border-top:1px solid var(--line);scroll-margin-top:12px;}
+  h2.s .n{font:700 15px/1 'Courier New',monospace;color:var(--accent);margin-right:10px;}
+  h3{font-size:17px;margin:26px 0 6px;color:var(--accentDeep);}
+  h4{font-size:14px;margin:18px 0 4px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:80ch}
+  ul,ol{max-width:80ch} li{margin:3px 0}
+  code.inl{background:var(--chipbg);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:8px;padding:14px 16px;overflow:auto;font:12.5px/1.55 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:16px 0;}
+  .rec b{color:var(--accentDeep)}
+  .ok{border-left-color:var(--ok)} .warn{border-left-color:var(--warn)} .bad{border-left-color:var(--bad)}
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#F3C4C4}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  /* diagram bits */
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:16px 0;overflow:auto;}
+  .layer{display:flex;gap:12px;align-items:stretch;justify-content:center;flex-wrap:wrap;margin:6px 0;}
+  .box{background:#F7F9FD;border:1.5px solid #C9D6EC;border-radius:9px;padding:10px 14px;min-width:150px;text-align:center;}
+  .box .t{font-weight:700;font-size:13px;color:var(--accentDeep);}
+  .box .d{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .box.ext{background:#FFF7EC;border-color:#EAD3A6}
+  .box.db{background:#EAF6EF;border-color:#B6E2C7}
+  .box.cli{background:#EDEFF7;border-color:#C2C9E6}
+  .varrow{text-align:center;color:var(--accent);font-size:20px;line-height:1;margin:2px 0;}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:10px 0 4px;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .stage{background:#EDEFF7;border:1.5px solid #C2C9E6;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;color:var(--accentDeep);text-align:center;min-width:230px;}
+  .stage .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+  .branch{font-size:11.5px;color:var(--ink2);background:#FAFBFE;border:1px dashed var(--line);border-radius:6px;padding:3px 9px;margin:4px 0;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:1000px){.wrap{grid-template-columns:1fr}nav{display:none}main{padding:24px 18px}.twocol{grid-template-columns:1fr}}
+  .foot{margin-top:60px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  .kbd{font:600 12px/1 'Cascadia Code',monospace;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <h1>NEXA Migration Plan</h1>
+  <div class="sub">AWS · GitHub · Architecture · Security</div>
+  <a class="top" href="#overview">Overview &amp; target state</a>
+  <a class="top" href="#s1"><span class="n">1</span>GitHub → ProcDNA org</a>
+  <a href="#s1-options">Transfer options</a>
+  <a href="#s1-identity">Commit identity</a>
+  <a href="#s1-secrets">Secret scan &amp; hygiene</a>
+  <a href="#s1-protect">Branch protection</a>
+  <a class="top" href="#s2"><span class="n">2</span>Database — RDS + S3</a>
+  <a href="#s2-rds">Amazon RDS (Postgres)</a>
+  <a href="#s2-s3">Amazon S3 (files)</a>
+  <a href="#s2-code">Code changes</a>
+  <a class="top" href="#s3"><span class="n">3</span>Compute — ECS vs EC2</a>
+  <a href="#s3-compare">Comparison</a>
+  <a href="#s3-size">Machine sizing</a>
+  <a class="top" href="#s4"><span class="n">4</span>Security (finance data)</a>
+  <a href="#s4-impl">What's implemented</a>
+  <a href="#s4-aws">What AWS adds</a>
+  <a href="#s4-gap">Gaps to close</a>
+  <a class="top" href="#s5"><span class="n">5</span>How the app works</a>
+  <a href="#s5-arch">Architecture</a>
+  <a href="#s5-fevsbe">Frontend vs backend</a>
+  <a href="#s5-req">Request &amp; auth flow</a>
+  <a href="#s5-state">Approval state machine</a>
+  <a href="#s5-data">Data model</a>
+  <a href="#s5-routes">Route map</a>
+  <a class="top" href="#s6"><span class="n">6</span>Component catalogue</a>
+  <a class="top" href="#seq">Migration sequence</a>
+</nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">ProcDNA · NEXA — Business Development &amp; Pricing Tool</div>
+  <h1>AWS Migration &amp; Architecture Plan</h1>
+  <p>A working document for moving NEXA off <strong>Vercel + Supabase</strong> onto the firm's <strong>AUXO AWS</strong> account, onto a <strong>ProcDNA GitHub</strong> repo, and for explaining how the system is built and secured. Written to be shared with the IT team and the senior SDE.</p>
+  <p style="font-size:12.5px;color:var(--muted)">Stack today: Next.js 16 (App Router) · React 19 · Prisma 7 · PostgreSQL (Supabase) · NextAuth v4 (Azure AD) · Microsoft Graph (mail) · Supabase Storage. Region fra1 (Frankfurt).</p>
+</header>
+
+<!-- ===================== OVERVIEW ===================== -->
+<section id="overview">
+  <h3 style="margin-top:18px">Current state → target state, at a glance</h3>
+  <table>
+    <tr><th>Concern</th><th>Today (Vercel + Supabase)</th><th>Target (AWS · AUXO)</th></tr>
+    <tr><td>Source control</td><td>Personal GitHub repo, personal commit identity</td><td>Repo under the <b>ProcDNA org</b>, work identity, branch protection</td></tr>
+    <tr><td>Compute</td><td>Vercel serverless functions</td><td><b>EC2</b> (Node + Nginx) to start → optionally <b>ECS Fargate</b> later</td></tr>
+    <tr><td>Database</td><td>Supabase Postgres (pgBouncer pooler)</td><td><b>Amazon RDS for PostgreSQL</b>, private subnet, SSL</td></tr>
+    <tr><td>File storage</td><td>Supabase Storage (<code class="inl">SoW_bucket</code>, <code class="inl">PO_busket</code>)</td><td><b>Amazon S3</b>, private buckets, presigned URLs</td></tr>
+    <tr><td>Public URL</td><td><code class="inl">*.vercel.app</code></td><td>Stable firm <b>subdomain</b> via Route 53 / corporate DNS + ACM TLS</td></tr>
+    <tr><td>Secrets</td><td>Vercel env vars</td><td><b>SSM Parameter Store / Secrets Manager</b></td></tr>
+    <tr><td>Identity (login)</td><td>Azure AD SSO — <i>unchanged</i></td><td>Azure AD SSO — <i>unchanged</i> (only the redirect URL changes)</td></tr>
+  </table>
+  <div class="rec"><b>The one constraint that drives everything:</b> the public URL must be <b>stable</b>. Microsoft SSO redirect URIs and email "Safe Links" are registered against a domain, so nothing external may ever point at a raw EC2 IP. Solve that once (Elastic IP or a load balancer behind a fixed subdomain) and an EC2 stop/start, a redeploy, or a scale event never breaks login or email.</p>
+  </div>
+</section>
+
+<!-- ===================== 1. GITHUB ===================== -->
+<h2 class="s" id="s1"><span class="n">1</span>Moving the repo into the ProcDNA GitHub organisation</h2>
+<p>You are on a personal repo committing as your personal GitHub identity. The goal is a repo owned by the <b>ProcDNA organisation</b>, with you (and the team) contributing under work identities, managed with the IT team. There are two distinct things to fix: <b>where the repo lives</b> (ownership) and <b>who the commits are attributed to</b> (identity).</p>
+
+<h3 id="s1-options">1.1 — Two ways to land it in the org</h3>
+<table>
+  <tr><th>Option</th><th>What happens</th><th>Pros / cons</th></tr>
+  <tr>
+    <td><b>A. Transfer the existing repo</b><br><span class="pill info">Preserves history</span></td>
+    <td>GitHub's <i>Settings → Transfer ownership</i> moves the repo (with all commits, branches, issues, PRs, stars) to the ProcDNA org. IT must accept the incoming transfer and you need permission to create repos in the org.</td>
+    <td>Keeps full history and metadata. <b>But</b> it carries your entire commit history — including personal-email commits and anything ever committed (see §1.3 secret scan first).</td>
+  </tr>
+  <tr>
+    <td><b>B. Fresh repo, push code in</b><br><span class="pill ok">Cleanest start</span></td>
+    <td>IT creates an empty private repo in the org and grants you write. You add it as a remote and push. You can push full history (<code class="inl">--mirror</code>) or start from a single clean commit.</td>
+    <td>You choose how much history travels. A clean initial commit drops historical baggage (the junk files, any old secrets) but loses the commit timeline. Best when the data so far is throwaway anyway.</td>
+  </tr>
+</table>
+
+<div class="rec ok"><b>Recommendation:</b> Option B with a <b>clean initial commit</b>. Your data is currently fake/test, the history contains accidental junk (the mangled <code class="inl">git commit -m …</code> filenames, <code class="inl">dummy.txt</code> with merge-conflict markers, <code class="inl">test_file.txt</code>), and a fresh start guarantees no historical secret or personal email rides into a firm-owned repo. If the IT/security team specifically wants the audit trail of history, use Option A <b>but only after</b> the secret scan in §1.3.</div>
+
+<h4>Concrete steps (Option B, clean start)</h4>
+<pre><span class="c"># 0) Ask IT to: create an empty PRIVATE repo `nexa` (or `procnexa`) under the ProcDNA org,</span>
+<span class="c">#    add you as a Maintainer/Write member, and confirm the org's default branch + rules.</span>
+
+<span class="c"># 1) Set your WORK identity for this repo (local override, doesn't touch global config)</span>
+git config user.name  "Shreeraj Deshmukh"
+git config user.email "shreeraj.deshmukh@procdna.com"   <span class="c"># your @procdna address</span>
+
+<span class="c"># 2) Remove junk before it ever reaches the org repo (see the audit doc, §R1–R4)</span>
+git rm -f dummy.txt test_file.txt app/main.txt
+git rm -f -- "errole changed*"  "app/errole changed*"   <span class="c"># the botched-commit files</span>
+
+<span class="c"># 3) (clean-start variant) collapse history into one commit</span>
+<span class="c">#    keep the working tree, drop the old timeline:</span>
+rm -rf .git
+git init -b main
+git add -A
+git commit -m "Initial import: NEXA BD &amp; Pricing Tool"
+
+<span class="c"># 4) Point at the org repo and push</span>
+git remote add origin https://github.com/ProcDNA/nexa.git
+git push -u origin main</pre>
+
+<p>Full-history variant of step 3–4 (Option A-style push, no <code class="inl">rm -rf .git</code>):</p>
+<pre>git remote add origin https://github.com/ProcDNA/nexa.git
+git push origin --all
+git push origin --tags</pre>
+
+<h3 id="s1-identity">1.2 — Fixing commit identity</h3>
+<p>Setting <code class="inl">user.email</code> (step 1 above) fixes <b>future</b> commits. Two more points:</p>
+<ul>
+  <li><b>GitHub links commits to accounts by email.</b> For your commits to show as "you" on the org repo, your <code class="inl">@procdna.com</code> address must be added to your GitHub account (Settings → Emails), or use the GitHub-provided <code class="inl">noreply</code> address. The IT team may instead want you on a separate work GitHub account that's a member of the org — clarify which.</li>
+  <li><b>Past commits keep their old author email</b> unless you rewrite history. With a clean initial commit (Option B) this is moot. If you keep history and must re-attribute, <code class="inl">git filter-repo --mailmap</code> can map personal→work email, but rewriting shared history is disruptive — only do it before anyone else clones.</li>
+  <li><b>Authentication to the org repo:</b> use a Personal Access Token (fine-grained, scoped to the org) or SSH key tied to your work identity, not your personal password.</li>
+</ul>
+
+<h3 id="s1-secrets">1.3 — Secret scan &amp; hygiene (do this BEFORE handing the repo to IT)</h3>
+<div class="rec bad"><b>Critical for finance data:</b> once the repo is in the org it is visible to more people. Before transferring or pushing full history, scan the working tree <i>and</i> git history for any committed secret. <code class="inl">.gitignore</code> already excludes <code class="inl">.env</code>, which is good — but verify nothing slipped in earlier.</div>
+<pre><span class="c"># scan committed history for secrets (run one of these)</span>
+gitleaks detect --source . --redact
+<span class="c"># or</span>
+docker run --rm -v "$(pwd):/repo" trufflesecurity/trufflehog git file:///repo</pre>
+<p>If anything is found (an old <code class="inl">SUPABASE_SERVICE_ROLE_KEY</code>, an Azure secret, <code class="inl">NEXTAUTH_SECRET</code>, <code class="inl">EMERGENCY_TOKEN</code>, …): <b>rotate that credential</b> (assume it is compromised) and prefer the clean-start option so it never enters the org repo. You are rotating all secrets during the AWS move anyway, which is the ideal moment.</p>
+<p>Also commit a tidy repo: remove the redundant duplicates flagged in the audit (<code class="inl">lib/prisma.js</code>, the <code class="inl">app/</code> duplicate configs, the boilerplate SVGs, the <code class="inl">cors</code> dependency) so the firm's first impression of the codebase is clean.</p>
+
+<h3 id="s1-protect">1.4 — Org repo settings to ask IT for</h3>
+<ul>
+  <li><b>Private</b> repository; add a <b>team</b> (not individuals) for access; you as Maintainer.</li>
+  <li><b>Branch protection</b> on <code class="inl">main</code>: require a pull request + at least one review, require status checks (lint/build) to pass, no direct pushes.</li>
+  <li><b>Secret scanning + push protection</b> (GitHub Advanced Security if the org has it) so a secret can never be pushed again.</li>
+  <li><b>Dependabot</b> alerts/updates — relevant because the app pins bleeding-edge and one known-vulnerable dependency (<code class="inl">xlsx@0.18.5</code>).</li>
+  <li>A <code class="inl">CODEOWNERS</code> file and a short <code class="inl">README</code>/<code class="inl">CONTRIBUTING</code> so the team can onboard.</li>
+  <li>Decide the deploy trigger now: GitHub Actions building and deploying to AWS (see §3) — the org will likely want OIDC federation from Actions to AWS rather than long-lived AWS keys.</li>
+</ul>
+
+<!-- ===================== 2. DATABASE ===================== -->
+<h2 class="s" id="s2"><span class="n">2</span>Database &amp; storage — Amazon RDS + Amazon S3</h2>
+<p>Your instinct (RDS + S3) is the right shape: the app already splits into a <b>relational database</b> (everything except files) and <b>object storage</b> (the SOW/PO documents). RDS replaces Supabase Postgres; S3 replaces Supabase Storage. Because the current data is throwaway, there is <b>no data migration</b> — only the schema and an empty bucket need to exist.</p>
+
+<h3 id="s2-rds">2.1 — Amazon RDS for PostgreSQL</h3>
+<table>
+  <tr><th>Setting</th><th>Recommendation</th><th>Why</th></tr>
+  <tr><td>Engine</td><td>PostgreSQL 16.x</td><td>Matches the Prisma/pg setup; Supabase ran Postgres, so the SQL is portable.</td></tr>
+  <tr><td>Instance class</td><td><code class="inl">db.t3.small</code> to start (2 vCPU / 2 GB), <code class="inl">db.t4g.medium</code> for headroom</td><td>Internal tool, modest load. <code class="inl">t4g</code> (Graviton/ARM) is ~20% cheaper for the same performance.</td></tr>
+  <tr><td>Storage</td><td><code class="inl">gp3</code>, 20–50 GB, autoscaling on</td><td>Documents live in S3, not the DB, so the DB stays small.</td></tr>
+  <tr><td>Network</td><td><b>Private subnet</b>, <b>not</b> publicly accessible</td><td>The DB is reachable only from the app's security group — never the internet.</td></tr>
+  <tr><td>Security group</td><td>Inbound 5432 only from the EC2/ECS security group</td><td>Tightest possible blast radius.</td></tr>
+  <tr><td>Encryption</td><td>Storage encryption ON (KMS); <code class="inl">sslmode=require</code> in transit</td><td>Encryption at rest + in transit — table stakes for finance data (see §4).</td></tr>
+  <tr><td>Backups</td><td>Automated backups, 7-day retention; snapshot before cut-over</td><td>Supabase did this for you; on RDS you own the policy. Multi-AZ optional (doubles cost, adds auto-failover).</td></tr>
+  <tr><td>Schema</td><td><code class="inl">procdna_database</code> (multi-schema)</td><td>The app pins this non-default schema in <code class="inl">lib/prisma.ts</code> and the scripts.</td></tr>
+</table>
+
+<div class="rec warn"><b>Two things get simpler, one needs care:</b>
+<ul style="margin:6px 0 0">
+  <li><span class="pill ok">simpler</span> No more pgBouncer. Supabase forced the transaction-mode pooler (port 6543) because Vercel opened many short-lived serverless connections. A single long-lived Node process on EC2 doesn't, so point Prisma straight at RDS on 5432. <code class="inl">DATABASE_URL</code> and <code class="inl">DIRECT_URL</code> can converge on the same endpoint.</li>
+  <li><span class="pill ok">simpler</span> You can run real migrations (<code class="inl">prisma migrate deploy</code>) instead of hand-applying SQL.</li>
+  <li><span class="pill warn">care</span> The connection pool in <code class="inl">lib/prisma.ts</code> is hard-capped at <code class="inl">max=1</code> in production — correct for Vercel, a severe bottleneck on one EC2 process where the whole app would serialise through a single connection. Raise it (e.g. 10) sized to the RDS instance's connection limit. <i>(Audit item A1.)</i></li>
+</ul></div>
+
+<h4>Cut-over for the DB (no data to move)</h4>
+<pre><span class="c"># point Prisma at RDS, then build the schema and seed</span>
+<span class="k">DATABASE_URL</span>="postgresql://USER:PW@nexa.xxxx.eu-central-1.rds.amazonaws.com:5432/nexa?schema=procdna_database&amp;sslmode=require"
+npx prisma migrate deploy        <span class="c"># or: prisma db push  — creates tables/enums fresh</span>
+npx tsx prisma/add-admin.ts      <span class="c"># bootstrap the first ADMIN</span>
+npx tsx prisma/sync-azure-users.ts   <span class="c"># pull the real BD users from Azure AD</span></pre>
+<p class="branch" style="max-width:80ch"><b>Gotcha:</b> <code class="inl">prisma/sync-azure-users.ts</code> reads <code class="inl">AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET</code> (no <code class="inl">_AD_</code>), while the app uses <code class="inl">AZURE_AD_*</code>. Provide <b>both</b> naming styles in the EC2 environment, or the sync silently exits. <i>(Audit A10.)</i> And <code class="inl">prisma/seed.ts</code> references old stage names — treat it as historical sample data, not a live seed.</p>
+
+<h3 id="s2-s3">2.2 — Amazon S3 (SOW &amp; PO documents)</h3>
+<p>This is the one part that is real <b>code work</b>, not just configuration — the storage layer in <code class="inl">lib/supabase.ts</code> plus the SOW/PO upload routes get rewritten to the AWS SDK. The bucket starts empty, so nothing migrates.</p>
+<table>
+  <tr><th>Setting</th><th>Recommendation</th></tr>
+  <tr><td>Buckets</td><td>One private bucket (or two) for SOW/PO objects, keyed by opportunity, e.g. <code class="inl">nexa-docs/&lt;oppId&gt;/&lt;version&gt;_&lt;ts&gt;.pdf</code></td></tr>
+  <tr><td>Public access</td><td><b>Block Public Access = ON</b>. Files are only ever reachable through short-lived presigned URLs.</td></tr>
+  <tr><td>Encryption</td><td>Default SSE (SSE-S3 or SSE-KMS) — encryption at rest by default.</td></tr>
+  <tr><td>Versioning</td><td>ON — recovers an overwritten/deleted document (the app does soft-deletes; S3 versioning is the safety net).</td></tr>
+  <tr><td>Access from app</td><td><b>IAM instance role</b> on EC2 (or task role on ECS) granting <code class="inl">s3:GetObject/PutObject</code> on this one bucket. <b>No AWS keys in <code class="inl">.env</code>.</b></td></tr>
+  <tr><td>URLs</td><td><code class="inl">@aws-sdk/s3-request-presigner</code>, <code class="inl">expiresIn: 3600</code> — same 1-hour expiry the app already assumes.</td></tr>
+</table>
+<div class="rec bad"><b>The single highest-impact new risk</b> is a mis-set bucket. One "Block Public Access = off" click and every confidential pricing/SOW document is world-readable. Keep buckets private; serve only via presigned URLs; constrain the upload presign to a content-type + size limit (which also fixes the "client-claimed MIME" weakness, audit S11).</div>
+
+<h3 id="s2-code">2.3 — Code that changes</h3>
+<ul>
+  <li><code class="inl">lib/supabase.ts</code> → a new <code class="inl">lib/s3.ts</code>: <code class="inl">getSupabase()</code> → an S3 client; <code class="inl">getSignedUrl()</code> → presigner. Keep the 55-min cache <b>but add eviction</b> (on a long-lived process the current cache grows unbounded — audit A5).</li>
+  <li>The four document routes (<code class="inl">…/sow</code>, <code class="inl">…/sow/confirm</code>, <code class="inl">…/po</code>, <code class="inl">…/po/confirm</code>): swap "signed upload URL" calls for S3 presigned <code class="inl">PUT</code>.</li>
+  <li>Env: drop <code class="inl">SUPABASE_*</code>; add <code class="inl">S3_BUCKET</code> + region (credentials come from the instance role, not env).</li>
+</ul>
+
+<!-- ===================== 3. COMPUTE ===================== -->
+<h2 class="s" id="s3"><span class="n">3</span>Compute — ECS vs EC2, and machine sizing</h2>
+<p>Next.js 16 needs a live Node process (<code class="inl">next start</code>) — it is not a static site. The question is what runs that process.</p>
+
+<h3 id="s3-compare">3.1 — The realistic options</h3>
+<table>
+  <tr><th>Option</th><th>What it is</th><th>Good for you?</th></tr>
+  <tr>
+    <td><b>EC2</b> + Nginx + PM2/systemd<br><span class="pill ok">recommended to start</span></td>
+    <td>A single Linux VM. You install Node, run <code class="inl">next start</code> under a process manager, put Nginx in front for TLS + reverse proxy. Elastic IP or an ALB gives the stable address.</td>
+    <td><b>Yes, to begin.</b> Simplest mental model for an AWS newcomer, fewest moving parts, easiest to reason about for login/cookies. You patch the OS and manage uptime yourself.</td>
+  </tr>
+  <tr>
+    <td><b>ECS on Fargate</b><br><span class="pill info">the "do it properly" upgrade</span></td>
+    <td>You containerise the app (Dockerfile) and AWS runs the container serverlessly — no VM to patch. An ALB fronts it; rolling deploys and rollbacks are built in; scale by task count.</td>
+    <td><b>Great target once stable.</b> No server patching, clean blue/green deploys, easy horizontal scale. Costs more setup learning (Docker, task defs, ECR) up front.</td>
+  </tr>
+  <tr>
+    <td><b>ECS on EC2</b></td>
+    <td>Same ECS orchestration but you own the underlying EC2 capacity.</td>
+    <td>Only if the firm standardises on it or you need cost control at scale. More to manage than Fargate.</td>
+  </tr>
+  <tr>
+    <td><b>Elastic Beanstalk / Amplify</b></td>
+    <td>Higher-level PaaS wrappers.</td>
+    <td>Beanstalk can work but hides detail you'll want; Amplify is awkward for a full Node-server Next app. Skip unless the firm already uses them.</td>
+  </tr>
+</table>
+<div class="rec"><b>Recommendation:</b> <b>Start on a single EC2</b> (Nginx + systemd-managed <code class="inl">next start</code>, Elastic IP or ALB, ACM TLS). It gets you live fastest and is the easiest place to get the SSO cookie/redirect behaviour right. <b>Plan to graduate to ECS Fargate</b> once the app is stable and you want zero-downtime deploys and no OS patching. The app is already deploy-from-one-branch and stateless (state lives in RDS/S3), so containerising later is low-friction. Ask the SDE which the firm prefers to support — match their standard if they have one.</div>
+
+<div class="rec warn"><b>Whichever you pick, three things must be configured or login breaks:</b>
+<ol style="margin:6px 0 0">
+  <li><b>TLS terminates upstream</b> (Nginx/ALB), so the Node app sees <code class="inl">http</code> internally. Set <code class="inl">X-Forwarded-Proto</code> and <code class="inl">NEXTAUTH_URL=https://…</code> so secure cookies are issued correctly. <i>(Audit A2.)</i></li>
+  <li><b>Stable address</b> — Elastic IP or ALB DNS behind a fixed subdomain, registered as the Azure AD redirect URI and <code class="inl">MAIL_BASE_URL</code>.</li>
+  <li><b>Process supervision</b> — systemd <code class="inl">Restart=always</code> (or PM2), so a crash or reboot brings the app back automatically. Vercel did this for free.</li>
+</ol></div>
+
+<h3 id="s3-size">3.2 — Machine sizing</h3>
+<p>Workload profile: server-side rendering + Prisma queries for a small internal user base (tens of users, not thousands). Memory matters more than CPU for Next.js; the one CPU/RAM spike is the build and the synchronous Excel parse/export.</p>
+<table>
+  <tr><th>Role</th><th>Start with</th><th>Headroom</th><th>Notes</th></tr>
+  <tr><td>App server (EC2)</td><td><code class="inl">t3.medium</code><br>2 vCPU / 4 GB</td><td><code class="inl">t3.large</code> / <code class="inl">t4g.large</code><br>2 vCPU / 8 GB</td><td>4 GB is the comfortable floor for SSR + headroom. <code class="inl">t4g</code> (ARM/Graviton) is cheaper — Node/Next support ARM fine.</td></tr>
+  <tr><td>App task (ECS Fargate)</td><td>1 vCPU / 2 GB</td><td>1 vCPU / 4 GB, 2 tasks</td><td>Two tasks behind the ALB = zero-downtime deploys + redundancy.</td></tr>
+  <tr><td>Database (RDS)</td><td><code class="inl">db.t3.small</code><br>2 vCPU / 2 GB</td><td><code class="inl">db.t4g.medium</code><br>2 vCPU / 4 GB</td><td>Small DB (docs live in S3). Burstable <code class="inl">t3/t4g</code> is cost-effective for spiky internal use.</td></tr>
+</table>
+<div class="rec warn"><b>Build memory trap:</b> <code class="inl">next build</code> is memory-hungry and can OOM on a 2 GB box. Don't build on a tiny instance — build in <b>CI (GitHub Actions)</b> and ship the artifact, build inside the Docker image (ECS), or temporarily add swap. Also note: the synchronous <code class="inl">xlsx</code> parse (rate-card upload) and the 5000-row export run on the request thread and will briefly block other requests on a single Node process — fine at this scale, worth knowing. <i>(Audit A7.)</i></div>
+
+<!-- ===================== 4. SECURITY ===================== -->
+<h2 class="s" id="s4"><span class="n">4</span>Security — for an app holding financial data</h2>
+<p>NEXA holds commercially sensitive financial data: deal pricing, <b>cost rates</b> and <b>bill rates</b>, gross margins, discounts, client billings, and signed SOW/PO documents. This section is deliberately honest — it separates <b>what the code actually implements today</b> from <b>what AWS adds</b> and <b>what still needs doing</b> before this is genuinely finance-grade. (The detailed findings live in <code class="inl">docs/codebase-audit.html</code>; this is the security-controls view of the same picture.)</p>
+
+<h3 id="s4-impl">4.1 — Controls that ARE implemented today</h3>
+<table>
+  <tr><th>Control</th><th>How it's done in the code</th><th>Status</th></tr>
+  <tr><td><b>Authentication</b></td><td>Azure AD SSO via NextAuth (OAuth2/OIDC). Sessions are signed JWTs (HMAC-SHA256 with <code class="inl">NEXTAUTH_SECRET</code>), 8-hour expiry, stored in an <code class="inl">httpOnly</code>, <code class="inl">Secure</code>, <code class="inl">SameSite=lax</code> cookie. One helper (<code class="inl">getAuthToken</code>) reads it everywhere.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Provisioning gate</b></td><td>The NextAuth <code class="inl">signIn</code> callback rejects any Azure user not already provisioned and active in the DB — being in the tenant isn't enough.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Global auth gate</b></td><td><code class="inl">proxy.ts</code> (Next 16 middleware) forces every request through the token check except an explicit public allowlist (login, NextAuth, email-action, emergency, static).</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Role-based read scoping (RBAC)</b></td><td><code class="inl">resolveOwnerFilter()</code> turns the user's role into a Prisma <code class="inl">where</code> filter: SEL sees own, DIRECTOR/ED see down the hierarchy, PARTNER/ADMIN see all. Admin-only routes guard rate-card upload, user create, export, client edit/delete.</td><td><span class="pill ok">Implemented (reads)</span></td></tr>
+  <tr><td><b>SQL injection protection</b></td><td>All DB access is through Prisma's parameterised query builder — no raw string-concatenated SQL.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Document access control</b></td><td>Files are private; served only via <b>short-lived (1-hour) signed URLs</b>. The storage service key is server-side only and never exposed to the browser.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Email one-click actions</b></td><td>Approve/Reject email links carry an <b>HMAC-signed, 7-day-TTL token</b> (can't be forged/tampered); approve requires a POST confirm so email scanners can't auto-approve.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Transport security</b></td><td>HTTPS end-to-end (TLS on Vercel today; ACM/Nginx on AWS).</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Secret hygiene</b></td><td><code class="inl">.env</code> / <code class="inl">.env*</code> are git-ignored; secrets injected as environment variables, not committed.</td><td><span class="pill ok">Implemented</span></td></tr>
+  <tr><td><b>Money correctness</b></td><td>Financial fields use Postgres <code class="inl">Decimal</code> (not float) in the DB; some multi-step writes use transactions.</td><td><span class="pill ok">Partial</span></td></tr>
+  <tr><td><b>Audit trail (model)</b></td><td><code class="inl">ActivityLog</code> / <code class="inl">NotificationLog</code> tables exist for recording actions.</td><td><span class="pill warn">Exists, not consistently written</span></td></tr>
+</table>
+
+<h3 id="s4-aws">4.2 — Controls AWS adds during the migration</h3>
+<table>
+  <tr><th>Control</th><th>How</th></tr>
+  <tr><td>Encryption at rest</td><td>RDS storage encryption (KMS) + S3 default SSE — every byte of finance data encrypted on disk.</td></tr>
+  <tr><td>Encryption in transit</td><td><code class="inl">sslmode=require</code> to RDS; HTTPS to the app; TLS within the VPC where applicable.</td></tr>
+  <tr><td>Network isolation</td><td>RDS in a <b>private subnet</b>, reachable only from the app security group; the DB has no public endpoint.</td></tr>
+  <tr><td>Least-privilege machine identity</td><td><b>IAM instance/task role</b> for S3 — no long-lived AWS keys on disk or in env.</td></tr>
+  <tr><td>Secrets management</td><td><b>SSM Parameter Store / Secrets Manager</b> (SecureString, KMS-encrypted) instead of a plaintext <code class="inl">.env</code> that would otherwise bake into AMIs/snapshots.</td></tr>
+  <tr><td>MFA / Conditional Access</td><td>Inherited free from Azure AD — enforce MFA / device / location policies at the IdP for all NEXA sign-ins.</td></tr>
+  <tr><td>Edge protection</td><td>Nginx rate-limiting and/or AWS WAF in front of the app (rate-based rules; IP allow-list for the sensitive endpoints).</td></tr>
+  <tr><td>Backups / DR</td><td>RDS automated backups + snapshots; S3 versioning — recoverability for financial records.</td></tr>
+  <tr><td>Observability</td><td>App logs to CloudWatch (Vercel's logging disappears); a <code class="inl">/healthz</code> route for ALB checks.</td></tr>
+</table>
+
+<h3 id="s4-gap">4.3 — Gaps that must be closed for finance-grade security</h3>
+<p>These are real and should be on the migration checklist. They exist today and the move to AWS does not fix them by itself.</p>
+<table>
+  <tr><th>Gap</th><th>Risk</th><th>Fix</th></tr>
+  <tr><td><b>Shared-password backup login</b> (<code class="inl">/login2</code>)</td><td><span class="pill bad">Critical</span> One shared <code class="inl">CREDENTIALS_SECRET</code> logs you in as <i>any</i> user, including ADMIN. Full account takeover if it leaks.</td><td>Remove it (go SSO-only), or replace with per-user hashed passwords. At minimum IP-restrict + rotate.</td></tr>
+  <tr><td><b>Emergency admin via URL token</b> (<code class="inl">/api/emergency</code>)</td><td><span class="pill bad">High</span> Static token in the query string → leaks into logs/history; grants instant 8-hour admin.</td><td>POST + short-lived signed token + IP allow-list/WAF, or remove in prod.</td></tr>
+  <tr><td><b>Authorization on writes (IDOR)</b></td><td><span class="pill bad">High</span> Most mutating API routes check that you're logged in but <i>not</i> that you own the record — a user can act on another team's opportunity, documents, or pricing by changing the ID.</td><td>One shared ownership/role guard at the top of every mutating route (the read-side filter already exists; mirror it for writes).</td></tr>
+  <tr><td><b>Stored XSS / HTML injection</b></td><td><span class="pill warn">High/Med</span> The email-action pages and the outbound emails interpolate user text (opportunity names, justifications) into HTML without escaping.</td><td>HTML-escape every interpolated value (one small helper).</td></tr>
+  <tr><td><b>No real-time revocation</b></td><td><span class="pill warn">Medium</span> Role/active status is cached in the 8-hour JWT; deactivating a user takes effect only on next sign-in.</td><td>Re-check <code class="inl">isActive</code>/role server-side periodically, or shorten the session.</td></tr>
+  <tr><td><b>Vulnerable dependency</b> (<code class="inl">xlsx@0.18.5</code>)</td><td><span class="pill warn">Medium</span> Known prototype-pollution / ReDoS CVEs; it parses admin-uploaded spreadsheets.</td><td>Move to the patched SheetJS build or <code class="inl">exceljs</code>.</td></tr>
+  <tr><td><b>Audit logging not enforced</b></td><td><span class="pill warn">Medium</span> Finance data should have a "who viewed/changed what, when" trail; the tables exist but writes are inconsistent.</td><td>Write <code class="inl">ActivityLog</code> on every create/update/approve/export; consider read-logging for documents.</td></tr>
+  <tr><td><b>No rate limiting today</b></td><td><span class="pill warn">Medium</span> On raw EC2 the secret-bearing endpoints are brute-forceable without Vercel's shield.</td><td>Nginx <code class="inl">limit_req</code> / AWS WAF (part of §3 setup).</td></tr>
+</table>
+<div class="rec bad"><b>Bottom line for IT/security sign-off:</b> the <i>foundations</i> are sound (SSO, signed sessions, role-scoped reads, private storage, parameterised queries), and AWS adds the infrastructure controls (encryption, isolation, secrets, backups, MFA). But before this holds real client financials, the <b>shared-password login</b>, the <b>emergency endpoint</b>, and the <b>write-side authorization (IDOR)</b> items are must-fix, and <b>audit logging</b> should be turned on. Treat those four as release-blockers for the production cut-over.</div>
+
+<!-- ===================== 5. HOW IT WORKS ===================== -->
+<h2 class="s" id="s5"><span class="n">5</span>How the app works — architecture &amp; flow</h2>
+
+<h3 id="s5-arch">5.1 — System architecture (block diagram)</h3>
+<div class="diagram">
+  <span class="tag">Browser</span>
+  <div class="layer"><div class="box cli"><div class="t">User's browser</div><div class="d">React 19 UI · client components · fetch() to API routes</div></div></div>
+  <div class="varrow">▼&nbsp;&nbsp;HTTPS (stable subdomain)</div>
+  <span class="tag">Edge / proxy</span>
+  <div class="layer"><div class="box"><div class="t">Nginx / ALB + ACM TLS</div><div class="d">TLS termination · reverse proxy · rate limiting (WAF)</div></div></div>
+  <div class="varrow">▼</div>
+  <span class="tag">Application — single Next.js 16 server (the "backend" and "frontend" are one app)</span>
+  <div class="layer">
+    <div class="box"><div class="t">proxy.ts</div><div class="d">global auth gate · redirects unauthenticated → /login</div></div>
+    <div class="box"><div class="t">Server Components</div><div class="d">render pages · call lib/db directly (no HTTP)</div></div>
+    <div class="box"><div class="t">API Routes <code style="font-size:10px">app/api/*</code></div><div class="d">the JSON backend · all mutations</div></div>
+    <div class="box"><div class="t">lib/ services</div><div class="d">auth · prisma · mail · storage · pricing math</div></div>
+  </div>
+  <div class="varrow">▼</div>
+  <span class="tag">Data &amp; external services</span>
+  <div class="layer">
+    <div class="box db"><div class="t">Amazon RDS</div><div class="d">PostgreSQL · all relational data · via Prisma</div></div>
+    <div class="box db"><div class="t">Amazon S3</div><div class="d">SOW / PO documents · presigned URLs</div></div>
+    <div class="box ext"><div class="t">Azure AD</div><div class="d">SSO login · user directory (sync)</div></div>
+    <div class="box ext"><div class="t">MS Graph API</div><div class="d">outbound approval emails · SharePoint export</div></div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:#EDEFF7;border-color:#C2C9E6"></span> client / app</span>
+    <span><span class="sw" style="background:#EAF6EF;border-color:#B6E2C7"></span> AWS data store</span>
+    <span><span class="sw" style="background:#FFF7EC;border-color:#EAD3A6"></span> external Microsoft service</span>
+  </div>
+</div>
+
+<h3 id="s5-fevsbe">5.2 — Frontend vs backend (it's one integrated Next.js app)</h3>
+<p>You're right that it's integrated — there is no separate backend service. Next.js App Router blends both, and the distinction is which <b>kind</b> of file handles a request:</p>
+<table>
+  <tr><th>"Frontend" (runs in browser)</th><th>"Backend" (runs on the server)</th></tr>
+  <tr>
+    <td>
+      <b>Client Components</b> — files with <code class="inl">'use client'</code> at the top.<br>
+      e.g. <code class="inl">PricingDrawer.tsx</code>, <code class="inl">OpportunityTable.tsx</code>, the modals/forms, the badges/selects.<br>
+      They handle interactivity (state, clicks, editing) and call the API routes with <code class="inl">fetch()</code>.
+    </td>
+    <td>
+      <b>Server Components &amp; pages</b> (no <code class="inl">'use client'</code>) — e.g. <code class="inl">dashboard/page.tsx</code>, <code class="inl">opportunities/[id]/page.tsx</code>. They run only on the server and fetch data <b>directly</b> via <code class="inl">lib/db/*</code> (no HTTP round-trip).<br>
+      <b>API Routes</b> — <code class="inl">app/api/**/route.ts</code>. The JSON HTTP backend: every create/update/delete, uploads, approvals, export. Each calls <code class="inl">getAuthToken()</code> then Prisma.<br>
+      <b>lib/ services</b> — auth, Prisma client, mail, storage, pricing math.
+    </td>
+  </tr>
+</table>
+<p>So a page load is mostly server-rendered (Server Component → <code class="inl">lib/db</code> → RDS → HTML), and any <i>change</i> the user makes goes Client Component → <code class="inl">fetch</code> → API Route → Prisma → RDS. Same codebase, same deployed process.</p>
+
+<h3 id="s5-req">5.3 — Request &amp; authentication flow</h3>
+<div class="diagram">
+  <div class="flow">
+    <div class="stage">1 · Browser requests a page/route<span class="sub">cookie carries the NextAuth session JWT</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">2 · proxy.ts runs (global gate)<span class="sub">getAuthToken() decrypts &amp; verifies the cookie</span></div>
+    <div class="varrow">▼</div>
+    <div class="branch">no valid token → redirect to <code class="inl">/login</code> → Azure AD SSO → signIn callback checks user is provisioned &amp; active → JWT minted</div>
+    <div class="varrow">▼</div>
+    <div class="stage">3 · Request reaches the page or API route<span class="sub">token gives { id, role, location }</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">4 · RBAC applied<span class="sub">resolveOwnerFilter(role) scopes the Prisma query</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">5 · Prisma → PostgreSQL (RDS)<span class="sub">Decimal money fields → Number for the client</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">6 · Response: rendered HTML (pages) or JSON (API)</div>
+  </div>
+</div>
+
+<h3 id="s5-state">5.4 — The opportunity lifecycle (approval state machine)</h3>
+<p>The heart of the domain. An opportunity moves through stages as pricing and SOW get prepared, approved, and signed. Pricing approval and SOW verification can run as <b>parallel tracks</b>, and a pricing rejection/withdrawal cascades to invalidate the SOW track.</p>
+<div class="diagram">
+  <div class="flow">
+    <div class="stage">LEAD<span class="sub">("WLBU Pending" in the UI) — create a pricing version</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">PRICE_LINKING_PENDING<span class="sub">mark a version as final</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">PRICE_LINKED<span class="sub">request pricing approval</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">APPROVAL_PENDING<span class="sub">approver decides</span></div>
+    <div class="branch">approve → SOW_PENDING&nbsp;&nbsp;·&nbsp;&nbsp;reject → back to PRICE_LINKED&nbsp;&nbsp;·&nbsp;&nbsp;withdraw (owner) → PRICE_LINKED</div>
+    <div class="varrow">▼</div>
+    <div class="stage">SOW_PENDING<span class="sub">upload SOW + PO, set pre-contract-agreed</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">SOW_SUBMITTED<span class="sub">request SOW verification</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">SOW_REVIEW_PENDING<span class="sub">approver verifies documents</span></div>
+    <div class="branch">approve → TO_BE_ARCHIVED&nbsp;&nbsp;·&nbsp;&nbsp;reject → back to SOW_SUBMITTED</div>
+    <div class="varrow">▼</div>
+    <div class="stage">TO_BE_ARCHIVED<span class="sub">deal effectively done · status set manually to WON</span></div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin:10px 0 0">Parallel-track rule: rejecting or withdrawing the <b>PRICING</b> request auto-withdraws any pending/approved SOW verification and resets the opportunity to PRICE_LINKED. Status (OPEN/WON/LOST/ABANDONED) is a manual dropdown, decoupled from stage. Editing the date window resets pricing and rolls the stage back.</p>
+</div>
+
+<h3 id="s5-data">5.5 — Data model (key entities)</h3>
+<div class="diagram">
+  <div class="layer">
+    <div class="box"><div class="t">User</div><div class="d">role (SEL→ADMIN) · azureId · managerId · isActive</div></div>
+    <div class="box"><div class="t">Client</div><div class="d">clientId (CL-NNN) · BU · industry · region</div></div>
+    <div class="box"><div class="t">ClientPOC</div><div class="d">contacts → Client</div></div>
+    <div class="box"><div class="t">ClientRequest</div><div class="d">admin approves → creates Client</div></div>
+  </div>
+  <div class="varrow">▼ owns / references</div>
+  <div class="layer">
+    <div class="box" style="border-color:#9bb4e0"><div class="t">Opportunity</div><div class="d">OPP-YY-NNNN · stage · status · ownerId · primaryLob · dates</div></div>
+  </div>
+  <div class="varrow">▼ has many</div>
+  <div class="layer">
+    <div class="box"><div class="t">PricingVersion</div><div class="d">versionNumber · isFinal · margin/billings/hours</div></div>
+    <div class="box"><div class="t">OtherCost</div><div class="d">non-staffing cost · markup · LoB</div></div>
+    <div class="box"><div class="t">ApprovalRequest</div><div class="d">PRICING / SOW_VERIFICATION · status · approver</div></div>
+    <div class="box"><div class="t">SOWDocument / PODocument</div><div class="d">file refs (S3) · soft-delete</div></div>
+    <div class="box"><div class="t">Comment</div><div class="d">threaded discussion</div></div>
+  </div>
+  <div class="varrow">▼ PricingVersion has many</div>
+  <div class="layer">
+    <div class="box"><div class="t">StaffingResource</div><div class="d">from RateCard · rates · utilisation</div></div>
+    <div class="box"><div class="t">StaffingWeekEntry</div><div class="d">hours per week (Monday-bucketed)</div></div>
+    <div class="box"><div class="t">ScheduleOfPayment</div><div class="d">monthly plan</div></div>
+    <div class="box"><div class="t">FinancialSnapshot</div><div class="d">monthly A–K rows</div></div>
+  </div>
+  <div class="varrow">▼ reference data &amp; audit</div>
+  <div class="layer">
+    <div class="box db"><div class="t">RateCard</div><div class="d">jobRole × location · cost &amp; bill rate</div></div>
+    <div class="box"><div class="t">ActivityLog</div><div class="d">audit trail</div></div>
+    <div class="box"><div class="t">NotificationLog</div><div class="d">email/notification trail</div></div>
+  </div>
+</div>
+
+<h3 id="s5-routes">5.6 — Route map</h3>
+<div class="twocol">
+  <div>
+    <h4>Pages (what the user sees)</h4>
+    <table>
+      <tr><th>Route</th><th>Purpose</th></tr>
+      <tr><td><code class="inl">/</code></td><td>redirect → /dashboard</td></tr>
+      <tr><td><code class="inl">/login</code> · <code class="inl">/login2</code></td><td>Azure SSO · credentials backup</td></tr>
+      <tr><td><code class="inl">/dashboard</code></td><td>pipeline table + KPI strip</td></tr>
+      <tr><td><code class="inl">/opportunities/new</code></td><td>create form</td></tr>
+      <tr><td><code class="inl">/opportunities/[id]</code></td><td>detail: Details/Pricing/Approval/SOW·PO/Project Code/Comments</td></tr>
+      <tr><td><code class="inl">/clients</code> · <code class="inl">/clients/[id]</code></td><td>client master · detail</td></tr>
+      <tr><td><code class="inl">/approvals</code></td><td>approver inbox</td></tr>
+      <tr><td><code class="inl">/admin/rate-cards</code></td><td>rate-card Excel import</td></tr>
+    </table>
+  </div>
+  <div>
+    <h4>API routes (the backend, grouped)</h4>
+    <table>
+      <tr><th>Group</th><th>Endpoints</th></tr>
+      <tr><td>Auth</td><td><code class="inl">/api/auth/*</code> (NextAuth), <code class="inl">/api/emergency</code></td></tr>
+      <tr><td>Opportunities</td><td>list/create, <code class="inl">[id]</code> patch, comments, other-costs, sow/po (+confirm)</td></tr>
+      <tr><td>Pricing</td><td><code class="inl">[id]/pricing-versions</code>, <code class="inl">/pricing-versions/[pvId]</code> (+ duplicate, staffing, hours)</td></tr>
+      <tr><td>Approvals</td><td><code class="inl">/api/approvals</code>, <code class="inl">[id]/approve|reject|withdraw</code>, <code class="inl">email-action</code></td></tr>
+      <tr><td>Clients</td><td><code class="inl">/api/clients/[id]</code>, <code class="inl">client-requests/*</code>, <code class="inl">client-pocs/*</code></td></tr>
+      <tr><td>Reference / misc</td><td><code class="inl">rate-cards</code>(+upload/confirm), <code class="inl">users</code>, <code class="inl">pipeline-revenue</code>, <code class="inl">export/opportunities</code></td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ===================== 6. COMPONENTS ===================== -->
+<h2 class="s" id="s6"><span class="n">6</span>Component catalogue — everything the app is made of</h2>
+
+<h3>6.1 — External services &amp; integrations</h3>
+<ul>
+  <li><b>Azure Active Directory</b> — single sign-on (OIDC) and the source of the user directory (the sync script pulls users + job titles → roles).</li>
+  <li><b>Microsoft Graph API</b> — sends approval emails as a shared mailbox (app-only auth), and overwrites a shared SharePoint workbook for the export feature.</li>
+  <li><b>PostgreSQL</b> (Supabase today → RDS) — all relational data, via Prisma + the <code class="inl">pg</code> driver, pinned to schema <code class="inl">procdna_database</code>.</li>
+  <li><b>Object storage</b> (Supabase Storage today → S3) — SOW/PO documents, served via short-lived signed URLs.</li>
+</ul>
+
+<h3>6.2 — Server library (<code class="inl">lib/</code>)</h3>
+<table>
+  <tr><th>Module</th><th>Responsibility</th></tr>
+  <tr><td><code class="inl">getAuthToken.ts</code></td><td>The one way the app reads the logged-in user from the session cookie.</td></tr>
+  <tr><td><code class="inl">auth.js</code> / <code class="inl">auth.d.ts</code></td><td>NextAuth config: Azure AD + credentials providers, signIn/jwt/session callbacks.</td></tr>
+  <tr><td><code class="inl">prisma.ts</code></td><td>The Prisma client singleton (pg adapter, schema-pinned). <i>(<code class="inl">prisma.js</code> is a dead duplicate — delete.)</i></td></tr>
+  <tr><td><code class="inl">supabase.ts</code></td><td>Storage layer — to be rewritten as <code class="inl">s3.ts</code>.</td></tr>
+  <tr><td><code class="inl">mail.ts</code></td><td>All outbound email via Graph (5 templates + the brand shell).</td></tr>
+  <tr><td><code class="inl">approval-tokens.ts</code></td><td>HMAC-signed tokens for the one-click email approve/reject links.</td></tr>
+  <tr><td><code class="inl">errors.ts</code></td><td>Central API error map (codes → status + safe message).</td></tr>
+  <tr><td><code class="inl">db/opportunities.ts</code></td><td>Opportunity reads + <code class="inl">resolveOwnerFilter</code> (the RBAC core).</td></tr>
+  <tr><td><code class="inl">db/clients.ts · db/users.ts · db/recompute.ts</code></td><td>Client/user reads; pricing reset on date change.</td></tr>
+  <tr><td><code class="inl">stageNextSteps.ts · utils.ts</code></td><td>Stage hint text; the <code class="inl">cn()</code> class helper.</td></tr>
+</table>
+
+<h3>6.3 — Pricing engine</h3>
+<p><code class="inl">app/opportunities/[id]/pricing/utils.ts</code> is the pure-function math core: it turns staffing rows × weekly hours × rates into billings, cost, gross margin, offshore %, effective rate, discount/premium, and FTE — and does all the calendar/working-day/proration logic in UTC so results are timezone-independent. <code class="inl">types.ts</code> shares the shapes; the five pricing sub-tabs (Basic Details, Efforts, Other Cost, Financial, Schedule of Payments) are the UI over it.</p>
+
+<h3>6.4 — UI components</h3>
+<ul>
+  <li><b>Structural:</b> <code class="inl">layout.tsx</code> (root), <code class="inl">Providers.tsx</code> (session + toasts), <code class="inl">MainLayout</code>, <code class="inl">Sidebar</code>.</li>
+  <li><b>Feature screens:</b> <code class="inl">OpportunityTable</code> (+ SearchBar, ExportButton), <code class="inl">OpportunityTabs</code>, <code class="inl">PricingDrawer</code> + 5 sub-tabs, <code class="inl">TabSoW</code>, <code class="inl">ApprovalsInbox</code>, <code class="inl">ClientsBrowser</code> + client modals, <code class="inl">NewOpportunityForm</code>, the admin rate-card screen.</li>
+  <li><b>Primitives:</b> <code class="inl">badge/button/card/table</code> (shadcn), the semantic <code class="inl">StatusBadge / StageBadge / LOBBadge</code>, and the reusable <code class="inl">SearchableSelect / MultiSelect</code>.</li>
+</ul>
+
+<h3>6.5 — Scripts &amp; configuration</h3>
+<ul>
+  <li><b>Scripts:</b> <code class="inl">prisma/sync-azure-users.ts</code> (pull users from Azure AD), <code class="inl">add-admin.ts</code> (bootstrap an admin), <code class="inl">seed.ts</code> / <code class="inl">seed-efforts.ts</code> (demo data — partly stale, treat as historical).</li>
+  <li><b>Config:</b> <code class="inl">prisma/schema.prisma</code> + <code class="inl">prisma.config.ts</code> (DB connection &amp; migrations), <code class="inl">proxy.ts</code> (auth middleware), <code class="inl">next.config.ts</code>, the env vars (<code class="inl">DATABASE_URL</code>, <code class="inl">NEXTAUTH_*</code>, <code class="inl">AZURE_AD_*</code>, storage keys, <code class="inl">MAIL_*</code>, <code class="inl">EMAIL_ACTION_SECRET</code>, <code class="inl">EMERGENCY_TOKEN</code>, …).</li>
+  <li><b>Docs in repo:</b> <code class="inl">AGENTS.md</code> (architecture notes), <code class="inl">docs/codebase-audit.html</code> (security/reliability findings), and this <code class="inl">plan.html</code>.</li>
+</ul>
+
+<!-- ===================== SEQUENCE ===================== -->
+<h2 class="s" id="seq">Putting it together — a migration sequence</h2>
+<ol>
+  <li><b>Repo:</b> secret-scan history → clean junk → create the ProcDNA org repo (IT) → push with your work identity → set branch protection + Dependabot.</li>
+  <li><b>Accounts &amp; network (with the SDE):</b> AUXO account access, region <code class="inl">eu-central-1</code>, a VPC with a public subnet (app) + private subnet (RDS), security groups.</li>
+  <li><b>Domain &amp; TLS:</b> get the stable subdomain (Route 53 / corporate DNS), an ACM cert, decide Elastic IP vs ALB. <b>Do this early</b> — it's the long pole and the SSO/Safe-Links constraint.</li>
+  <li><b>Data layer:</b> RDS (private, encrypted, SSL) + an empty private S3 bucket with an instance role.</li>
+  <li><b>Code:</b> rewrite the storage layer (Supabase → S3); raise the Prisma pool size; trust <code class="inl">X-Forwarded-Proto</code>; harden the chunked-cookie detection. <b>Fix the four release-blockers</b> from §4.3 (login2, emergency, IDOR, audit logging).</li>
+  <li><b>Compute:</b> stand up EC2 (Nginx + systemd) or an ECS Fargate service; secrets in SSM/Secrets Manager; logs to CloudWatch; <code class="inl">/healthz</code>.</li>
+  <li><b>Identity:</b> add the new redirect URI to the Azure App Registration <b>before</b> go-live (SSO breaks the moment the URL changes if it isn't pre-registered).</li>
+  <li><b>Cut-over:</b> <code class="inl">prisma migrate deploy</code> → run the Azure sync + add-admin → point DNS at the app → test SSO + an upload + an approval email end-to-end.</li>
+  <li><b>After:</b> WAF/rate-limiting, backups verified, Dependabot/xlsx fix, decide if/when to graduate EC2 → ECS Fargate.</li>
+</ol>
+
+<div class="foot">
+  NEXA — AWS Migration &amp; Architecture Plan. Companion to <code class="inl">docs/codebase-audit.html</code> (detailed findings) and <code class="inl">AGENTS.md</code> (conventions).
+  Security claims describe the codebase as built; the §4.3 release-blockers are the gating items for handling real client financial data. Sizing/region figures are starting points to confirm with the senior SDE against the firm's AWS standards.
+</div>
+
+</main>
+</div>
+</body>
+</html>

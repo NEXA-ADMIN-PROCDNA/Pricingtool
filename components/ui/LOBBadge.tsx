@@ -1,3 +1,5 @@
+// ui/LOBBadge.tsx — colored pill for a Line of Business (Tech/Analytics/MS/DS/Design/Auxo).
+// Maps each LoB enum value to a label + colour classes.
 const config: Record<string, { label: string; classes: string }> = {
   TECH:      { label: 'Technology',       classes: 'bg-cyan-50 text-cyan-700'     },
   ANALYTICS: { label: 'Analytics',        classes: 'bg-violet-50 text-violet-700' },

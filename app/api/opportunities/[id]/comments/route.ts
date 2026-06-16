@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/comments — add a comment (threaded via parentId).
+// Big picture: the discussion feed on an opportunity. authorId comes from the SESSION
+// token (good — not the body). parentId null = top-level comment, else it's a reply.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

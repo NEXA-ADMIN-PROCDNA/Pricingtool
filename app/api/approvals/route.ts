@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/approvals — the approver's inbox.
+// Big picture: lists approval requests where YOU are the approver (ADMIN sees all);
+// ?pending=true narrows to still-open ones. For SOW_VERIFICATION rows it attaches
+// fresh signed URLs to the linked SOW/PO docs so the approver can preview the actual
+// documents before deciding. Powers the /approvals page (ApprovalsInbox).
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

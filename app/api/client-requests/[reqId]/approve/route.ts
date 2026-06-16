@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/client-requests/[reqId]/approve — admin approves a new-client request.
+// Big picture: in ONE $transaction it creates the real Client (no clientId yet —
+// finance/admins assign the code later) and marks the request APPROVED. The admin half
+// of the "request a client" workflow that started in /api/client-requests.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH/DELETE /api/opportunities/[id]/other-costs/[costId] — edit or remove one
+// other-cost line (toggle billable, change markup/LoB, or delete). Operates purely by
+// costId with no ownership check on the parent opportunity. (See audit S5.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

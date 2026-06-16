@@ -1,3 +1,15 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/rate-cards/upload — parse an uploaded rate-card Excel (ADMIN only).
+//
+// Big picture: step 1 of a 2-step admin import — it READS the .xlsx, finds the header
+// row heuristically (col A = "Location", col B = "Position/Job Role"), normalises the
+// LoB/domain column to the enum, carries location down merged/blank cells, and returns
+// {rows, errors} for review. The /upload/confirm route then writes them to the DB.
+//
+// RISK: xlsx@0.18.5 has known CVEs (prototype pollution / ReDoS) on parsed files; and
+// on a single EC2 process this SYNCHRONOUS parse blocks the whole event loop for big
+// files. (See audit S10 / A7.) The error path returns a 30-row preview (minor info leak).
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import * as XLSX from 'xlsx'

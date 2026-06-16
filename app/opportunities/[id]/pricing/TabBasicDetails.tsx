@@ -1,4 +1,7 @@
 'use client'
+// TabBasicDetails — Pricing drawer ▸ "Basic Details" sub-tab. A read-only summary of the
+// version: headline metrics (revenue, gross margin, FTE, discount/premium) and the LoB
+// revenue mix. Pure presentation off the live computed metrics — no editing happens here.
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { Version, ComputedMetrics, OtherCostRow } from './types'
 import { fmtMoneyExact, fmtDate, computeFte } from './utils'

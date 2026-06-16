@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA — AWS Architecture Briefing</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6; --chip:#EEF2F9;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:270px 1fr;max-width:1280px;margin:0 auto;}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:26px 18px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 15px/1 'Segoe UI';letter-spacing:.2em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand span{display:inline-block;width:6px;height:6px;background:var(--accent);transform:rotate(45deg);margin-left:6px}
+  nav .sub{font-size:11px;color:var(--muted);margin:6px 0 18px;}
+  nav a{display:block;font-size:12.5px;color:var(--ink2);padding:4px 0;}
+  nav a .n{color:var(--accent);font:700 11px/1 'Courier New',monospace;margin-right:6px;}
+  main{min-width:0}
+  .hero{background:linear-gradient(120deg,#0A1F44,#001E96 60%,#003a8f);color:#EAF0FB;padding:40px 48px 34px;}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.22em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:30px;margin:12px 0 8px;letter-spacing:-.01em;color:#fff;}
+  .hero p{max-width:80ch;color:#CBD8F2;margin:.4em 0;}
+  .hero .meta{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+  .body{padding:30px 48px 120px}
+  h2.s{font-size:22px;margin:46px 0 6px;padding-top:14px;border-top:1px solid var(--line);scroll-margin-top:10px;}
+  h2.s .n{font:700 14px/1 'Courier New',monospace;color:var(--accent);margin-right:10px;}
+  h3{font-size:16px;margin:22px 0 6px;color:var(--accentDeep);}
+  p{max-width:82ch} ul,ol{max-width:82ch} li{margin:3px 0}
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:8px;padding:13px 15px;overflow:auto;font:12.5px/1.55 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .callout{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:16px 0;}
+  .callout.warn{border-left-color:var(--warn)} .callout.ok{border-left-color:var(--ok)}
+  .callout b{color:var(--accentDeep)}
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  /* diagrams */
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:16px 0;overflow:auto;}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:12px 0 6px;}
+  .layer{display:flex;gap:12px;align-items:stretch;justify-content:center;flex-wrap:wrap;}
+  .box{background:#F7F9FD;border:1.5px solid #C9D6EC;border-radius:9px;padding:10px 14px;min-width:150px;text-align:center;}
+  .box .t{font-weight:700;font-size:13px;color:var(--accentDeep);}
+  .box .d{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .box.ext{background:#FFF7EC;border-color:#EAD3A6} .box.db{background:#EAF6EF;border-color:#B6E2C7} .box.cli{background:#EDEFF7;border-color:#C2C9E6}
+  .varrow{text-align:center;color:var(--accent);font-size:20px;line-height:1;margin:4px 0;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid}
+  /* numbered flow */
+  .steps{counter-reset:step;display:flex;flex-direction:column;gap:0;}
+  .step{position:relative;display:flex;gap:14px;padding:0 0 18px 0;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:15px;top:30px;bottom:-2px;width:2px;background:#C9D6EC;}
+  .step .num{counter-increment:step;flex:0 0 32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:700 14px/1 'Segoe UI';z-index:1;}
+  .step .c2{background:#F7F9FD;border:1px solid #C9D6EC;border-radius:9px;padding:10px 14px;flex:1;}
+  .step .c2 b{color:var(--accentDeep)}
+  .step .c2 .k{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  .arrowcol{display:flex;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;margin:6px 0}
+  .arrowcol .box{min-width:130px}
+  .ar{color:var(--accent);font-size:20px}
+  .foot{margin-top:54px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  @media(max-width:1000px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body{padding-left:20px;padding-right:20px}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">NEXA <span></span></div>
+  <div class="sub">AWS Architecture Briefing</div>
+  <a href="#summary"><span class="n">0</span>Purpose &amp; summary</a>
+  <a href="#app"><span class="n">1</span>The application</a>
+  <a href="#current"><span class="n">2</span>Current stack</a>
+  <a href="#proposed"><span class="n">3</span>Proposed stack</a>
+  <a href="#sizing"><span class="n">4</span>Compute &amp; sizing</a>
+  <a href="#network"><span class="n">5</span>Networking &amp; security</a>
+  <a href="#iam"><span class="n">6</span>IAM &amp; permissions</a>
+  <a href="#decisions"><span class="n">7</span>Decisions I need</a>
+  <a href="#flows"><span class="n">8</span>Flow diagrams</a>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA · Internal Tooling</div>
+  <h1>NEXA Migration to AWS (AUXO): architecture briefing</h1>
+  <p>NEXA is ProcDNA's internal <strong>Business Development &amp; Pricing</strong> application. It currently runs on Vercel + Supabase and we want to move it onto the firm's <strong>AUXO AWS</strong> account. This document gives you the technical picture about what exists today, the stack I'm proposing (EC2 + RDS + S3) with compute sizing, the networking/security model, and the IAM access I'd need — so you can validate the design and allocate the right resources and permissions.</p>
+  <div class="meta">
+    <span class="chip">55+ users and would scale up· US + India</span>
+    <span class="chip">Next.js 16</span>
+    <span class="chip">PostgreSQL + object storage</span>
+    <span class="chip">Azure AD SSO</span>
+    <span class="chip">Financial data (pricing, rates, margins, SOW/PO)</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- 0 -->
+<h2 class="s" id="summary"><span class="n">0</span>Purpose &amp; summary</h2>
+<p><b>The ask:</b> move NEXA from <span class="pill info">Vercel + Supabase</span> to <span class="pill info">AWS (AUXO)</span> without changing the application architecture and only the hosting/data providers. One constraint is a <b>stable public URL</b>: we use Microsoft SSO and email "Safe Links", both of which are registered against a domain, so the public entry point must never change across restarts or redeploys.</p>
+<!--<div class="callout"><b>some proposed requirements<b></b>:</b> confirm the target region, whether to use an existing AUXO VPC or a new one, sign off on the compute sizing below, and grant the IAM access for me to build . Ive mentioned details in 6tha nd 7th point</div>
+-->
+<table>
+  <tr><th>Concern</th><th>Today</th><th>Proposed (AWS)</th></tr>
+  <tr><td>Compute (app)</td><td>Vercel serverless</td><td><b>EC2</b> (Node + Nginx) </td></tr>
+  <tr><td>Relational DB</td><td>Supabase PostgreSQL</td><td><b>Amazon RDS for PostgreSQL</b></td></tr>
+  <tr><td>Object storage</td><td>Supabase Obj. Storage</td><td><b>Amazon S3</b></td></tr>
+  <tr><td>Public URL / TLS</td><td>*.vercel.app</td><td>Stable subdomain · Route 53/corp DNS · ACM TLS · Elastic IP or ALB , because SSO would need a fixed redirect url</td></tr>
+  <tr><td>Secrets</td><td>Vercel env vars</td><td>SSM Parameter Store / Secrets Manager</td></tr>
+  <tr><td>Identity</td><td>Azure AD SSO</td><td>Azure AD SSO — <i>unchanged</i> (only the redirect URI changes)</td></tr>
+  <tr><td>Mail functionality</td><td>mailto, graphapi alongwith safelinks added</td><td>Same, the safe link needs to be updated</td></tr>
+</table>
+
+<!-- 1 -->
+<h2 class="s" id="app"><span class="n">1</span>Some details about the application and stack</h2>
+<p>The application, NEXA tracks opportunities (BDs) through pricing, multi-level approval, SOW/PO signing, and project-code stages. It is used by roughly <b>55 </b>internal staff across US and India, with role-based visibility (SEL-> D -> ED -> PARTNER → ADMIN {finance team}). Concurrency is low (internal tool — a handful to low-tens of simultaneous users), but the data is commercially sensitive: <b>deal pricing, cost &amp; bill rates, gross margins, discounts, client billings, and signed SOW/PO documents</b>.</p>
+
+<p>NEXA is a single <b>Next.js 16 (App Router)</b> codebase that contains <i>both</i> the UI and the API in one deployable unit so there is no separate backend service to host:</p>
+<ul>
+  <li><b>Frontend</b> = React 19 components (pages, the pricing editor, tables, forms) rendered by the same Next.js server.</li>
+  <li><b>Backend</b> = "API routes" inside the same project (<code class="inl">app/api/**</code>) that handle every create/update/delete, file upload, and approval, plus server-side data fetching via Prisma.</li>
+</ul>
+<p>So one process serves HTML <i>and</i> JSON. That's why a single app server (EC2 or one ECS service) is all that's needed. state lives entirely in the database and object store, which makes the app horizontally scalable and easy to containerise later.</p>
+
+<!-- 2 -->
+<h2 class="s" id="current"><span class="n">2</span>Current stack (Vercel + Supabase)</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th><th>Notes</th></tr>
+  <tr><td>Hosting / compute</td><td><b>Vercel</b> (serverless functions)</td><td>Region <code class="inl">fra1</code> (Frankfurt). Auto-scaling, ephemeral instances.</td></tr>
+  <tr><td>Framework</td><td><b>Next.js 16</b> · React 19 · Prisma 7</td><td>App Router; server components + API routes in one codebase.</td></tr>
+  <tr><td>Relational database</td><td><b>Supabase PostgreSQL</b></td><td>Managed Postgres behind a pgBouncer pooler (transaction mode, port 6543). This is the "RDS equivalent" today.</td></tr>
+  <tr><td>Object storage</td><td><b>Supabase Storage</b></td><td>SOW / PO documents; served via short-lived signed URLs. The "S3 equivalent" today.</td></tr>
+  <tr><td>Authentication</td><td><b>Azure AD SSO</b> (NextAuth v4, OIDC)</td><td>Only pre-provisioned, active users may sign in. JWT sessions (8h), httpOnly secure cookies.</td></tr>
+  <tr><td>Email</td><td><b>Microsoft Graph API</b></td><td>Approval emails sent app-only from a shared mailbox.</td></tr>
+</table>
+<div class="diagram">
+  <span class="tag">Current architecture</span>
+  <div class="layer"><div class="box cli"><div class="t">Browser (US / India)</div><div class="d">React UI</div></div></div>
+  <div class="varrow">▼ HTTPS</div>
+  <div class="layer"><div class="box"><div class="t">Vercel</div><div class="d">Next.js serverless · FE + API in one</div></div></div>
+  <div class="varrow">▼</div>
+  <div class="layer">
+    <div class="box db"><div class="t">Supabase Postgres</div><div class="d">relational data</div></div>
+    <div class="box db"><div class="t">Supabase Storage</div><div class="d">SOW / PO files</div></div>
+    <div class="box ext"><div class="t">Azure AD</div><div class="d">SSO</div></div>
+    <div class="box ext"><div class="t">MS Graph</div><div class="d">email</div></div>
+  </div>
+</div>
+
+<!-- 3 -->
+<h2 class="s" id="proposed"><span class="n">3</span>Proposed stack (EC2 + RDS + S3)</h2>
+<table>
+  <tr><th>Component</th><th>Service</th><th>Role</th></tr>
+  <tr><td>App compute</td><td><b>Amazon EC2</b> + Nginx + systemd<br></td><td>Runs the whole app. Nginx terminates TLS + reverse-proxies. Process-managed for auto-restart.</td></tr>
+  <!--<tr><td>App compute (future)</td><td><b>ECS on Fargate</b><br><span class="pill info">optional upgrade</span></td><td>Containerised, no OS to patch, rolling deploys. Natural next step once stable.</td></tr>
+--> <tr><td>Relational DB</td><td><b>Amazon RDS for PostgreSQL</b></td><td>Managed Postgres, private subnet, SSL, encrypted, automated backups.</td></tr>
+  <tr><td>Object storage</td><td><b>Amazon S3</b></td><td>Private buckets for SOW/PO docs; access via presigned URLs only.</td></tr>
+  <tr><td>Edge / TLS</td><td><b>Nginx</b> or <b>ALB</b> + <b>ACM</b></td><td>HTTPS termination; stable address (Elastic IP or ALB DNS) behind a fixed subdomain.</td></tr>
+  <tr><td>DNS</td><td><b>Route 53</b></td><td>The stable subdomain registered as the Azure AD redirect URI + email base URL.</td></tr>
+  <tr><td>Secrets</td><td><b>SSM Parameter Store</b> / <b>Secrets Manager</b></td><td>Azure secret, DB creds, NextAuth secret, etc</td></tr>
+  <tr><td>CI/CD</td><td>GitHub Actions (OIDC → AWS)</td><td>Build + deploy from the ProcDNA GitHub repo; keyless federation preferred over stored AWS keys.</td></tr>
+  <tr><td>Process manager</td><td>PM2</td><td>to keep the process (nextjs) process running and restart if it crashes.</td></tr>
+  <tr><td>Logs</td><td><b>CloudWatch Logs</b></td><td>App stdout shipped off the box (Vercel's logging goes away).</td></tr>
+</table>
+<div class="diagram">
+  <span class="tag">Proposed AWS architecture</span>
+  <div class="layer"><div class="box cli"><div class="t">Browser (US / India)</div><div class="d">React UI</div></div></div>
+  <div class="varrow">▼ HTTPS · stable subdomain</div>
+  <div class="layer"><div class="box"><div class="t">Nginx / ALB + ACM TLS</div><div class="d">TLS termination · reverse proxy · (WAF / rate-limit)</div></div></div>
+  <div class="varrow">▼ public subnet</div>
+  <div class="layer"><div class="box"><div class="t">EC2 — Next.js app</div><div class="d">FE + API · IAM instance role · systemd</div></div></div>
+  <div class="varrow">▼ private subnet / VPC-internal</div>
+  <div class="layer">
+    <div class="box db"><div class="t">Amazon RDS</div><div class="d">PostgreSQL · private · encrypted</div></div>
+    <div class="box db"><div class="t">Amazon S3</div><div class="d">SOW / PO · presigned URLs</div></div>
+    <div class="box ext"><div class="t">Azure AD</div><div class="d">SSO (unchanged)</div></div>
+    <div class="box ext"><div class="t">MS Graph</div><div class="d">email</div></div>
+  </div>
+  <div class="legend">
+    <span><span class="sw" style="background:#EDEFF7;border-color:#C2C9E6"></span> client / app</span>
+    <span><span class="sw" style="background:#EAF6EF;border-color:#B6E2C7"></span> AWS data store</span>
+    <span><span class="sw" style="background:#FFF7EC;border-color:#EAD3A6"></span> external Microsoft service</span>
+  </div>
+</div>
+
+<!-- 4 -->
+<h2 class="s" id="sizing"><span class="n">4</span>Compute &amp; sizing</h2>
+<p>Profile: server-side rendering + Prisma queries for ~55 internal users with low concurrency. Memory matters more than CPU for Next.js; synchronous Excel parse/export cause cpu spikes. </p>
+<table>
+  <tr><th>Resource</th><th>Start with</th><th>Headroom</th><th>Reasoning</th></tr>
+  <tr><td><b>EC2</b> — app server</td><td><code class="inl">t3.large</code><br>2 vCPU · 4 GB</td><td><code class="inl">-</code>  <code class="inl">t4g.large</code><br>2 vCPU · 8 GB</td><td>4 GB is the comfortable floor for SSR + headroom. <code class="inl">t4g</code> (Graviton/ARM) is ~20% cheaper; Node/Next support ARM.</td></tr>
+  <tr><td><b>ECS Fargate</b> takes some more work to contanerize </td><td>1 vCPU · 2 GB</td><td>1 vCPU · 4 GB × 2 tasks</td><td>Two tasks behind an ALB = zero-downtime deploys + redundancy.</td></tr>
+  <tr><td><b>RDS</b> — database</td><td><code class="inl">db.t3.small</code><br>2 vCPU · 2 GB</td><td><code class="inl">db.t4g.medium</code><br>2 vCPU · 4 GB</td><td>Small DB ,documents live in S3, not the DB. Burstable class fits spiky internal use.</td></tr>
+  <tr><td><b>RDS storage</b></td><td><code class="inl">gp3</code>, 20–50 GB, autoscale on</td><td>—</td><td>Grows slowly; files aren't stored here.</td></tr>
+  <tr><td><b>S3</b></td><td>Pay-per-use (no sizing)</td><td>—</td><td>Private buckets ·versioning.</td></tr>
+  <tr><td><b>NAT Gateway</b></td><td>Not required</td><td>—</td><td>EC2 sits in a public subnet (direct egress via IGW);</td></tr>
+</table>
+<!--<div class="callout warn"><b>One operational note:</b> <code class="inl">next build</code> is memory-hungry and can OOM on a 2 GB box. We'll build in <b>GitHub Actions (CI)</b> or inside the container image rather than on a small instance — so the runtime instance can stay modest.</div>
+-->
+<!-- 5 -->
+<h2 class="s" id="network"><span class="n">5</span>Networking &amp; security model</h2>
+<p>Standard two-tier isolation: the app is reachable from the internet; the database is not.</p>
+<pre>VPC  (e.g. 10.0.0.0/16)  — target region
+├─ Public subnet   10.0.1.0/24   (AZ-a)  →  EC2 app server (+ ALB)
+├─ Private subnet  10.0.11.0/24  (AZ-a)  →  RDS
+└─ Private subnet  10.0.12.0/24  (AZ-b)  →  RDS (DB subnet group needs 2 AZs)</pre>
+<div class="grid2">
+  <div>
+    <h4 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Security groups</h4>
+    <ul>
+      <li><b>App Security Group (EC2):</b> inbound <code class="inl">443/80</code> from internet (or from the ALB);</li>
+      <li><b>DB Security Group (RDS):</b> inbound <code class="inl">5432</code> only from the App SG — referenced by SG, not IP. Nothing else can reach the database.</li>
+    </ul>
+  </div>
+  <div>
+    <h4 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Data protection</h4>
+    <ul>
+      <li><b>At rest:</b> RDS storage encryption (KMS) + S3 default SSE.</li>
+      <li><b>In transit:</b> HTTPS to the app; <code class="inl">sslmode=require</code> to RDS.</li>
+      <li><b>Isolation:</b> RDS not publicly accessible; private subnets.</li>
+      <li><b>Identity:</b> MFA and (SSO) Conditional Access inherited from Azure AD.</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="appsec">Application-level security already in place now</h3>
+<p>Beyond the AWS infrastructure controls above, NEXA already ships these protections in the application itself — they carry over to AWS unchanged:</p>
+<table>
+  <tr><th>Control</th><th>How it works</th></tr>
+  <tr><td><b>Single Sign-On (Azure AD)</b></td><td>Login is delegated to corporate Azure AD over OIDC — the app stores no passwords of its own. MFA / Conditional Access is enforced at the identity provider.</td></tr>
+  <tr><td><b>Provisioning gate</b></td><td>Only users who are pre-provisioned and marked active are allowed in; simply having a tenant account is not enough to sign in.</td></tr>
+  <tr><td><b>Signed session tokens</b></td><td>Sessions are HMAC-signed JWTs held in <code class="inl">httpOnly</code> + <code class="inl">Secure</code> + <code class="inl">SameSite</code> cookies with an 8-hour expiry — not readable by browser scripts and not forgeable.</td></tr>
+  <tr><td><b>Global authentication gate</b></td><td>Middleware forces every non-public request through the auth check before it reaches any page or API route.</td></tr>
+  <tr><td><b>Role-based access control (RBAC)</b></td><td>Every data query is scoped by the user's role (SEL → Director → ED → Partner → Admin), so users only ever receive the records they're entitled to see.</td></tr>
+  <tr><td><b>SQL-injection protection</b></td><td>All database access goes through Prisma's parameterized query builder — there is no raw, string-concatenated SQL anywhere in the app.</td></tr>
+  <tr><td><b>XSS protection</b></td><td>The React / Next.js UI auto-escapes all rendered output, so user-supplied content (names, notes, justifications) cannot inject executable script into the pages.</td></tr>
+  <tr><td><b>CSRF protection</b></td><td>The authentication layer issues anti-CSRF tokens on its sign-in / sign-out endpoints, preventing forged cross-site auth requests.</td></tr>
+  <tr><td><b>Private document storage</b></td><td>SOW / PO files are never publicly accessible; they are served only through short-lived (1-hour) signed URLs scoped to a single object.</td></tr>
+  <tr><td><b>Tamper-proof email actions</b></td><td>The one-click approve / reject email links carry an HMAC-signed, time-limited token that cannot be forged or altered .</td></tr>
+  <tr><td><b>Secret hygiene</b></td><td>Credentials live in environment / secret storage and are never committed to the codebase (enforced via <code class="inl">.gitignore</code>); all secrets are rotated as part of the migration.</td></tr>
+</table>
+
+<!-- 6 -->
+<h2 class="s" id="iam"><span class="n">6</span>IAM &amp; permissions</h2>
+<p>Since you own access allocation, here's what the application and I think I need </p>
+<table>
+  <tr><th>Principal</th><th>Needs</th><th>Why</th></tr>
+  <tr><td><b>EC2 instance role</b> (the app)</td><td><code class="inl">s3:GetObject</code> / <code class="inl">s3:PutObject</code> on the NEXA bucket; <code class="inl">ssm:GetParameter*</code> on the NEXA path; <code class="inl">logs:*</code> for its log group</td><td>So the app reads/writes documents and pulls secrets <b>without any static AWS keys on disk</b>.</td></tr>
+  <tr><td><b>GitHub Actions role</b> (deploy)</td><td>OIDC-federated role scoped to deploy (push image to ECR / update the service, or SSM-run a pull on EC2)</td><td>Keyless CI/CD from the ProcDNA repo so no long-lived AWS credentials in GitHub.</td></tr>
+  <tr><td><b>My build access</b></td><td>Permission to create VPC/EC2/RDS/S3 in a dev sub-account or maybe <i>or</i> you pre-create them and hand me endpoints + the instance role</td></tr>
+</table>
+<!--<p>External (non-AWS) credentials the app uses — Azure client secret, <code class="inl">NEXTAUTH_SECRET</code>, mail/HMAC secrets — would live in Secrets Manager / Parameter Store, not in the AMI or env files. All current secrets are being rotated as part of the move.</p>
+-->
+<!-- 7 -->
+<h2 class="s" id="decisions"><span class="n">7</span>Decisions I need from you</h2>
+<ol>
+  <li><b>Region / data residency.</b> We're on Frankfurt (fra1) today; default proposal is eu-central-1 to match. But users are in <b>US + India</b> — if residency rules or latency push toward usa-east-1 or ap-south-1 (Mumbai) </li>
+  <li><b>Existing VPC or new?</b> Should NEXA deploy into an existing AUXO VPC (with the firm's CIDR/subnet standards) or a new dedicated one?</li>
+  <li><b>Stable address: Elastic IP or ALB?</b> Single EC2 + Elastic IP (cheapest) vs ALB (cleaner TLS via ACM, easy HA later).</li>
+  <li><b>EC2 to start vs ECS Fargate now?</b> I'm proposing EC2 first for speed/simplicity; if the firm standardises on ECS/containers, I'll containerise up front. </li>
+  <li><b>RDS Multi-AZ &amp; backup retention</b> for an internal tool — your policy.</li>
+  <li><b>Domain / DNS ownership</b> — who controls the firm domain, and can I get a subdomain (e.g.nexa.procdna.com)? This is the long pole because of SSO. </li>
+  <li><b>Secrets standard</b> — SSM Parameter Store vs Secrets Manager. </li>
+</ol>
+
+<!-- 8 -->
+<h2 class="s" id="flows"><span class="n">8</span>Flow diagrams — how the mechanics work</h2>
+
+<h3>8.1 — A normal request &amp; authentication</h3>
+<p>Every request is gated centrally before it reaches any page or API. This is the path for both an HTML page load and an API call.</p>
+<div class="diagram">
+  <ol>
+    <li><b>Browser</b> — sends the request with the <b>session cookie</b> (a signed JWT) over HTTPS to the stable subdomain.</li>
+    <li><b>Edge</b> — Nginx / ALB terminates TLS and forwards to the EC2 app, adding <code class="inl">X-Forwarded-Proto: https</code>.</li>
+    <li><b>Auth gate (proxy.ts)</b> — the global middleware verifies the JWT. No valid token → redirect to <code class="inl">/login</code> → Azure AD SSO → the app confirms the user is provisioned &amp; active → a fresh JWT is issued.</li>
+    <li><b>Handler</b> — request reaches a Server Component (page) or an API route. The token yields <code class="inl">{ id, role, location }</code>.</li>
+    <li><b>RBAC</b> — the user's role is turned into a query filter (SEL sees own; Director/ED down the hierarchy; Partner/Admin all), applied to the Prisma query.</li>
+    <li><b>Data</b> — Prisma → <b>RDS (PostgreSQL)</b> over SSL. Documents are returned as short-lived <b>S3 presigned URLs</b>, never as raw files.</li>
+    <li><b>Response</b> — rendered <b>HTML</b> (pages) or <b>JSON</b> (API) back to the browser.</li>
+  </ol>
+</div>
+
+<h3>8.2 — Email approval &amp; one-click verification</h3>
+<p>Approvers can act <b>straight from their inbox without logging in</b>. The security of that rests on a signed, expiring token — this is the "email verification" mechanism.</p>
+<div class="diagram">
+  <ol>
+    <li><b>Request raised</b> — a user sends an opportunity for approval. An <code class="inl">ApprovalRequest</code> row is created and the opportunity stage advances.</li>
+    <li><b>Email sent (MS Graph)</b> — an email goes to the approver with <b>Approve</b> / <b>Reject</b> buttons. Each button's URL carries a token:
+      <pre style="margin:8px 0 0"><span class="c">// HMAC-SHA256 signed, 7-day expiry</span>
+token = base64url( approvalId | approverId | action | expiry )
+        + "." + HMAC_SHA256(payload, SECRET)</pre>
+      The signature means the link <b>cannot be forged or tampered with</b> — change any field and the signature no longer matches.</li>
+    <li><b>Approver clicks (GET)</b> — hits <code class="inl">/api/approvals/email-action?token=…</code>. The server <b>verifies the token</b>: signature valid, not expired, the approver matches, the request is still PENDING. It then renders an "Are you sure?" confirmation page. <b>GET never changes anything</b> — deliberately, so email-scanner / Safe-Links pre-fetches can't auto-approve.</li>
+    <li><b>Approver confirms (POST)</b> — the confirm button POSTs the same token. The server re-verifies, updates the <code class="inl">ApprovalRequest</code> to APPROVED/REJECTED, moves the opportunity stage, and (for a pricing rejection) cascades to invalidate the parallel SOW track.</li>
+    <li><b>Result email</b> — both requester and approver are emailed the outcome. The original inbox links are now inert (the request is no longer PENDING).</li>
+  </ol>
+  <p style="font-size:12px;color:var(--muted);margin:6px 0 0"><b>Why this matters for hosting:</b> the email links are absolute URLs built from the app's base URL, and Safe Links rewrites/pre-scans them — another reason the public domain must be stable and the GET action must be side-effect-free.</p>
+</div>
+
+<h3>8.3 — Document upload &amp; serving (S3 path)</h3>
+<div class="diagram">
+  <div class="arrowcol">
+    <div class="box cli"><div class="t">Browser</div><div class="d">selects SOW/PO file</div></div>
+    <span class="ar">→</span>
+    <div class="box"><div class="t">API route</div><div class="d">validates · issues <b>presigned PUT</b></div></div>
+    <span class="ar">→</span>
+    <div class="box db"><div class="t">S3 (private)</div><div class="d">browser uploads directly</div></div>
+  </div>
+  <div class="varrow">▼ later, to view</div>
+  <div class="arrowcol">
+    <div class="box cli"><div class="t">Browser</div><div class="d">opens document</div></div>
+    <span class="ar">→</span>
+    <div class="box"><div class="t">API route</div><div class="d">issues 1-hour <b>presigned GET</b></div></div>
+    <span class="ar">→</span>
+    <div class="box db"><div class="t">S3 (private)</div><div class="d">temporary signed link</div></div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin:8px 0 0">Files never transit the app server in bulk and the bucket is never public — every access is a short-lived signed URL scoped to one object. The app authenticates to S3 via the <b>EC2 instance role</b> (no stored keys).</p>
+</div>
+
+
+</div>
+</main>
+</div>
+</body>
+</html>

@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/rate-cards — list active rate cards (job role × location × cost/bill rate).
+// Big picture: rate cards are the source of staffing bill/cost rates used across ALL
+// pricing. Decimals are coerced to Number for the client. Visible to any signed-in
+// user — note this includes sensitive cost rates / margin inputs.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

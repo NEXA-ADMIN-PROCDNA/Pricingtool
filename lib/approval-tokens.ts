@@ -1,3 +1,17 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// approval-tokens.ts — signed tokens for the one-click email approval links.
+//
+// Big picture: approval emails contain "Approve" / "Reject" buttons that work
+// WITHOUT logging in. The capability to act is carried by a self-contained signed
+// token: base64url(approvalId|approverId|action|expiry) + an HMAC-SHA256 signature.
+// The email-action route verifies the signature, so a recipient can act straight
+// from their inbox, but nobody can forge or tamper with a link. TTL = 7 days, and
+// the signing key is NEXTAUTH_SECRET (shared with the session JWT).
+//
+// RISK: secret() falls back to '' if NEXTAUTH_SECRET is unset → tokens would sign
+// and verify under an empty key, making them forgeable. And verify uses a plain
+// string `!==` compare, not a timing-safe one. (See audit S13.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { createHmac } from 'crypto'
 
 const TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days

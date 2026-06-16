@@ -1,4 +1,7 @@
 'use client'
+// TabSoP — Pricing drawer ▸ "Schedule of Payments" sub-tab. Big picture: spreads the
+// project's billings/costs across calendar months (Mon–Fri working-day weighting via
+// utils) to show the month-by-month payment plan. A display/derived view.
 import type { ReactNode } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, OtherCostRow } from './types'

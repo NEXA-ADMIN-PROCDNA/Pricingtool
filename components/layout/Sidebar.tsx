@@ -1,4 +1,10 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// Sidebar — the global left navigation (client component).
+// Big picture: the nav rail (Pipeline / Clients / Approvals / …), the signed-in user
+// chip with sign-out, and a pin/expand toggle persisted to localStorage (PIN_KEY). Uses
+// usePathname to highlight the active route and useSession for the user identity.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from 'react'
 
 const PIN_KEY = 'nexa.sidebar.pinned'

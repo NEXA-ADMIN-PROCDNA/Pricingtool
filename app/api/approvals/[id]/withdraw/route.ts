@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/approvals/[id]/withdraw — the REQUESTER pulls back their own pending
+// request (gated on requestedById === you, NOT on being the approver).
+//
+// Big picture: same cascade philosophy as reject — withdrawing a PRICING request
+// also withdraws any parallel SOW verification and resets the opportunity to
+// PRICE_LINKED; a SOW-verification withdrawal only rolls its own track back to
+// SOW_SUBMITTED. Emails both parties so the now-dead inbox links are explained.
+// (This one IS wrapped in try/catch, unlike approve/reject — but still not a single
+// $transaction.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

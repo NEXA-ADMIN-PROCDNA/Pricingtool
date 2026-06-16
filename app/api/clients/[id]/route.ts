@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH/DELETE /api/clients/[id] — admin-only client edit and delete.
+// Big picture: edits the client IN PLACE (same id) so every opportunity/POC pointing
+// at it stays valid; clientId is the admin-assigned human code (nullable, unique).
+// DELETE is a HARD delete, blocked while the client still has opportunities (POCs
+// cascade). A P2002 error = the assigned clientId is already taken.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

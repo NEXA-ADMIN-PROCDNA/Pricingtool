@@ -1,3 +1,17 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/approvals — CREATE an approval request + send mail.
+//
+// Big picture: the "send for approval" action. computeContext() snapshots the final
+// pricing version's numbers (revenue, gross margin, hours, offshore %, discount vs
+// recommended) into the email, then it creates the ApprovalRequest, advances the
+// stage (APPROVAL_PENDING or SOW_REVIEW_PENDING), and notifies the approver (with
+// action buttons), the CC list, and the requester.
+//
+// RISK (high): requestedById and approverId are read from the request BODY, not the
+// session, and there's no check that the caller owns the opportunity — so a user can
+// open a request "as" someone else, to any approver, on any opp id. Use token.id and
+// add an ownership gate. (See audit S4.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

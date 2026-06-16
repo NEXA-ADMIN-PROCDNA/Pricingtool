@@ -1,3 +1,25 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// supabase.ts — file storage layer (SOW & PO documents).
+//
+// Big picture: NEXA stores uploaded SOW/PO files in Supabase Storage buckets and
+// serves them via short-lived signed URLs. The service-role key is used because
+// auth is NextAuth, not Supabase Auth — so Supabase RLS is bypassed and access
+// control is OUR responsibility in the API routes.
+//
+// Two halves:
+//   • getSupabase()  — lazy singleton client (never built at module load, so a
+//     missing env var doesn't crash the whole bundle just by importing this file).
+//   • getSignedUrl() — wraps Supabase's 1-hour signed URLs with a 55-min in-memory
+//     cache so repeated list calls don't re-sign the same path every time.
+//
+// NOTE (AWS migration): this whole file is what gets rewritten for S3 —
+// getSupabase → S3 client, getSignedUrl → @aws-sdk/s3-request-presigner. Keep the
+// bucket PRIVATE and use an EC2 instance role (no static keys). (See audit A3.)
+// RISK (AWS): the urlCache Map below never evicts expired entries — on a
+// long-lived EC2 process it grows unbounded (slow memory leak). Self-cleans on
+// Vercel because instances recycle. (See audit A5.)
+// (Bucket name PO_busket is a deliberate, baked-in typo — do not "fix" it.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 export const SOW_BUCKET = 'SoW_bucket'

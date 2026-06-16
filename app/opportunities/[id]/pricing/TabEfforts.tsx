@@ -1,4 +1,11 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// TabEfforts — Pricing drawer ▸ "Efforts" sub-tab (the staffing grid).
+// Big picture: the spreadsheet-like core of pricing — one row per staffing resource ×
+// one column per project week, where you key in hours (or set utilisation % and let it
+// auto-fill prorated hours via pricing/utils). Edits flow up to PricingDrawer state,
+// which recomputes all downstream metrics live. The heaviest interactive surface.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useMemo } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { toast } from 'sonner'

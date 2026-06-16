@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/other-costs — add a non-staffing cost line.
+// Big picture: costs outside the rate-card staffing model (licences, travel,
+// pass-through). amount + optional markupPct feed the pricing revenue/margin math;
+// lineOfBusiness tags which LoB the cost belongs to. (No ownership gate — IDOR, S5.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

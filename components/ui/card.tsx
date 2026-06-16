@@ -1,3 +1,5 @@
+// ui/card.tsx — shadcn Card primitives (Card + Header/Title/Content/Footer slots). Generic
+// surface/container styling used throughout the UI.
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

@@ -1,3 +1,7 @@
+// stageNextSteps.ts — UI hint text mapping each opportunity STAGE to the single
+// next action the owner should take ("what now?" nudge). Keep these labels in sync
+// with the OpportunityStage enum and the real transition rules in the approval
+// routes — this map is display-only and does not enforce anything.
 export const STAGE_NEXT_STEPS: Record<string, string> = {
   LEAD:                  'Create a pricing version',
   PRICE_LINKING_PENDING: 'Mark a version as final',

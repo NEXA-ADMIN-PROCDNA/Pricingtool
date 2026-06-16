@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/client-pocs — add a point-of-contact to a client. Big picture: POCs are
+// the client-side people attached to a Client, shown on the client + opportunity
+// pages. Open to any signed-in user by design (no role gate); any clientId can be
+// targeted.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

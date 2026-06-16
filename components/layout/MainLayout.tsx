@@ -1,3 +1,6 @@
+// MainLayout — the app chrome shared by every page: fixed Sidebar + an optional sticky
+// header (title + action slot) + a scroll/padding-configurable main area. Pure layout,
+// no data. Pages wrap their content in this to get the consistent shell.
 import { Sidebar } from './Sidebar'
 
 export function MainLayout({

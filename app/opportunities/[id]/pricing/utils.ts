@@ -1,3 +1,19 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// pricing/utils.ts — the pricing MATH (pure functions, no DB, no React).
+//
+// Big picture: every number the pricing UI shows is derived here from staffing rows +
+// the project date window. Two clusters:
+//   • Money/metrics — computeFromRows() turns staffing × weekly hours × rates into
+//     billings, cost, gross margin %, offshore %, effective rate and discount/premium %.
+//     computeFte() expresses total hours as full-time-equivalents.
+//   • Calendar — week columns, working-day counts and proration. ALL of it runs in UTC
+//     (utcDateOnly) so a week / working day lands on the same calendar day on every
+//     browser and server regardless of timezone — critical, since hours are bucketed by
+//     Monday-week and split across months for the schedule / financial tabs.
+//
+// The 520-week (~10yr) cap in getWeekColumns guards against an end-date typo blowing up
+// the grid. Display helpers (fmt / fmtMoneyExact / fmtDate) live here too.
+// ─────────────────────────────────────────────────────────────────────────────
 import type { StaffRow, ComputedMetrics } from './types'
 
 export function fmtRole(r: string) {

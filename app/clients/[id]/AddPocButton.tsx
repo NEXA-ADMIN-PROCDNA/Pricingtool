@@ -1,4 +1,6 @@
 'use client'
+// AddPocButton — adds a point-of-contact to a client (POST /api/client-pocs), then
+// refreshes the client detail page. Small inline form/dialog.
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'

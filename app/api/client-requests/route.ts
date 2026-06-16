@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/client-requests — GET pending requests; POST request a new client.
+// Big picture: non-admins can't create clients directly — they file a ClientRequest
+// that an admin approves (the [reqId]/approve route then creates the real Client with
+// a CL-NNN id). This is the request side of that workflow.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

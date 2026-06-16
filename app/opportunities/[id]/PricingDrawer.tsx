@@ -1,4 +1,17 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// PricingDrawer — the pricing editor (client component, the app's most complex screen).
+//
+// Big picture: a slide-over with five sub-tabs (Basic Details / Efforts / Other Cost /
+// Financial / Schedule of Payments) for ONE pricing version. It loads the version's
+// staffing into local StaffRow state, lets the user edit weekly hours / rates /
+// utilisation, and recomputes all metrics LIVE via pricing/utils (computeFromRows, etc.)
+// before persisting through the /pricing-versions/[pvId]/staffing routes.
+//
+// `locked` = version.isFinal AND currentStage ∈ LOCKED_STAGES — once an approval is in
+// flight the final version is read-only. NOTE it uses currentStage (the live prop), not
+// the stale page-load opp.stage, so the lock reflects reality.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { OpportunityDetail } from '@/lib/db/opportunities'

@@ -1,3 +1,4 @@
+// _logo.ts — base64 data-URI logo constants (ProcDNA + NEXA marks) for the login page.
 // Inlined logos rendered as data: URIs. Serving these from /public via a URL
 // returned broken images in this environment (Next dev cache / _next/image /
 // CDN), so we embed them directly in the component bundle instead.

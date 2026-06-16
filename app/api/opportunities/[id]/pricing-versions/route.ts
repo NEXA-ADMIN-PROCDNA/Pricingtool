@@ -1,3 +1,10 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/pricing-versions — create a new pricing version.
+// Big picture: an opportunity can hold multiple pricing scenarios; versionNumber
+// auto-increments off the latest. Creating the FIRST one moves the opp LEAD →
+// PRICE_LINKING_PENDING. Returns the version with its (empty) staffing/schedule/
+// financial relations ready for the pricing drawer to fill in.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

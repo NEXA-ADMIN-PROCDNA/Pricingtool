@@ -1,3 +1,8 @@
+// app/dashboard/page.tsx — the dashboard / pipeline landing page (server component).
+// Big picture: loads the session, fetches the RBAC-scoped opportunity list
+// (getOpportunities applies the owner filter) and renders the SearchBar, ExportButton and
+// the client <OpportunityTable> (which derives the KPI strip from the filtered rows).
+// NOTE (per AGENTS.md): do NOT add 'use server' here — it breaks page rendering.
 import { Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -5,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getOpportunities } from '@/lib/db/opportunities'
+import { prisma } from '@/lib/prisma'
 import { OpportunityTable } from './OpportunityTable'
 import { SearchBar } from './SearchBar'
 import { ExportButton } from './ExportButton'
@@ -84,7 +90,19 @@ export default async function DashboardPage({
   // Fetch the full role-scoped set (status filtering happens client-side in the
   // table). This keeps the status-tab count badges accurate for every status —
   // server-side status filtering would zero out the non-active tabs.
-  const rows = await getOpportunities('ALL', q, auth)
+  // The bell badge count mirrors the /approvals inbox scoping: ADMIN sees all
+  // pending requests, everyone else only those assigned to them as approver.
+  const [rows, pendingApprovals] = await Promise.all([
+    getOpportunities('ALL', q, auth),
+    userId
+      ? prisma.approvalRequest.count({
+          where: {
+            status: 'PENDING',
+            ...(role === 'ADMIN' ? {} : { approverId: userId }),
+          },
+        })
+      : Promise.resolve(0),
+  ])
 
   const banner  = ROLE_BANNER[role] ?? { label: 'Nexa', restriction: '' }
 
@@ -117,13 +135,29 @@ export default async function DashboardPage({
             <SearchBar />
           </Suspense>
 
-          {/* Bell */}
-          <div style={{ color: C.inkMuted, padding: 6, position: 'relative', display: 'grid', placeItems: 'center' }}>
+          {/* Bell — links to the approvals inbox; badge shows pending count, hidden at zero */}
+          <Link
+            href="/approvals"
+            title={pendingApprovals > 0
+              ? `${pendingApprovals} pending approval${pendingApprovals === 1 ? '' : 's'}`
+              : 'Approvals inbox'}
+            style={{ color: C.inkMuted, padding: 6, position: 'relative', display: 'grid', placeItems: 'center' }}
+          >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
               <path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 20a2 2 0 01-3.4 0"/>
             </svg>
-            <div style={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: C.accent }} />
-          </div>
+            {pendingApprovals > 0 && (
+              <span style={{
+                position: 'absolute', top: -2, right: -4,
+                minWidth: 15, height: 15, padding: '0 4px',
+                borderRadius: 999, background: C.accent, color: '#F4F6FB',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 9.5, fontWeight: 600, lineHeight: '15px', textAlign: 'center',
+              }}>
+                {pendingApprovals > 9 ? '9+' : pendingApprovals}
+              </span>
+            )}
+          </Link>
 
           {/* Export — admin only */}
           {role === 'ADMIN' && <ExportButton />}

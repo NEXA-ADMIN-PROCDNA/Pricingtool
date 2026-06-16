@@ -1,3 +1,13 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// prisma/seed-efforts.ts — second-pass seeder: fills in staffing + comments for the
+// demo opportunities BD-003 … BD-009 created by seed.ts.
+//
+// Big picture: for each opp it finds the final (or latest) pricing version, seeds a
+// realistic resource mix with 8 weeks of hours, and adds a couple of in-character
+// comments — but ONLY when none exist yet (idempotent: re-running skips already-seeded
+// opps). Run after seed.ts. Connects directly via DATABASE_URL + the procdna_database
+// schema. Like seed.ts this is demo data tied to the BD-NNN sample world.
+// ─────────────────────────────────────────────────────────────────────────────
 import 'dotenv/config'
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'

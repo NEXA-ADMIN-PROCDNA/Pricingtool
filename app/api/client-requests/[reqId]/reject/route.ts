@@ -1,3 +1,5 @@
+// POST /api/client-requests/[reqId]/reject — admin rejects a new-client request
+// (marks it REJECTED with reviewer + timestamp; no Client is created).
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

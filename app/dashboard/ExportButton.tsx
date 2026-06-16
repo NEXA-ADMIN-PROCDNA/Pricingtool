@@ -1,4 +1,7 @@
 'use client'
+// ExportButton — admin-only "Sync to SharePoint / download" action. Calls
+// /api/export/opportunities (POST overwrites the shared workbook in place; GET downloads
+// a copy). Shows toast feedback for the locked-file / permission error cases.
 import { useState } from 'react'
 import { toast } from 'sonner'
 

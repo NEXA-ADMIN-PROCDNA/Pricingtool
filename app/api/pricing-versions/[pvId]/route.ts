@@ -1,3 +1,23 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/pricing-versions/[pvId] — read / update / delete a single pricing version.
+//
+// Big picture: the heart of the pricing drawer's persistence.
+//   • GET    — full version graph (staffing + weekly hours + schedule + financials)
+//              plus the parent opp's primaryLob/stage.
+//   • PATCH  — save summary metrics AND/OR flip isFinal. Marking a version final is the
+//              important bit: it unsets siblings, RECOMPUTES the opportunity's primaryLob
+//              from this version's staffing (computeMajorityLob), and moves the stage to
+//              PRICE_LINKED.
+//   • DELETE — drop a version.
+//
+// computeMajorityLob / normalizeLob: tally each staffing row's Line-of-Business weighted
+// by (effectiveBillRate × hours), falling back to hours when the rate is 0, and pick the
+// top one — this is the "LoB Revenue Mix" the UI shows.
+//
+// Guard (PRICING_LOCKED): promoting a DIFFERENT version to final is blocked once an
+// approval is in flight (APPROVAL_PENDING / SOW_REVIEW_PENDING / TO_BE_ARCHIVED) so
+// approved pricing can't be silently swapped out from under a granted approval.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

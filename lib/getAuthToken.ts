@@ -1,3 +1,23 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// getAuthToken — the ONE way the whole app reads the logged-in user.
+//
+// Big picture: every API route and the proxy call this instead of next-auth's raw
+// getToken(). It decrypts the NextAuth session cookie (a signed JWT) and returns
+// { id, role, location, email, … } or null. Centralising it means the cookie-name
+// and secret handling live in exactly one place.
+//
+// Why the explicit params: on Vercel's Edge runtime NextAuth's auto-detection of
+// the secret and cookie name is unreliable (env vars aren't always inlined into
+// the bundle), which caused silent login loops and 401s. Passing them explicitly
+// removes the guessing.
+//
+// RISK (latent login loop): the secure-cookie detection below keys off the EXACT
+// cookie name. When the session JWT grows past ~4KB (e.g. a user in many Azure AD
+// groups), NextAuth SPLITS it into `…session-token.0`, `.1`, … and never sets the
+// un-suffixed base name — so the check returns false, the wrong name is used,
+// getToken returns null, and that user is stuck redirecting to /login forever.
+// Fix = also check for the `.0` chunk. (See docs/codebase-audit.html · C1.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { getToken } from 'next-auth/jwt'
 import type { NextRequest } from 'next/server'
 

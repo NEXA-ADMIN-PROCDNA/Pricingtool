@@ -1,4 +1,17 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// OpportunityTabs — the opportunity DETAIL page shell (client component).
+//
+// Big picture: renders the tabbed detail view (Details / Pricing / Pricing Approval /
+// SOW · PO / Project Code / Comments) and owns most of the page's interactivity:
+//   • Holds LIVE copies of pricingVersions + primaryLob in state, because marking a
+//     version final recomputes them server-side and the page-load props go stale.
+//   • Opens the PricingDrawer for a version, passing the LIVE stage as currentStage so
+//     the drawer's lock logic uses current (not page-load) state.
+//   • Gates tab visibility/dimming by stage and shows the withdraw button only to the
+//     owner of a pending pricing request.
+// (Stage-gating here is UX only — the server is the real authority. See audit S6.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'

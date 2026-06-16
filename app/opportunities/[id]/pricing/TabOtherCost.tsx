@@ -1,4 +1,7 @@
 'use client'
+// TabOtherCost — Pricing drawer ▸ "Other Cost" sub-tab. Lists and edits non-staffing cost
+// lines (licences, travel, pass-through): amount, markup %, billable toggle, and the
+// Line-of-Business tag. Persists through the /opportunities/[id]/other-costs routes.
 import type { OtherCostRow } from './types'
 import { fmt } from './utils'
 

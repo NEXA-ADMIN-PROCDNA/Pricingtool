@@ -1,3 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/opportunities — list (GET) and create (POST) opportunities.
+//
+// Big picture: GET applies RBAC via getOpportunities(auth) so each role sees only
+// what it should. POST generates the next human id (OPP-YY-NNNN, resets each year),
+// creates the opportunity owned by the caller (ownerId from the token), and
+// optionally attaches new POCs.
+//
+// RISK: nextOpportunityId() does a read-then-insert with no lock — two concurrent
+// creates can compute the same id (collision), and the desc string ordering
+// mis-sorts once the counter passes 9999. (See audit C4.) POST also doesn't check
+// the dates parse (garbage → 500) and uses parseInt on revenue ("1.5M" → 1). (C7.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

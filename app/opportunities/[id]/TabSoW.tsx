@@ -1,4 +1,8 @@
 'use client'
+// TabSoW — opportunity ▸ "SOW / PO" tab. Big picture: the document area — upload (browser
+// → Supabase via a signed URL, then /confirm), list with download links, and soft-delete,
+// for both SOW and PO docs. Also surfaces the pre-contract-agreed toggle that gates the
+// SOW_PENDING → SOW_SUBMITTED transition.
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'

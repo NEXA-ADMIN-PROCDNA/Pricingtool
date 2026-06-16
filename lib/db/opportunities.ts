@@ -1,3 +1,20 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// db/opportunities.ts — opportunity read layer + the RBAC core.
+//
+// Big picture: server components call these helpers to fetch opportunities. The
+// key function is resolveOwnerFilter() — it turns the signed-in user's ROLE into a
+// Prisma `where` fragment, which is how row-level access control is enforced (SEL
+// sees own, DIRECTOR/ED see down the hierarchy, PARTNER/ADMIN see all).
+//
+// serialize() exists because Prisma returns Decimal objects for money fields;
+// React state needs plain numbers, so it deep-converts Decimal → Number.
+//
+// RISK 1: resolveOwnerFilter scopes by ROLE, not by TEAM — a DIRECTOR sees EVERY
+// SEL's deals company-wide (no managerId traversal). Intended simplification, but
+// it's cross-team data exposure. (See audit S8.)
+// RISK 2: this filter only guards the READS in this file. Most MUTATING API routes
+// don't apply an equivalent check, so they're IDOR-able by opportunity id. (S5.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { prisma } from '@/lib/prisma'
 import { OpportunityStatus } from '@prisma/client'
 

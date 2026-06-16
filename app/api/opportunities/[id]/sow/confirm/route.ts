@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/sow/confirm — record the DB row AFTER the browser has
+// finished uploading the file to Supabase (step 2 of the 2-step upload).
+//
+// Big picture: the /sow route issued a signed URL + storagePath; the browser PUT the
+// bytes; this writes the SOWDocument row pointing at that storagePath and, if the opp
+// was SOW_PENDING, advances it to SOW_SUBMITTED. Returns a fresh signed URL.
+//
+// RISK: no ownership check, and it trusts the client-supplied storagePath/mimeType
+// verbatim — a caller could attach an arbitrary path/type to any opp. (See S5/S11.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

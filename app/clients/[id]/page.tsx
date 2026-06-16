@@ -1,3 +1,6 @@
+// app/clients/[id]/page.tsx — client DETAIL page (server component). Loads one client by
+// internal id (getClientDetail) with its POCs + opportunities, 404s if missing, and
+// renders the detail view + the <AddPocButton>. force-dynamic.
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getClientDetail } from '@/lib/db/clients'

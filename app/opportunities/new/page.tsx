@@ -1,3 +1,6 @@
+// app/opportunities/new/page.tsx — the "New Opportunity" route (server component).
+// Loads the client list for the dropdown (getClientsForSelect) and renders the client
+// <NewOpportunityForm> inside the app shell. force-dynamic so the client list is fresh.
 import Link from 'next/link'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getClientsForSelect } from '@/lib/db/clients'

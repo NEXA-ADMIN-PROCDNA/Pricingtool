@@ -1,3 +1,18 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// prisma.ts — the database client singleton (THE only DB handle in the app).
+//
+// Big picture: every server file imports `{ prisma }` from here. It wraps a
+// node-postgres Pool with Prisma's pg adapter, pinned to the `procdna_database`
+// schema (the app deliberately uses a non-default Postgres schema; multi-schema
+// is enabled). A single instance is reused via globalThis so dev hot-reload
+// doesn't open a new pool on every save and warm instances reuse the connection.
+//
+// RISK (AWS): `max = 1` in production is correct for Vercel serverless (one short
+// connection per function; the Supabase pgBouncer fans out). On a single
+// long-lived EC2 process this means the ENTIRE app serialises through ONE DB
+// connection — feels fine in testing, falls over the instant two users hit it at
+// once. Raise the pool size on EC2. (See audit A1.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { Pool } from 'pg'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { PrismaClient } from '@prisma/client'

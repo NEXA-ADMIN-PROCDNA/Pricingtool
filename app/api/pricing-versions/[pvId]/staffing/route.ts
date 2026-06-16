@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/pricing-versions/[pvId]/staffing — add a staffing resource from a rate card.
+// Big picture: pick a RateCard and it seeds a new StaffingResource on the version,
+// copying the card's role/location/domain and rates (effectiveBillRate starts at the
+// card's bill rate). The user then fills in weekly hours + utilisation in the drawer.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

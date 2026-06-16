@@ -1,3 +1,6 @@
+// pricing/types.ts — shared TypeScript types for the pricing drawer + its sub-tabs
+// (StaffRow, RateCardItem, OtherCostRow, ComputedMetrics, Version). No runtime code —
+// these keep the drawer, the tabs, and pricing/utils in lockstep on the same shapes.
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 
 export type Version = OpportunityDetail['pricingVersions'][number]

@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// errors.ts — the single source of truth for API error responses.
+//
+// Big picture: instead of scattering ad-hoc status codes + messages across 30+
+// routes, every route returns apiError('SOME_CODE'). This central map keeps HTTP
+// status codes consistent and gives the UI human-readable, user-safe copy. Codes
+// are grouped by domain (Auth / Opportunities / Pricing / Approvals / … ).
+//
+// NOTE: the optional `detail` arg is for debugging — avoid leaking internal
+// exception text to clients in production. (See audit S14.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextResponse } from 'next/server'
 
 export const APP_ERRORS = {

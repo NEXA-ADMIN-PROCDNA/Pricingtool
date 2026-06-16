@@ -1,5 +1,7 @@
 "use client"
 
+// ui/table.tsx — shadcn Table primitives (Table/Header/Body/Row/Cell). Styling wrappers
+// over the native <table> elements.
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

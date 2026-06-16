@@ -1,3 +1,14 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/approvals/[id]/reject — reject a pending request (approver or ADMIN).
+//
+// Big picture: flips the request to REJECTED (optional reason) and rolls the
+// opportunity stage BACK (PRICING → PRICE_LINKED, SOW_VERIFICATION → SOW_SUBMITTED).
+// Key rule: rejecting the PRICING request also auto-WITHDRAWS any pending OR approved
+// SOW verification on the parallel track, so the deal resets cleanly and the owner
+// redoes the flow once pricing is re-approved.
+//
+// RISK: several writes, not transactional. (See audit C3.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

@@ -1,4 +1,10 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// NewOpportunityForm — the create-opportunity form (client component).
+// Big picture: collects client + name + dates (end date required) + optional POCs and an
+// estimate, then POSTs /api/opportunities (which assigns the OPP-YY-NNNN id and owner).
+// On success it routes to the new opportunity's detail page.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'

@@ -1,3 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/export/opportunities — Excel export of the pipeline (ADMIN only).
+//
+// Big picture: buildBuffer() flattens up to 5000 opportunities (+ client, owner,
+// final pricing, approving partner) into a 20-column .xlsx. GET streams it to the
+// browser as a download; POST overwrites a specific shared SharePoint file IN PLACE
+// via Microsoft Graph (resolve sharing URL → driveItem → PUT content), preserving its
+// sharing/history/comments. App-only Graph auth (Files.ReadWrite.All).
+//
+// NOTE: the target is the hardcoded SHAREPOINT_SYNC_URL below — the older
+// ONEDRIVE_USER/ONEDRIVE_FILE_PATH env vars are unused. (See audit R6.)
+// RISK: the synchronous xlsx build of up to 5000 rows blocks a single EC2 process. (A7.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

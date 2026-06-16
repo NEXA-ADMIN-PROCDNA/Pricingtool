@@ -1,4 +1,8 @@
 'use client'
+// app/admin/rate-cards/page.tsx — admin rate-card import screen (client component).
+// Big picture: the 2-step upload UI — POST the Excel to /api/rate-cards/upload to parse +
+// preview {rows, errors}, then confirm to /api/rate-cards/upload/confirm to upsert them.
+// Dark-themed admin console.
 import { useState, useRef } from 'react'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { toast } from 'sonner'

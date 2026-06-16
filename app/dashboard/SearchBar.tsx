@@ -1,4 +1,6 @@
 'use client'
+// SearchBar — dashboard search box. Writes the query into the URL (?q=) so the list
+// re-filters and the view stays shareable/bookmarkable. Pure client control.
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 

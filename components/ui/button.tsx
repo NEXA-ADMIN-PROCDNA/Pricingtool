@@ -1,3 +1,5 @@
+// ui/button.tsx — shadcn/base-ui Button primitive with size/variant styles (cva). The
+// standard button used across the app.
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 

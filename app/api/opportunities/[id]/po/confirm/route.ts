@@ -1,3 +1,8 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/opportunities/[id]/po/confirm — record the PODocument row after the
+// browser uploads (step 2). PO twin of /sow/confirm; advances SOW_PENDING →
+// SOW_SUBMITTED. Same caveats: no ownership check, trusts client storagePath. (S5/S11.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

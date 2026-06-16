@@ -1,3 +1,7 @@
+// app/clients/page.tsx — the client master list (server component).
+// Big picture: loads all clients (+ opportunity counts) and the session, then renders the
+// client <ClientsBrowser>, the <AddClientModal>, and — for admins — the
+// <AdminRequestsPanel> for approving new-client requests. force-dynamic.
 import { getClients, type ClientRow } from '@/lib/db/clients'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

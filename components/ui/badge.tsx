@@ -1,3 +1,5 @@
+// ui/badge.tsx — shadcn/base-ui Badge primitive: a small pill with style variants (cva).
+// Generic building block; the app's semantic badges (Status/Stage/LOB) are separate files.
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"

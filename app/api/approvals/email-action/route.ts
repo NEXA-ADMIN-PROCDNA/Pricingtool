@@ -1,3 +1,20 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/approvals/email-action — the endpoint behind the email Approve/Reject links.
+// PUBLIC (excluded from proxy); the signed token IS the authorisation.
+//
+// Big picture: an approver can decide straight from their inbox without logging in.
+//   • GET  — verifies the token, then renders a branded HTML page: an "are you sure"
+//            confirm for approve, or a reason form for reject. GET NEVER mutates —
+//            deliberate, so email Safe-Links pre-scanners can't silently auto-approve.
+//   • POST — the actual action: flips the ApprovalRequest, moves the opportunity stage
+//            (track-aware: pricing & SOW verification run in parallel), and sends the
+//            outcome email. Mirrors the in-app approve/reject routes.
+//
+// RISK (high): the HTML pages interpolate opportunityName / approverName WITHOUT
+// escaping → stored XSS, since the opportunity name is free user input rendered to a
+// privileged approver. Escape every interpolated value. (See audit S3.)
+// RISK (medium): the multi-step DB writes aren't wrapped in a transaction. (C3.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyEmailAction } from '@/lib/approval-tokens'

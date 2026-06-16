@@ -1,3 +1,17 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// /api/opportunities/[id]/sow — SOW document list / upload-URL / soft-delete.
+//
+// Big picture: files upload BROWSER → Supabase directly via a short-lived signed
+// upload URL (the server never sees the bytes). GET returns docs with fresh signed
+// download URLs; POST validates type/size then hands back an upload URL + storagePath;
+// DELETE soft-deletes (isActive:false) and, if that empties the doc set, rolls
+// SOW_SUBMITTED back to SOW_PENDING. The matching /sow/confirm route records the row
+// after the browser finishes the upload.
+//
+// RISK: (1) auth only — any signed-in user can list/upload/delete on ANY opp id
+// (IDOR, S5). (2) mimeType/fileSize are CLIENT-CLAIMED JSON, not the real bytes, so
+// the allow-list is bypassable; the limit is 49MB here vs 20MB in the UI/docs. (S11.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

@@ -1,4 +1,13 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// ApprovalsInbox — the /approvals screen (client component).
+//
+// Big picture: the in-app counterpart to the email Approve/Reject links. Lists the
+// requests where YOU are the approver (split into pending vs decided), shows the pricing
+// snapshot, and for SOW verifications lets you preview the actual SOW/PO documents (via
+// the signed URLs the /api/approvals route attaches) before approving/rejecting through
+// the /api/approvals/[id]/approve|reject routes. Heavy inline styling via the C palette.
+// ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'

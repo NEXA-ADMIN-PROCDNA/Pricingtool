@@ -1,4 +1,10 @@
 'use client'
+// ─────────────────────────────────────────────────────────────────────────────
+// TabFinancial — Pricing drawer ▸ "Financial" sub-tab. Big picture: the month-by-month
+// financial breakdown (revenue, cost, gross margin, offshore mix, rates) derived from
+// the staffing rows + other costs, with each week's value split across the months it
+// spans (workingDaysByMonth / getProjectMonths in utils). Read-only analysis view.
+// ─────────────────────────────────────────────────────────────────────────────
 import type { ReactNode } from 'react'
 import type { OpportunityDetail } from '@/lib/db/opportunities'
 import type { StaffRow, OtherCostRow, Version } from './types'

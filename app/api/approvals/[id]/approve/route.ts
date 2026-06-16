@@ -1,3 +1,15 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/approvals/[id]/approve — approve a pending request from inside the app.
+//
+// Big picture: the in-app twin of the email-action approve. Only the assigned
+// approver (or an ADMIN) may approve. It flips the request to APPROVED and advances
+// the opportunity stage. Track-aware: PRICING normally → SOW_PENDING, but if SOW
+// verification was already approved on the parallel track it jumps straight to
+// TO_BE_ARCHIVED; SOW_VERIFICATION → TO_BE_ARCHIVED. Then emails both parties.
+//
+// RISK: the status flip + stage update aren't in one transaction — a failure between
+// them leaves a half-applied state. (See audit C3.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

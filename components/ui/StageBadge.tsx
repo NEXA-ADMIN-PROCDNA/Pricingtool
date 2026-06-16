@@ -1,3 +1,6 @@
+// ui/StageBadge.tsx — colored pill for an opportunity STAGE (LEAD → TO_BE_ARCHIVED). Maps
+// each stage to a user-facing label + colour. Labels are display-only; the real transition
+// rules live in the approval routes.
 const config: Record<string, { label: string; classes: string }> = {
   LEAD:                  { label: 'WLBU Pending',      classes: 'bg-slate-100 text-slate-600'   },
   PRICE_LINKING_PENDING: { label: 'Price Linking',     classes: 'bg-blue-50 text-blue-700'      },

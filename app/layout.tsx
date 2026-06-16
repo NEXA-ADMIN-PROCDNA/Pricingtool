@@ -1,3 +1,6 @@
+// app/layout.tsx — the ROOT layout wrapping every page. Loads the Geist sans/mono fonts
+// as CSS variables, pulls in global styles, sets <html>/<body>, and mounts the client
+// <Providers> (auth session + toasts). Server component (no 'use client').
 import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'

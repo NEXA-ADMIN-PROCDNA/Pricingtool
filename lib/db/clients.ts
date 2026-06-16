@@ -1,3 +1,12 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// db/clients.ts — client (customer org) read helpers.
+//
+// Big picture: clients are the companies opportunities belong to. These power the
+// /clients master list, the client detail page (with its opportunities + POCs),
+// and the client dropdowns on the new-opportunity form. Note getClientDetail keys
+// on the internal cuid `id`, NOT the human CL-NNN clientId (which is admin-assigned
+// and nullable).
+// ─────────────────────────────────────────────────────────────────────────────
 import { prisma } from '@/lib/prisma'
 
 export type ClientRow    = Awaited<ReturnType<typeof getClients>>[number]

@@ -1,3 +1,15 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/pricing-versions/[pvId]/duplicate — deep-copy a pricing version.
+//
+// Big picture: clones a version and ALL its children (staffing resources + their weekly
+// hours, schedule-of-payments, financial snapshots) into a fresh version with the next
+// versionNumber and isFinal:false. A "start from this scenario" action.
+//
+// Why the careful batching + 30s timeout: weekly hours can be huge (multi-year × many
+// resources). Children are written with nested createMany so it stays within the
+// Supabase transaction-mode pooler's ~5s interactive-tx limit; the 30s timeout is a
+// belt-and-braces net. (On RDS without pgBouncer this constraint relaxes — see audit A1/A6.)
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

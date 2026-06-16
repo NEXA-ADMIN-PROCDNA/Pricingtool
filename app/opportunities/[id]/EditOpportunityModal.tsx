@@ -1,4 +1,8 @@
 'use client'
+// EditOpportunityModal — edit the opportunity's detail fields (BU, Star Connect, dates).
+// Big picture: PATCHes /api/opportunities/[id]; changing the date window resets pricing
+// server-side, and dates are locked while an approval is mid-flight (DATE_LOCKED_STAGES,
+// mirrored from the server's OPP_DATE_LOCKED guard).
 import { useState } from 'react'
 import { toast } from 'sonner'
 

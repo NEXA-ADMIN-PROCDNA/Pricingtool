@@ -1,3 +1,9 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/rate-cards/upload/confirm — commit reviewed rate-card rows (ADMIN, step 2).
+// Big picture: takes the {rows} the /upload route parsed and UPSERTS them — matching
+// on jobRole::location::domain it UPDATES rates on existing cards and CREATES new ones,
+// all in one $transaction. This is how staffing bill/cost rates get refreshed in bulk.
+// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'

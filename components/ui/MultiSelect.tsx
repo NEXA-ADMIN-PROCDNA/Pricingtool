@@ -1,4 +1,6 @@
 'use client'
+// MultiSelect — reusable multi-pick dropdown built on SearchableSelect's option shape.
+// Used for things like the approval CC list. Self-contained (search + checkboxes + chips).
 import { useState, useRef, useEffect } from 'react'
 import type { SelectOption } from './SearchableSelect'
 
