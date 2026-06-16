@@ -135,13 +135,18 @@ export default async function DashboardPage({
             <SearchBar />
           </Suspense>
 
-          {/* Bell — links to the approvals inbox; badge shows pending count, hidden at zero */}
+          {/* Bell — shortcut to approvals inbox; badge shows pending count */}
           <Link
             href="/approvals"
             title={pendingApprovals > 0
               ? `${pendingApprovals} pending approval${pendingApprovals === 1 ? '' : 's'}`
               : 'Approvals inbox'}
-            style={{ color: C.inkMuted, padding: 6, position: 'relative', display: 'grid', placeItems: 'center' }}
+            style={{
+              color: C.inkMuted, padding: 6,
+              position: 'relative', display: 'inline-flex',
+              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}>
               <path d="M18 8a6 6 0 10-12 0c0 7-3 8-3 8h18s-3-1-3-8M13.7 20a2 2 0 01-3.4 0"/>
