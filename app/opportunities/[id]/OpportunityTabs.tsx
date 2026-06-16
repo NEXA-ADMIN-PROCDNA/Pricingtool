@@ -459,7 +459,8 @@ export function OpportunityTabs({
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
                 <Field label="Client"       value={opp.client.name} />
                 <Field label="Client ID"    value={opp.client.clientId ?? 'Pending ID'} />
-                <Field label="Client BU"    value={opp.businessUnit ?? opp.client.businessUnit} />
+                <Field label="Client BU"    value={(opp.businessUnit ?? opp.client.businessUnit) ?? 'Not Selected'} />
+                <Field label="Work Type"    value={opp.workType ?? 'Not Selected'} />
                 <Field label="Owner"        value={opp.owner.name} />
                 <Field label="BU"           value={primaryLob ? (LOB_LABELS[primaryLob] ?? primaryLob) : null} />
                 <Field label="Star Connect" value={opp.starConnect ? 'Yes' : 'No'} />
@@ -1414,6 +1415,7 @@ export function OpportunityTabs({
           initialStarConnect={opp.starConnect}
           initialStartDate={opp.startDate as unknown as string}
           initialEndDate={opp.endDate as unknown as string}
+          initialWorkType={opp.workType ?? null}
           onClose={() => setEditingDetails(false)}
         />
       )}

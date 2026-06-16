@@ -28,7 +28,7 @@ export async function PATCH(
   const { id: opportunityId } = await params
   const body = await req.json() as {
     preContractAgreed?: boolean; status?: string; projectCodeProceed?: boolean
-    businessUnit?: string | null; starConnect?: boolean
+    businessUnit?: string | null; starConnect?: boolean; workType?: string | null
     startDate?: string; endDate?: string
   }
 
@@ -38,6 +38,7 @@ export async function PATCH(
   // Owner-or-admin gate for the editable detail fields (BU / Star Connect / dates).
   const editsDetails =
     body.businessUnit !== undefined || typeof body.starConnect === 'boolean' ||
+    body.workType !== undefined ||
     body.startDate !== undefined || body.endDate !== undefined
   if (editsDetails) {
     const isOwner = opp.ownerId === (token.id as string)
@@ -84,9 +85,10 @@ export async function PATCH(
   }
 
   // Business Unit / Star Connect — simple in-place cell updates.
-  const simpleData: { businessUnit?: string | null; starConnect?: boolean } = {}
+  const simpleData: { businessUnit?: string | null; starConnect?: boolean; workType?: string | null } = {}
   if (body.businessUnit !== undefined) simpleData.businessUnit = (body.businessUnit ?? '').toString().trim() || null
   if (typeof body.starConnect === 'boolean') simpleData.starConnect = body.starConnect
+  if (body.workType !== undefined) simpleData.workType = (body.workType ?? '').toString().trim() || null
   if (Object.keys(simpleData).length > 0) {
     await prisma.opportunity.update({ where: { id: opp.id }, data: simpleData })
   }
@@ -125,7 +127,7 @@ export async function PATCH(
     where:  { id: opp.id },
     select: {
       status: true, preContractAgreed: true, stage: true, projectCodeProceed: true,
-      businessUnit: true, starConnect: true, startDate: true, endDate: true, primaryLob: true,
+      businessUnit: true, starConnect: true, startDate: true, endDate: true, primaryLob: true, workType: true,
     },
   })
 

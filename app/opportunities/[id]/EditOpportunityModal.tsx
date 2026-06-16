@@ -8,6 +8,33 @@ import { toast } from 'sonner'
 
 const DATE_LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_REVIEW_PENDING']
 
+const WORK_TYPES = [
+  'Infrastructure capabilities',
+  'Segmentation capabilities',
+  'Alignment capabilities',
+  'Dynamic targeting capabilities',
+  'Call planning capabilities',
+  'Market research capabilities',
+  'Competitive Intelligence capabilities',
+  'Next Best Actions capabilities',
+  'Marketing mix measurement capabilities',
+  'Omnichannel capabilities',
+  'Patient identification capabilities',
+  'Launch excellence capabilities',
+  'Sales force sizing and restructuring',
+  'Forecasting capabilities',
+  'HCP 360 Capabilities',
+  'Conference insights capabilities',
+  'MSL Empowerment capabilities',
+  'Social listening capabilities',
+  'CRM deployment and migration capabilities/Veeva/SFDC',
+  'Data warehousing capabilities',
+  'GenAI capabilities',
+  'BI reporting capabilities',
+  'Data procurement capabilities',
+  'Data aggregation and tokenization capabilities',
+] as const
+
 function toInputDate(d: string | Date) {
   return new Date(d).toISOString().slice(0, 10)
 }
@@ -21,7 +48,7 @@ function openPicker(e: React.MouseEvent<HTMLInputElement>) {
 
 export function EditOpportunityModal({
   opportunityId, stage,
-  initialBusinessUnit, initialStarConnect, initialStartDate, initialEndDate,
+  initialBusinessUnit, initialStarConnect, initialStartDate, initialEndDate, initialWorkType,
   onClose,
 }: {
   opportunityId: string
@@ -30,10 +57,14 @@ export function EditOpportunityModal({
   initialStarConnect: boolean
   initialStartDate: string | Date
   initialEndDate: string | Date
+  initialWorkType: string | null
   onClose: () => void
 }) {
+  const isOtherWorkType = initialWorkType !== null && !(WORK_TYPES as readonly string[]).includes(initialWorkType)
   const [businessUnit, setBusinessUnit] = useState(initialBusinessUnit ?? '')
   const [starConnect, setStarConnect]   = useState(initialStarConnect)
+  const [workType, setWorkType]         = useState(isOtherWorkType ? 'Others' : (initialWorkType ?? ''))
+  const [otherWorkType, setOtherWorkType] = useState(isOtherWorkType ? (initialWorkType ?? '') : '')
   const [startDate, setStartDate]       = useState(toInputDate(initialStartDate))
   const [endDate, setEndDate]           = useState(toInputDate(initialEndDate))
   const [saving, setSaving]             = useState(false)
@@ -48,9 +79,11 @@ export function EditOpportunityModal({
     if (datesChanged && invalidDates) { toast.error('End date must be on or after the start date.'); return }
     setSaving(true)
     try {
+      const resolvedWorkType = workType === 'Others' ? otherWorkType.trim() || null : workType || null
       const payload: Record<string, unknown> = {
         businessUnit: businessUnit.trim() || null,
         starConnect,
+        workType: resolvedWorkType,
       }
       if (datesChanged && !datesLocked) {
         payload.startDate = startDate
@@ -105,6 +138,31 @@ export function EditOpportunityModal({
                 placeholder="e.g. Oncology"
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               />
+            </div>
+
+            {/* Work Type */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Work Type</label>
+              <select
+                value={workType}
+                onChange={e => { setWorkType(e.target.value); setOtherWorkType('') }}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="">Select work type…</option>
+                {WORK_TYPES.map(wt => (
+                  <option key={wt} value={wt}>{wt}</option>
+                ))}
+                <option value="Others">Others</option>
+              </select>
+              {workType === 'Others' && (
+                <input
+                  type="text"
+                  placeholder="Describe the work type…"
+                  value={otherWorkType}
+                  onChange={e => setOtherWorkType(e.target.value)}
+                  className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                />
+              )}
             </div>
 
             {/* Star Connect */}
