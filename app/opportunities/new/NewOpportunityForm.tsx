@@ -42,6 +42,33 @@ const MONO: React.CSSProperties = {
 
 const PHONE_RE = /^(\+\d{1,3})?\d{10}$/
 
+const WORK_TYPES = [
+  'Infrastructure capabilities',
+  'Segmentation capabilities',
+  'Alignment capabilities',
+  'Dynamic targeting capabilities',
+  'Call planning capabilities',
+  'Market research capabilities',
+  'Competitive Intelligence capabilities',
+  'Next Best Actions capabilities',
+  'Marketing mix measurement capabilities',
+  'Omnichannel capabilities',
+  'Patient identification capabilities',
+  'Launch excellence capabilities',
+  'Sales force sizing and restructuring',
+  'Forecasting capabilities',
+  'HCP 360 Capabilities',
+  'Conference insights capabilities',
+  'MSL Empowerment capabilities',
+  'Social listening capabilities',
+  'CRM deployment and migration capabilities/Veeva/SFDC',
+  'Data warehousing capabilities',
+  'GenAI capabilities',
+  'BI reporting capabilities',
+  'Data procurement capabilities',
+  'Data aggregation and tokenization capabilities',
+] as const
+
 // ─── Atoms ───────────────────────────────────────────────────────────────────
 
 function SectionHeader({ label, count }: { label: string; count?: string }) {
@@ -156,6 +183,8 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   const [error, setError]             = useState<string | null>(null)
   const [clientId, setClientId]       = useState('')
   const [starConnect, setStarConnect] = useState<'yes' | 'no'>('no')
+  const [workType, setWorkType]       = useState('')
+  const [otherWorkType, setOtherWorkType] = useState('')
   const [pocRows, setPocRows]         = useState<PocRow[]>([])
   const [dateError, setDateError]     = useState<string | null>(null)
   const [pocErrors, setPocErrors]     = useState<{ phone?: string; email?: string }[]>([])
@@ -233,6 +262,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
     setError(null)
     const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
+    data.workType = workType === 'Others' ? otherWorkType.trim() || null : workType || null
     data.pocs = pocRows
       .filter(p => p.name.trim())
       .map(({ name, email, phone }) => ({ name, email, phone }))
@@ -482,6 +512,32 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
             style={inputBase}
             {...focusHandlers}
           />
+        </div>
+
+        <div style={{ gridColumn: '1 / -1' }}>
+          <FieldLabel text="Work Type" />
+          <select
+            value={workType}
+            onChange={e => { setWorkType(e.target.value); setOtherWorkType('') }}
+            style={inputBase}
+            {...focusHandlers}
+          >
+            <option value="">Select work type…</option>
+            {WORK_TYPES.map(wt => (
+              <option key={wt} value={wt}>{wt}</option>
+            ))}
+            <option value="Others">Others</option>
+          </select>
+          {workType === 'Others' && (
+            <input
+              type="text"
+              placeholder="Describe the work type…"
+              value={otherWorkType}
+              onChange={e => setOtherWorkType(e.target.value)}
+              style={{ ...inputBase, marginTop: 8 }}
+              {...focusHandlers}
+            />
+          )}
         </div>
 
         <div>

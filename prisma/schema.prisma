@@ -205,6 +205,7 @@ model Opportunity {
   clientId          String
   client            Client            @relation(fields: [clientId], references: [id])
   opportunityName   String
+  workType          String?
   primaryLob        LineOfBusiness?
   businessUnit      String?
   startDate         DateTime

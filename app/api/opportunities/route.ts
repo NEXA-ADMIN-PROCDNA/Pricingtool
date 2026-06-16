@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const {
       clientId,
       opportunityName,
+      workType,
       businessUnit,
       stage,
       startDate,
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
         opportunityId,
         clientId,
         opportunityName,
+        workType:         workType?.trim() || null,
         businessUnit:     businessUnit?.trim() || null,
         stage:            (stage as OpportunityStage) ?? 'LEAD',
         ownerId,

@@ -10,5 +10,5 @@ export const STAGE_NEXT_STEPS: Record<string, string> = {
   SOW_PENDING:           'Upload SOW, PO, or pre-contract agreement',
   SOW_SUBMITTED:         'Submit for SOW / PO / PCA verification',
   SOW_REVIEW_PENDING:    'Waiting for SOW / PO / PCA approval',
-  TO_BE_ARCHIVED:        'SOW approved — to be archived in 12 hrs',
+  TO_BE_ARCHIVED:        'SOW approved —> to be archived in 12 hrs',
 }
