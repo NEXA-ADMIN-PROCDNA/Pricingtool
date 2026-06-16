@@ -67,6 +67,9 @@ const WORK_TYPES = [
   'BI reporting capabilities',
   'Data procurement capabilities',
   'Data aggregation and tokenization capabilities',
+
+
+  // Add here for future work types.
 ] as const
 
 // ─── Atoms ───────────────────────────────────────────────────────────────────
