@@ -497,7 +497,13 @@ export function OpportunityTabs({
                   value={oppStatus}
                   disabled={statusSaving}
                   onChange={e => updateStatus(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-50 cursor-pointer"
+                  className={`rounded-lg border px-2.5 py-1 text-xs font-semibold shadow-sm focus:outline-none focus:ring-1 disabled:opacity-50 cursor-pointer ${
+                    oppStatus === 'WON'
+                      ? 'border-green-300 bg-green-50 text-green-700 focus:ring-green-400'
+                      : oppStatus === 'LOST'
+                      ? 'border-red-300 bg-red-50 text-red-700 focus:ring-red-400'
+                      : 'border-slate-200 bg-white text-slate-700 focus:ring-indigo-400'
+                  }`}
                 >
                   <option value="OPEN">Open</option>
                   <option value="WON">Won</option>
