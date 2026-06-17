@@ -102,8 +102,9 @@ export async function getOpportunities(
       probability: true,
       projectCodeProceed: true,
       createdAt: true,
-      client:  { select: { name: true, clientId: true } },
-      owner:   { select: { name: true } },
+      client:   { select: { name: true, clientId: true } },
+      owner:    { select: { name: true } },
+      coOwner:  { select: { name: true } },
       _count:  { select: { comments: true } },
       pricingVersions: {
         where:  { isFinal: true },

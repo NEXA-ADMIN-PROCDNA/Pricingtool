@@ -115,6 +115,7 @@ model User {
  deletedAt DateTime? @db.Timestamptz(3)
 
   opportunitiesOwned    Opportunity[]     @relation("OpportunityOwner")
+  opportunitiesCoOwned  Opportunity[]     @relation("OpportunityCoOwner")
   approvalsRequested    ApprovalRequest[] @relation("Requester")
   approvalsGiven        ApprovalRequest[] @relation("Approver")
   comments              Comment[]
@@ -208,6 +209,8 @@ model Opportunity {
   workType          String?   @map("work_type")
   primaryLob        LineOfBusiness?
   businessUnit      String?
+  coOwnerId         String?   @map("co_owner_id")
+  coOwner           User?     @relation("OpportunityCoOwner", fields: [coOwnerId], references: [id])
   startDate         DateTime
   endDate           DateTime
   status            OpportunityStatus @default(OPEN)

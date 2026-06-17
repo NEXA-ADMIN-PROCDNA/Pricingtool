@@ -176,7 +176,7 @@ const openDatePicker = (e: React.MouseEvent<HTMLInputElement>) => {
 
 // ─── Form ────────────────────────────────────────────────────────────────────
 
-export function NewOpportunityForm({ clients }: { clients: Client[] }) {
+export function NewOpportunityForm({ clients, users }: { clients: Client[]; users: { id: string; name: string }[] }) {
   const router = useRouter()
   const { data: session } = useSession()
   const sessionUser = session?.user as { name?: string } | undefined
@@ -186,8 +186,9 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
   const [error, setError]             = useState<string | null>(null)
   const [clientId, setClientId]       = useState('')
   const [starConnect, setStarConnect] = useState<'yes' | 'no'>('no')
-  const [workType, setWorkType]       = useState('')
+  const [workType, setWorkType]           = useState('')
   const [otherWorkType, setOtherWorkType] = useState('')
+  const [coOwnerId, setCoOwnerId]         = useState('')
   const [pocRows, setPocRows]         = useState<PocRow[]>([])
   const [dateError, setDateError]     = useState<string | null>(null)
   const [pocErrors, setPocErrors]     = useState<{ phone?: string; email?: string }[]>([])
@@ -266,6 +267,7 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
     const data: Record<string, unknown> = Object.fromEntries(new FormData(e.currentTarget))
     data.starConnect = starConnect === 'yes' ? 'true' : 'false'
     data.workType = workType === 'Others' ? otherWorkType.trim() || null : workType || null
+    data.coOwnerId = coOwnerId || null
     data.pocs = pocRows
       .filter(p => p.name.trim())
       .map(({ name, email, phone }) => ({ name, email, phone }))
@@ -541,6 +543,21 @@ export function NewOpportunityForm({ clients }: { clients: Client[] }) {
               {...focusHandlers}
             />
           )}
+        </div>
+
+        <div>
+          <FieldLabel text="Co-Owner" />
+          <select
+            value={coOwnerId}
+            onChange={e => setCoOwnerId(e.target.value)}
+            style={inputBase}
+            {...focusHandlers}
+          >
+            <option value="">None</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>

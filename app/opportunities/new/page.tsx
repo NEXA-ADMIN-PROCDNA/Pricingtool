@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getClientsForSelect } from '@/lib/db/clients'
+import { prisma } from '@/lib/prisma'
 import { NewOpportunityForm } from './NewOpportunityForm'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +24,10 @@ const MONO: React.CSSProperties = {
 }
 
 export default async function NewOpportunityPage() {
-  const clients = await getClientsForSelect()
+  const [clients, users] = await Promise.all([
+    getClientsForSelect(),
+    prisma.user.findMany({ where: { isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+  ])
 
   return (
     <MainLayout noPadding scrollable>
@@ -90,7 +94,7 @@ export default async function NewOpportunityPage() {
       {/* Body */}
       <div style={{ padding: '32px 44px 48px' }}>
         <div style={{ maxWidth: 880, margin: '0 auto' }}>
-          <NewOpportunityForm clients={clients} />
+          <NewOpportunityForm clients={clients} users={users} />
         </div>
       </div>
     </MainLayout>

@@ -352,6 +352,10 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
     [...new Set(rows.map(r => r.owner.name))].sort().map(n => ({ label: n, value: n })),
     [rows])
 
+  const coOwnerOptions = useMemo(() =>
+    [...new Set(rows.map(r => r.coOwner?.name).filter((n): n is string => !!n))].sort().map(n => ({ label: n, value: n })),
+    [rows])
+
   const statusOptions = useMemo(() =>
     [...new Set(rows.map(r => r.status))].sort()
       .map(s => ({ label: s.charAt(0) + s.slice(1).toLowerCase(), value: s })),
@@ -390,6 +394,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
   const colFilterOptions: Record<string, { label: string; value: string }[]> = {
     client:   clientOptions,
     owner:    ownerOptions,
+    coowner:  coOwnerOptions,
     status:   statusOptions,
     winpct:   winOptions,
     window:   windowOptions,
@@ -414,6 +419,9 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
 
     const of2 = columnFilters['owner']
     if (of2?.length && !of2.includes(r.owner.name)) return false
+
+    const cof = columnFilters['coowner']
+    if (cof?.length && !cof.includes(r.coOwner?.name ?? '')) return false
 
     const sf = columnFilters['status']
     if (sf?.length && !sf.includes(r.status)) return false
@@ -497,6 +505,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
     { key: 'client',   label: 'Client',      w: 140, filterable: true  },
     { key: 'opp',      label: 'Opportunity', w: 220, filterable: false },
     { key: 'owner',    label: 'Owner',       w: 160, filterable: true  },
+    { key: 'coowner',  label: 'Co-Owner',    w: 160, filterable: true  },
     { key: 'revenue',  label: 'Estimated Revenue', w: 130, filterable: true  },
     { key: 'winpct',   label: 'Win Probability',   w: 120, filterable: true  },
     { key: 'window',   label: 'Project Duration',  w: 180, filterable: true  },
@@ -640,7 +649,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={11} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
+                <td colSpan={12} style={{ padding: '64px 0', textAlign: 'center', color: C.inkMuted, fontSize: 14 }}>
                   No opportunities found.
                 </td>
               </tr>
@@ -697,6 +706,20 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
                         {row.owner.name}
                       </span>
                     </div>
+                  </td>
+
+                  {/* Co-Owner */}
+                  <td style={{ padding: '14px 42px 14px 0', verticalAlign: 'middle', textAlign: 'left' }}>
+                    {row.coOwner ? (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: C.inkSoft, fontSize: 14 }}>
+                        <Avatar initials={ownerInitials(row.coOwner.name)} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {row.coOwner.name}
+                        </span>
+                      </div>
+                    ) : (
+                      <span style={{ color: C.inkFaint, fontSize: 13 }}>—</span>
+                    )}
                   </td>
 
                   {/* Revenue */}
