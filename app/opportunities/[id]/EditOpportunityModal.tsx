@@ -3,8 +3,11 @@
 // Big picture: PATCHes /api/opportunities/[id]; changing the date window resets pricing
 // server-side, and dates are locked while an approval is mid-flight (DATE_LOCKED_STAGES,
 // mirrored from the server's OPP_DATE_LOCKED guard).
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
+
+type User = { id: string; name: string }
 
 const DATE_LOCKED_STAGES = ['APPROVAL_PENDING', 'SOW_REVIEW_PENDING']
 
@@ -48,7 +51,7 @@ function openPicker(e: React.MouseEvent<HTMLInputElement>) {
 
 export function EditOpportunityModal({
   opportunityId, stage,
-  initialBusinessUnit, initialStarConnect, initialStartDate, initialEndDate, initialWorkType,
+  initialBusinessUnit, initialStarConnect, initialStartDate, initialEndDate, initialWorkType, initialCoOwnerId,
   onClose,
 }: {
   opportunityId: string
@@ -58,6 +61,7 @@ export function EditOpportunityModal({
   initialStartDate: string | Date
   initialEndDate: string | Date
   initialWorkType: string | null
+  initialCoOwnerId: string | null
   onClose: () => void
 }) {
   const isOtherWorkType = initialWorkType !== null && !(WORK_TYPES as readonly string[]).includes(initialWorkType)
@@ -65,9 +69,17 @@ export function EditOpportunityModal({
   const [starConnect, setStarConnect]   = useState(initialStarConnect)
   const [workType, setWorkType]         = useState(isOtherWorkType ? 'Others' : (initialWorkType ?? ''))
   const [otherWorkType, setOtherWorkType] = useState(isOtherWorkType ? (initialWorkType ?? '') : '')
+  const [coOwnerId, setCoOwnerId]       = useState(initialCoOwnerId ?? '')
+  const [users, setUsers]               = useState<User[]>([])
   const [startDate, setStartDate]       = useState(toInputDate(initialStartDate))
   const [endDate, setEndDate]           = useState(toInputDate(initialEndDate))
   const [saving, setSaving]             = useState(false)
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: User[]) => setUsers(data.sort((a, b) => a.name.localeCompare(b.name))))
+  }, [])
 
   const datesLocked  = DATE_LOCKED_STAGES.includes(stage)
   const origStart    = toInputDate(initialStartDate)
@@ -84,6 +96,7 @@ export function EditOpportunityModal({
         businessUnit: businessUnit.trim() || null,
         starConnect,
         workType: resolvedWorkType,
+        coOwnerId: coOwnerId || null,
       }
       if (datesChanged && !datesLocked) {
         payload.startDate = startDate
@@ -128,6 +141,18 @@ export function EditOpportunityModal({
           </div>
 
           <div className="px-6 py-5 space-y-4">
+            {/* Co-Owner */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Co-Owner</label>
+              <SearchableSelect
+                options={users.map(u => ({ value: u.id, label: u.name }))}
+                value={coOwnerId}
+                onChange={setCoOwnerId}
+                placeholder="Search co-owner…"
+                emptyMessage="No matching users found."
+              />
+            </div>
+
             {/* Business Unit */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Client BU</label>

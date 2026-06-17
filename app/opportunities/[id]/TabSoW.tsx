@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 type Doc = {
   id: string
@@ -552,23 +553,13 @@ export function TabSoW({
                   <label style={{ fontSize: 11, fontWeight: 600, color: '#7B7C7F', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
                     Approver
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
                     value={approverId}
-                    onChange={e => setApproverId(e.target.value)}
-                    style={{
-                      width: '100%', padding: '9px 12px', borderRadius: 8,
-                      border: '1px solid #D6DCE8', fontSize: 13, color: '#001E96',
-                      background: '#fff', outline: 'none', cursor: 'pointer',
-                    }}
-                  >
-                    <option value="">Select approver…</option>
-                    {users
-                      .filter(u => u.id !== currentUserId)
-                      .map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                      ))
-                    }
-                  </select>
+                    onChange={setApproverId}
+                    placeholder="Search approver…"
+                    emptyMessage="No matching users found."
+                  />
                 </div>
                 <button
                   onClick={() => setConfirmOpen(true)}

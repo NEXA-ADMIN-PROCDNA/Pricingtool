@@ -9,6 +9,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
 type POC    = { id: string; name: string; email: string | null; phone: string | null; jobTitle: string | null }
 type Client = {
@@ -547,17 +548,13 @@ export function NewOpportunityForm({ clients, users }: { clients: Client[]; user
 
         <div>
           <FieldLabel text="Co-Owner" />
-          <select
+          <SearchableSelect
+            options={users.map(u => ({ value: u.id, label: u.name }))}
             value={coOwnerId}
-            onChange={e => setCoOwnerId(e.target.value)}
-            style={inputBase}
-            {...focusHandlers}
-          >
-            <option value="">None</option>
-            {users.map(u => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
+            onChange={setCoOwnerId}
+            placeholder="Search co-owner…"
+            emptyMessage="No matching users found."
+          />
         </div>
 
         <div>

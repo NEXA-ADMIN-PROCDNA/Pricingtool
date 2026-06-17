@@ -1475,6 +1475,7 @@ export function OpportunityTabs({
           initialStartDate={opp.startDate as unknown as string}
           initialEndDate={opp.endDate as unknown as string}
           initialWorkType={opp.workType ?? null}
+          initialCoOwnerId={(opp as any).coOwnerId ?? null}
           onClose={() => setEditingDetails(false)}
         />
       )}

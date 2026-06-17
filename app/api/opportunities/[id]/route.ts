@@ -89,6 +89,7 @@ export async function PATCH(
   if (body.businessUnit !== undefined) simpleData.businessUnit = (body.businessUnit ?? '').toString().trim() || null
   if (typeof body.starConnect === 'boolean') simpleData.starConnect = body.starConnect
   if (body.workType !== undefined) simpleData.workType = (body.workType ?? '').toString().trim() || null
+  if ((body as any).coOwnerId !== undefined) (simpleData as any).coOwnerId = (body as any).coOwnerId || null
   if (Object.keys(simpleData).length > 0) {
     await prisma.opportunity.update({ where: { id: opp.id }, data: simpleData })
   }
