@@ -80,6 +80,7 @@ export async function getOpportunities(
 
   const data = await prisma.opportunity.findMany({
     where: {
+      isActive: true,
       ...ownerFilter,
       ...(status && status !== 'ALL' ? { status } : {}),
       ...(search ? {

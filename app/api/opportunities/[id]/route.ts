@@ -133,3 +133,23 @@ export async function PATCH(
 
   return NextResponse.json(updated)
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const token = await getAuthToken(req)
+  if (!token) return apiError('UNAUTHORIZED')
+
+  const { id: opportunityId } = await params
+  const opp = await prisma.opportunity.findUnique({ where: { opportunityId } })
+  if (!opp) return apiError('OPP_NOT_FOUND')
+
+  const isOwner = opp.ownerId === (token.id as string)
+  const isAdmin = (token.role as string) === 'ADMIN'
+  if (!isOwner && !isAdmin) return apiError('OPP_EDIT_FORBIDDEN')
+
+  await prisma.opportunity.update({ where: { id: opp.id }, data: { isActive: false } })
+
+  return NextResponse.json({ ok: true })
+}
