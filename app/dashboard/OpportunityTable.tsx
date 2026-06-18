@@ -472,7 +472,7 @@ export function OpportunityTable({ rows, roleLabel, currentUserName }: { rows: O
     }
 
     return true
-  }), [rows, active, columnFilters])
+  }), [rows, active, columnFilters, mineOnly, currentUserName])
 
   // ── KPI stats derived from the visible (filtered) rows ─────────────────────
   // Mirrors the server-side getDashboardStats logic, but driven entirely off the
