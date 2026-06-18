@@ -82,9 +82,10 @@ export default async function DashboardPage({
   const { q } = await searchParams
 
   const session = await getServerSession(authOptions)
-  const sessionUser = session?.user as { id?: string; role?: string } | undefined
-  const userId  = sessionUser?.id   ?? ''
-  const role    = sessionUser?.role ?? ''
+  const sessionUser = session?.user as { id?: string; role?: string; name?: string } | undefined
+  const userId      = sessionUser?.id   ?? ''
+  const role        = sessionUser?.role ?? ''
+  const currentUserName = sessionUser?.name ?? ''
   const auth    = userId && role ? { userId, role } : undefined
 
   // Fetch the full role-scoped set (status filtering happens client-side in the
@@ -219,7 +220,7 @@ export default async function DashboardPage({
           KPI cards stay in sync with every active filter. */}
       <div className="flex flex-1 flex-col overflow-hidden min-h-0">
         <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
-          <OpportunityTable rows={rows} roleLabel={banner.label} />
+          <OpportunityTable rows={rows} roleLabel={banner.label} currentUserName={currentUserName} />
         </Suspense>
       </div>
     </MainLayout>

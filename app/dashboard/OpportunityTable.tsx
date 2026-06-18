@@ -297,7 +297,7 @@ function FilterPopover({
   )
 }
 
-export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; roleLabel: string }) {
+export function OpportunityTable({ rows, roleLabel, currentUserName }: { rows: OpportunityRow[]; roleLabel: string; currentUserName: string }) {
   const router = useRouter()
   const params = useSearchParams()
   const active = (params.get('status') ?? 'ALL') as 'ALL' | OpportunityStatus
@@ -305,6 +305,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({})
   const [openFilter, setOpenFilter]       = useState<string | null>(null)
   const [popoverPos, setPopoverPos]       = useState({ top: 0, left: 0 })
+  const [mineOnly, setMineOnly]           = useState(true)
 
   // Show a spinner ONLY if a row click takes longer than 400 ms to resolve —
   // snappy navigations stay flicker-free, slow ones get a clear "loading" cue.
@@ -412,6 +413,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
 
   // ── Multi-column filter logic ──────────────────────────────────────────────
   const visible = useMemo(() => rows.filter(r => {
+    if (mineOnly && r.owner.name !== currentUserName && r.coOwner?.name !== currentUserName) return false
     if (active !== 'ALL' && r.status !== active) return false
 
     const cf = columnFilters['client']
@@ -583,7 +585,7 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}>
           {hasActiveFilters && (
             <button
               onClick={() => setColumnFilters({})}
@@ -598,6 +600,22 @@ export function OpportunityTable({ rows, roleLabel }: { rows: OpportunityRow[]; 
               ✕ Clear all filters
             </button>
           )}
+          <button
+            onClick={() => setMineOnly(v => !v)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: 11.5, fontWeight: 600,
+              border: `1px solid ${mineOnly ? C.accent : C.rule}`,
+              background: mineOnly ? C.accentSoft : 'none',
+              color: mineOnly ? C.accentDeep : C.inkMuted,
+              transition: 'all 120ms',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: mineOnly ? C.accent : C.inkFaint, flexShrink: 0 }} />
+            My Opportunities
+          </button>
         </div>
       </div>
 
