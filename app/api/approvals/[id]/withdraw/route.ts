@@ -33,7 +33,7 @@ export async function POST(
     include: {
       requestedBy: { select: { name: true, email: true } },
       approver:    { select: { name: true, email: true } },
-      opportunity: { select: { opportunityId: true, opportunityName: true } },
+      opportunity: { select: { opportunityId: true, opportunityName: true, client: { select: { name: true } } } },
     },
   })
 
@@ -87,6 +87,7 @@ export async function POST(
     requesterName:   approval.requestedBy.name,
     opportunityId:   approval.opportunity.opportunityId,
     opportunityName: approval.opportunity.opportunityName,
+    clientName:      approval.opportunity.client?.name ?? '',
     approvalType:    approval.approvalType,
     reason:          reason ?? undefined,
   })

@@ -32,7 +32,7 @@ export async function POST(
     include: {
       requestedBy: { select: { name: true, email: true } },
       approver:    { select: { name: true, email: true } },
-      opportunity: { select: { opportunityId: true, opportunityName: true } },
+      opportunity: { select: { opportunityId: true, opportunityName: true, client: { select: { name: true } } } },
     },
   })
   if (!approval) return apiError('APPROVAL_NOT_FOUND')
@@ -72,6 +72,7 @@ export async function POST(
     approverName:     approval.approver.name,
     opportunityId:    approval.opportunity.opportunityId,
     opportunityName:  approval.opportunity.opportunityName,
+    clientName:       approval.opportunity.client?.name ?? '',
     approvalType:     approval.approvalType,
   })
 

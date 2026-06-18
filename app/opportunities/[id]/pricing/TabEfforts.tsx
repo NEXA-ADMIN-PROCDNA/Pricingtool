@@ -106,7 +106,7 @@ export function TabEfforts({
   return (
     <div className="space-y-4">
       <p className="text-xs text-slate-400">
-        Tick rows to include in calculations. Click Eff. Rate or D/P to edit — they auto-fill each other.
+        Tick rows to include in calculations. Click Eff. Rate or Discount/Premium to edit — they auto-fill each other.
       </p>
 
       {/* Live metrics banner — active rows only */}
@@ -145,7 +145,7 @@ export function TabEfforts({
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Cost Rate</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[88px]">Bill Rate</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[96px]">Eff. Rate</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[80px]">D/P %</th>
+                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-indigo-400 whitespace-nowrap min-w-[80px]">Discount/Premium %</th>
                 <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-400 whitespace-nowrap min-w-[72px]">Util %</th>
                 {weeks.map((_, i) => (
                   <th key={i} className="px-2 py-3 text-center text-xs font-semibold text-indigo-500 whitespace-nowrap min-w-[48px]">
@@ -238,7 +238,7 @@ export function TabEfforts({
                         </span>
                       )}
                     </td>
-                    {/* D/P % — editable when not readOnly */}
+                    {/* Discount/Premium % — editable when not readOnly */}
                     <td className={`px-2 py-2 text-right whitespace-nowrap ${nonBillable ? 'pointer-events-none opacity-30' : ''}`}>
                       {isEditingDP && !readOnly ? (
                         <input

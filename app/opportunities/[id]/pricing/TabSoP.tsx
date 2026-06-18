@@ -87,9 +87,9 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
         </svg>
         <span>
           <strong>Recommended</strong> = system bill rate × billable hrs/month.{' '}
-          <strong>Proposed</strong> = effective rate (incl. D/P) × billable hrs/month.{' '}
+          <strong>Proposed</strong> = effective rate (incl. Discount/Premium) × billable hrs/month.{' '}
           Other costs distributed proportionally to billable hours per month.{' '}
-          <strong>D/P</strong> = (Proposed − Recommended) ÷ Recommended.
+          <strong>Discount/Premium</strong> = (Proposed − Recommended) ÷ Recommended.
         </span>
       </div>
 
@@ -158,7 +158,7 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
                   <td className="px-4 py-2.5 text-right text-amber-900 bg-amber-100">{Math.round(totPropTotal).toLocaleString()}</td>
                 </tr>
                 <tr className="bg-white">
-                  <td className="px-4 py-2.5 font-semibold text-slate-500 border-r border-slate-200 text-[11px]">Total D/P</td>
+                  <td className="px-4 py-2.5 font-semibold text-slate-500 border-r border-slate-200 text-[11px]">Total Discount/Premium</td>
                   <td className="px-4 py-2.5 border-r border-slate-100 bg-slate-50/50" />
                   <td className="px-4 py-2.5 border-r border-slate-100 bg-slate-50/50" />
                   <td className="px-4 py-2.5 border-r border-slate-200 bg-slate-50/50" />

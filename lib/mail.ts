@@ -96,15 +96,15 @@ function wrap(body: string): string {
     <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #D6DCE8;">
       <!-- Header -->
       <tr><td style="background:#0A1F44;padding:20px 32px;display:flex;align-items:center;">
-        <span style="font-family:Georgia,serif;font-weight:800;font-size:22px;letter-spacing:0.18em;color:#F4F6FB;text-transform:uppercase;">NEXA</span>
+        <span style="font-family:Georgia,serif;font-weight:800;font-size:22px;letter-spacing:0.18em;color:#F4F6FB;text-transform:uppercase;">ProcDNA NEXA</span>
         <span style="display:inline-block;width:6px;height:6px;background:#1E5BB8;transform:rotate(45deg);margin-left:8px;"></span>
       </td></tr>
       <!-- Body -->
       <tr><td style="padding:32px 32px 24px;">${body}</td></tr>
       <!-- Footer -->
       <tr><td style="padding:16px 32px 28px;border-top:1px solid #D6DCE8;">
-        <p style="margin:0 0 6px;font-size:11px;color:#9AA3B8;">This is an automated message from NEXA · Business Development &amp; Pricing Tool. Do not reply to this email.</p>
-        <a href="${BASE_URL}" style="font-size:11px;color:#1E5BB8;text-decoration:none;">Open NEXA app →</a>
+        <p style="margin:0 0 6px;font-size:11px;color:#9AA3B8;">This is an automated message from ProcDNA NEXA · Business Development &amp; Pricing Tool. Do not reply to this email.</p>
+        <a href="${BASE_URL}" style="font-size:11px;color:#1E5BB8;text-decoration:none;">Open ProcDNA NEXA →</a>
       </td></tr>
     </table>
   </td></tr>
@@ -212,8 +212,8 @@ export async function mailApprovalRequested({
     </table>`
 
   const subjectLine = approvalType === 'SOW_VERIFICATION'
-    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
-    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+    ? `[ProcDNA NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[ProcDNA NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
 
   const headingLabel = approvalType === 'SOW_VERIFICATION'
     ? 'SOW Verification Request'
@@ -228,7 +228,8 @@ export async function mailApprovalRequested({
     to:      approverEmail,
     subject: subjectLine,
     html: wrap(`
-      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
+      <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
+      <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">${approverIntro}</p>
       ${detailsTable}
       <table cellpadding="0" cellspacing="0" style="margin-top:24px;width:100%;">
@@ -242,7 +243,7 @@ export async function mailApprovalRequested({
         </tr>
       </table>
       <p style="margin:16px 0 0;font-size:11px;color:#9AA3B8;">You can also review this request in the app.</p>
-      ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
+      ${btn('Open in ProcDNA NEXA →', `${BASE_URL}/approvals`)}
     `),
   })
 
@@ -252,10 +253,11 @@ export async function mailApprovalRequested({
       to:      ccEmails,
       subject: subjectLine,
       html: wrap(`
-        <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
+        <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">${headingLabel}</h2>
+        <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
         <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">You have been CC'd on this request. <strong style="color:#0A1F44;">${requesterName}</strong> has requested approval from <strong style="color:#0A1F44;">${approverName}</strong>.</p>
         ${detailsTable}
-        ${btn('Open in NEXA →', `${BASE_URL}/approvals`)}
+        ${btn('Open in ProcDNA NEXA →', `${BASE_URL}/approvals`)}
       `),
     })
   }
@@ -265,7 +267,8 @@ export async function mailApprovalRequested({
     to:      requesterEmail,
     subject: subjectLine,
     html: wrap(`
-      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">${headingLabel} submitted</h2>
+      <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">${headingLabel} submitted</h2>
+      <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been sent to <strong style="color:#0A1F44;">${approverName}</strong> for review.</p>
       <table cellpadding="0" cellspacing="0" style="width:100%;background:#F4F6FB;border-radius:8px;padding:16px;border:1px solid #D6DCE8;">
         ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
@@ -274,7 +277,7 @@ export async function mailApprovalRequested({
         ${metaRow('Sent to', approverName)}
       </table>
       <p style="margin:16px 0 0;font-size:12px;color:#6B7591;">You will be notified by email once a decision is made.</p>
-      ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
+      ${btn('Open in ProcDNA NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
     `),
   })
 
@@ -287,6 +290,7 @@ export async function mailApprovalApproved({
   approverName,
   opportunityId,
   opportunityName,
+  clientName,
   approvalType,
 }: {
   requesterEmail:  string
@@ -295,14 +299,16 @@ export async function mailApprovalApproved({
   approverName:    string
   opportunityId:   string
   opportunityName: string
+  clientName:      string
   approvalType:    string
 }) {
   const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const subjectLine = approvalType === 'SOW_VERIFICATION'
-    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
-    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+    ? `[ProcDNA NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[ProcDNA NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
   const html = wrap(`
-    <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request approved ✓</h2>
+    <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Request approved ✓</h2>
+    <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
     <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been approved by <strong style="color:#0A1F44;">${approverName}</strong>.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#F0FDF4;border-radius:8px;padding:16px;border:1px solid #86EFAC;">
       ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
@@ -327,6 +333,7 @@ export async function mailApprovalRejected({
   approverName,
   opportunityId,
   opportunityName,
+  clientName,
   approvalType,
   reason,
 }: {
@@ -336,15 +343,17 @@ export async function mailApprovalRejected({
   approverName:    string
   opportunityId:   string
   opportunityName: string
+  clientName:      string
   approvalType:    string
   reason?:         string
 }) {
   const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const subjectLine = approvalType === 'SOW_VERIFICATION'
-    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
-    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+    ? `[ProcDNA NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[ProcDNA NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
   const html = wrap(`
-    <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request rejected</h2>
+    <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Request rejected</h2>
+    <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
     <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">Hi ${requesterName}, your <strong style="color:#0A1F44;">${typeLabel}</strong> request has been rejected by <strong style="color:#0A1F44;">${approverName}</strong>.</p>
     <table cellpadding="0" cellspacing="0" style="width:100%;background:#FEF2F2;border-radius:8px;padding:16px;border:1px solid #FCA5A5;">
       ${metaRow('Opportunity', `<strong>${opportunityName}</strong> <span style="color:#6B7591;">(${opportunityId})</span>`)}
@@ -370,6 +379,7 @@ export async function mailApprovalWithdrawn({
   requesterName,
   opportunityId,
   opportunityName,
+  clientName,
   approvalType,
   reason,
 }: {
@@ -379,19 +389,21 @@ export async function mailApprovalWithdrawn({
   requesterName:   string
   opportunityId:   string
   opportunityName: string
+  clientName:      string
   approvalType:    string
   reason?:         string
 }) {
   const typeLabel   = approvalType === 'SOW_VERIFICATION' ? 'SOW Verification' : 'Pricing Approval'
   const subjectLine = approvalType === 'SOW_VERIFICATION'
-    ? `[NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
-    : `[NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
+    ? `[ProcDNA NEXA] SOW Verification · ${opportunityId} · ${opportunityName}`
+    : `[ProcDNA NEXA] Pricing Approval · ${opportunityId} · ${opportunityName}`
 
   await sendMail({
     to:      [approverEmail, requesterEmail],
     subject: subjectLine,
     html: wrap(`
-      <h2 style="margin:0 0 6px;font-size:20px;color:#0A1F44;">Request withdrawn</h2>
+      <h2 style="margin:0 0 4px;font-size:20px;color:#0A1F44;">Request withdrawn</h2>
+      <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#1E5BB8;">${clientName} &nbsp;&middot;&nbsp; ${opportunityName}</p>
       <p style="margin:0 0 20px;font-size:13px;color:#6B7591;">
         <strong style="color:#0A1F44;">${requesterName}</strong> has withdrawn the
         <strong style="color:#0A1F44;">${typeLabel}</strong> request.
@@ -403,7 +415,7 @@ export async function mailApprovalWithdrawn({
         ${metaRow('Withdrawn by', requesterName)}
         ${reason ? metaRow('Reason', `<em style="color:#6B7591;">${reason}</em>`) : ''}
       </table>
-      ${btn('Open in NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
+      ${btn('Open in ProcDNA NEXA →', `${BASE_URL}/opportunities/${opportunityId}`)}
     `),
   })
 }

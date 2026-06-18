@@ -22,11 +22,11 @@ import { mailApprovalApproved, mailApprovalRejected } from '@/lib/mail'
 
 // ── Branded HTML shell ───────────────────────────────────────────
 function page(body: string): Response {
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>NEXA</title></head>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>ProcDNA NEXA</title></head>
 <body style="margin:0;padding:0;background:#F4F6FB;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(10,31,68,0.12);max-width:460px;width:90%;overflow:hidden;">
     <div style="background:#001E96;padding:16px 28px;display:flex;align-items:center;gap:8px;">
-      <span style="font-family:Georgia,serif;font-weight:800;font-size:18px;letter-spacing:0.18em;color:#F4F6FB;text-transform:uppercase;">NEXA</span>
+      <span style="font-family:Georgia,serif;font-weight:800;font-size:18px;letter-spacing:0.18em;color:#F4F6FB;text-transform:uppercase;">ProcDNA NEXA</span>
       <span style="display:inline-block;width:5px;height:5px;background:#005CD9;transform:rotate(45deg);"></span>
     </div>
     <div style="padding:32px 28px 28px;">${body}</div>
@@ -62,7 +62,7 @@ function resultPage(variant: ResultVariant, title: string, oppId: string, messag
                 font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;
                 color:#7B7C7F;font-weight:500;">
       <span style="display:inline-block;width:5px;height:5px;background:${palette.accent};transform:rotate(45deg);"></span>
-      NEXA · Approval · ${oppId}
+      ProcDNA NEXA · Approval · ${oppId}
     </div>
 
     <h1 style="margin:0 0 18px;
@@ -136,7 +136,7 @@ async function getApproval(approvalId: string) {
     include: {
       requestedBy: { select: { name: true, email: true } },
       approver:    { select: { name: true, email: true } },
-      opportunity: { select: { opportunityId: true, opportunityName: true } },
+      opportunity: { select: { opportunityId: true, opportunityName: true, client: { select: { name: true } } } },
     },
   })
 }
@@ -147,7 +147,7 @@ export async function GET(req: NextRequest) {
   if (!token) return errorPage('Invalid Link', 'This link is missing required parameters.')
 
   const payload = verifyEmailAction(token)
-  if (!payload) return errorPage('Link Expired', 'This approval link has expired or is invalid. Please use the NEXA app to take action.')
+  if (!payload) return errorPage('Link Expired', 'This approval link has expired or is invalid. Please use the ProcDNA NEXA app to take action.')
 
   const { approvalId, approverId, action } = payload
 
@@ -232,6 +232,7 @@ export async function POST(req: NextRequest) {
       approverName:    approval.approver.name,
       opportunityId:   approval.opportunity.opportunityId,
       opportunityName: approval.opportunity.opportunityName,
+      clientName:      approval.opportunity.client?.name ?? '',
       approvalType:    approval.approvalType,
     })
     return resultPage(
@@ -275,6 +276,7 @@ export async function POST(req: NextRequest) {
     approverName:    approval.approver.name,
     opportunityId:   approval.opportunity.opportunityId,
     opportunityName: approval.opportunity.opportunityName,
+    clientName:      approval.opportunity.client?.name ?? '',
     approvalType:    approval.approvalType,
     reason:          reason || undefined,
   })
