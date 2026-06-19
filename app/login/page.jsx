@@ -9,8 +9,8 @@ import { useSearchParams } from 'next/navigation'
 import { PROCDNA_LOGO_DATA_URL, NEXA_LOGO_DATA_URL } from './_logo'
 
 const ERROR_MESSAGES = {
-  not_provisioned:  'Your account has not been set up in the system. Contact your admin.',
-  account_disabled: 'Your account has been disabled. Contact your admin.',
+  not_provisioned:  'Your account has not been set up in the system. Please contact nexa_admin@procdna.com or shreeraj.deshmukh@procdna.com.',
+  account_disabled: 'Your account has been disabled. Please contact nexa_admin@procdna.com or shreeraj.deshmukh@procdna.com. .',
 }
 
 const serif  = "'DM Serif Display', Georgia, serif"

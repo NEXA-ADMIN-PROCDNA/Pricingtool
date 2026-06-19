@@ -67,7 +67,7 @@ export function TabOtherCost({
             const isEditingMarkup = editCostCell?.id === oc.id && editCostCell?.field === 'markup'
             const isEditingBilled = editCostCell?.id === oc.id && editCostCell?.field === 'billed'
             return (
-              <tr key={oc.id} className={`group transition-colors ${!oc.isBillable ? 'opacity-40' : 'hover:bg-slate-50/50'}`}>
+              <tr key={oc.id} className="group transition-colors hover:bg-slate-50/50">
                 {/* Billable checkbox */}
                 <td className="px-2 py-3 text-center">
                   <input
@@ -159,7 +159,7 @@ export function TabOtherCost({
               <td className="px-4 py-3 text-slate-800">Total</td>
               <td />
               <td className="px-4 py-3 text-right text-slate-700">
-                {fmt(otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount, 0))}
+                {fmt(otherCosts.reduce((s, oc) => s + oc.amount, 0))}
               </td>
               <td />
               <td className="px-4 py-3 text-right text-indigo-700">

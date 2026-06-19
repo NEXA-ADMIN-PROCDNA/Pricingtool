@@ -58,7 +58,7 @@ export function TabSoP({ staffRows, otherCosts, opp }: Props) {
   }
 
   const totalRecOther  = otherCosts.reduce((s, oc) => s + oc.amount, 0)
-  const totalPropOther = otherCosts.reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
+  const totalPropOther = otherCosts.filter(oc => oc.isBillable).reduce((s, oc) => s + oc.amount * (1 + (oc.markupPct ?? 0) / 100), 0)
 
   const recOtherMap  = new Map<string, number>()
   const propOtherMap = new Map<string, number>()

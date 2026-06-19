@@ -29,18 +29,14 @@ const prisma = new PrismaClient({ adapter })
 // Keys are lowercase substrings to match against the Azure AD jobTitle.
 // Adjust these to match exactly how your company titles appear in Azure AD.
 const TITLE_TO_ROLE: Array<{ match: string; role: UserRole }> = [
-  { match: 'partner',           role: UserRole.PARTNER   },
-  { match: 'Co Founder',          role: UserRole.PARTNER  },
-  { match: 'engagement director', role: UserRole.ED      },
-  { match: ' ed ',              role: UserRole.ED        },
-  { match: 'executive director', role: UserRole.ED       },
-  { match: 'director',          role: UserRole.DIRECTOR  },
-  { match: 'D',          role: UserRole.DIRECTOR  },
-  { match: 'Senior Engagement Lead',          role: UserRole.SEL },
-  { match: 'sel',               role: UserRole.SEL       },
-  { match: 'Senior Engagement Leader',          role: UserRole.SEL  },
-  { match: 'director',          role: UserRole.DIRECTOR  },
-  { match: 'senior engagement', role: UserRole.SEL       },
+  { match: 'partner',           role: UserRole.PARTNER  },
+  { match: 'co founder',        role: UserRole.PARTNER  },
+  { match: 'co-founder',        role: UserRole.PARTNER  },
+  { match: 'engagement director', role: UserRole.ED     },
+  { match: 'executive director',  role: UserRole.ED     },
+  { match: 'senior engagement',   role: UserRole.SEL    },
+  { match: 'sel',                 role: UserRole.SEL    },
+  { match: 'director',            role: UserRole.DIRECTOR },
 ]
 
 function mapTitleToRole(jobTitle: string | null | undefined): UserRole | null {
@@ -99,10 +95,12 @@ async function fetchAllAzureUsers(graphClient: Client): Promise<GraphUser[]> {
 
 // ── Main ──────────────────────────────────────────────────────────
 async function main() {
-  const { AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET } = process.env
+  const AZURE_TENANT_ID     = process.env.AZURE_AD_TENANT_ID
+  const AZURE_CLIENT_ID     = process.env.AZURE_AD_CLIENT_ID
+  const AZURE_CLIENT_SECRET = process.env.AZURE_AD_CLIENT_SECRET
 
   if (!AZURE_TENANT_ID || !AZURE_CLIENT_ID || !AZURE_CLIENT_SECRET) {
-    console.error('Missing AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET in .env')
+    console.error('Missing AZURE_AD_TENANT_ID / AZURE_AD_CLIENT_ID / AZURE_AD_CLIENT_SECRET in .env')
     process.exit(1)
   }
 
@@ -142,8 +140,8 @@ async function main() {
 
     const role = mapTitleToRole(azUser.jobTitle)
 
-    // Only sync BD staff — skip PARTNER and anyone with an unrecognised/missing title
-    if (!role || role === UserRole.PARTNER) {
+    // Skip anyone with an unrecognised or missing title
+    if (!role) {
       skipped++
       continue
     }
@@ -166,7 +164,7 @@ async function main() {
     console.log(`             └─ ${u.source}`)
   }
 
-  console.log(`\nSkipped ${skipped} (service accounts, guests, PARTNER, or unrecognised titles).`)
+  console.log(`\nSkipped ${skipped} (service accounts, guests, or unrecognised titles).`)
   console.log(`Done. Synced: ${synced.length}`)
 }
 
