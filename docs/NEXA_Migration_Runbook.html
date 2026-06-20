@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA — AWS Migration Runbook</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6; --chip:#EEF2F9;
+    --aws:#EC7211; --awsDeep:#C25A0A; --awsbg:#FFF3E8; --squid:#232F3E;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:290px 1fr;max-width:1340px;margin:0 auto;}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 16px 60px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 15px/1 'Segoe UI';letter-spacing:.16em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand b{color:var(--aws)}
+  nav .sub{font-size:11px;color:var(--muted);margin:7px 0 14px;}
+  nav a{display:block;font-size:12.4px;color:var(--ink2);padding:3px 0;line-height:1.4}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:11px;}
+  nav a .n{color:var(--aws);font:800 11px/1 'Courier New',monospace;margin-right:6px;}
+  nav .part{font:700 10px/1 'Courier New',monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:16px 0 4px;padding-top:9px;border-top:1px dashed var(--line)}
+  main{padding:0 0 140px;min-width:0;}
+  .hero{background:linear-gradient(125deg,#0A1F44 0%,#001E96 52%,#003a8f 100%);color:#EAF0FB;padding:44px 52px 36px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-70px;top:-90px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(236,114,17,.30),transparent 60%);}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.22em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:32px;margin:13px 0 8px;letter-spacing:-.015em;color:#fff;max-width:26ch;line-height:1.13}
+  .hero h1 b{color:var(--aws)}
+  .hero p{max-width:76ch;color:#CBD8F2;margin:.45em 0;font-size:15px}
+  .hero .meta{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+  .body{padding:8px 52px 0}
+  h2.s{font-size:23px;margin:52px 0 6px;padding-top:15px;border-top:2px solid var(--ink);scroll-margin-top:10px;letter-spacing:-.01em}
+  h2.s .n{font:800 14px/1 'Courier New',monospace;color:var(--aws);margin-right:12px;}
+  h3{font-size:17px;margin:28px 0 6px;color:var(--accentDeep);scroll-margin-top:10px}
+  h4{font-size:13px;margin:18px 0 4px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:84ch} ul,ol{max-width:84ch} li{margin:4px 0}
+  .lead{font-size:16px;color:var(--ink2);max-width:82ch}
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:9px;padding:14px 16px;overflow:auto;font:12.3px/1.6 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0} pre .o{color:#FFB066} pre .s{color:#A8C7FF}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.3px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:13px 17px;margin:16px 0;}
+  .rec b{color:var(--accentDeep)}
+  .rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)} .rec.aws{border-left-color:var(--aws)} .rec.aws b{color:var(--awsDeep)}
+  .rec .h{display:block;font-weight:800;margin-bottom:3px;font-size:13.3px}
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;vertical-align:middle}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#F3C4C4}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  .pill.aws{color:var(--awsDeep);background:var(--awsbg);border-color:#F3CBA0}
+  .svc{display:inline-block;font:700 11px/1 'Segoe UI';color:#fff;background:var(--squid);border-radius:5px;padding:2px 7px 2px 6px;white-space:nowrap}
+  .svc::before{content:"";display:inline-block;width:7px;height:7px;border-radius:1.5px;background:var(--aws);margin-right:6px}
+  .own{display:inline-block;font:700 9.5px/1 'Courier New',monospace;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px;border:1px solid;margin-right:5px}
+  .own.you{background:#E6EFFB;color:var(--accent);border-color:#B9D3F2}
+  .own.it{background:var(--awsbg);color:var(--awsDeep);border-color:#F3CBA0}
+  .own.sde{background:#F2FAF5;color:var(--ok);border-color:#B6E2C7}
+  /* phase header */
+  .phase{display:flex;align-items:center;gap:14px;margin:40px 0 4px;padding-top:18px;border-top:2px solid var(--ink);scroll-margin-top:10px}
+  .phase .pn{flex:0 0 auto;font:800 13px/1 'Courier New',monospace;color:#fff;background:var(--accentDeep);border-radius:8px;padding:8px 11px;letter-spacing:.04em}
+  .phase h2{font-size:22px;margin:0;letter-spacing:-.01em}
+  .phase .owns{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+  .goal{font-size:13px;color:var(--ink2);background:#F7F9FD;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:8px 13px;margin:8px 0 4px}
+  /* steps */
+  .steps{counter-reset:step;display:flex;flex-direction:column;gap:0;margin:14px 0}
+  .step{position:relative;display:flex;gap:15px;padding:0 0 18px 0;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:33px;bottom:-2px;width:2px;background:#C9D6EC;}
+  .step .num{counter-increment:step;flex:0 0 34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:800 14px/1 'Segoe UI';z-index:1;}
+  .step .c2{background:#F7F9FD;border:1px solid #C9D6EC;border-radius:9px;padding:11px 15px;flex:1;}
+  .step .c2 b{color:var(--accentDeep)}
+  .step .c2 .k{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+  /* diagram */
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:18px 0;overflow:auto;}
+  .diagram .cap{font-size:12px;color:var(--muted);margin:10px 2px 0;max-width:none}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:0 0 10px;}
+  .layer{display:flex;gap:10px;align-items:stretch;justify-content:center;flex-wrap:wrap;margin:6px 0}
+  .box{background:#F7F9FD;border:1.5px solid #C9D6EC;border-radius:9px;padding:9px 13px;min-width:140px;text-align:center;}
+  .box .t{font-weight:700;font-size:12.5px;color:var(--accentDeep);}
+  .box .d{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.3;}
+  .box.ext{background:#FFF7EC;border-color:#EAD3A6} .box.db{background:#EAF6EF;border-color:#B6E2C7} .box.cli{background:#EDEFF7;border-color:#C2C9E6} .box.aws{background:var(--awsbg);border-color:#F3CBA0}
+  .varrow{text-align:center;color:var(--accent);font-size:19px;line-height:1;margin:3px 0;}
+  /* timeline */
+  .timeline{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}
+  .tl{flex:1 1 130px;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:9px;padding:9px 11px;background:#fff;min-width:130px}
+  .tl .ph{font:800 10px/1 'Courier New',monospace;color:var(--accent);letter-spacing:.05em}
+  .tl .tt{font-weight:700;font-size:12.5px;margin:4px 0 2px}
+  .tl .td{font-size:11px;color:var(--muted)}
+  .chk{list-style:none;padding-left:0}
+  .chk li{position:relative;padding-left:26px;margin:6px 0}
+  .chk li::before{content:"☐";position:absolute;left:0;top:-1px;font-size:15px;color:var(--accent)}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .foot{margin:60px 52px 0;padding:18px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  @media(max-width:1040px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body,.foot{padding-left:20px;padding-right:20px}.twocol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">NEXA Â· <b>RUNBOOK</b></div>
+  <div class="sub">Vercel + Supabase → AWS (AUXO)</div>
+  <a href="#summary" class="top">Overview &amp; scope</a>
+  <a href="#assumptions" class="top">Assumptions</a>
+  <a href="#prereq" class="top">Prerequisites &amp; access</a>
+  <a href="#perms">Permissions you're getting</a>
+  <a href="#arch" class="top">Target architecture</a>
+  <a href="#timeline" class="top">Phase timeline</a>
+
+  <div class="part">The runbook</div>
+  <a href="#p0"><span class="n">0</span>Access &amp; pre-flight</a>
+  <a href="#p1"><span class="n">1</span>Network &amp; security groups</a>
+  <a href="#p2"><span class="n">2</span>Identity &amp; secrets</a>
+  <a href="#p3"><span class="n">3</span>RDS (database)</a>
+  <a href="#p4"><span class="n">4</span>S3 (documents)</a>
+  <a href="#p5"><span class="n">5</span>App code changes</a>
+  <a href="#p6"><span class="n">6</span>EC2 &amp; runtime</a>
+  <a href="#p7"><span class="n">7</span>Edge: TLS, ALB, DNS</a>
+  <a href="#p8"><span class="n">8</span>Build &amp; deploy (CI/CD)</a>
+  <a href="#p9"><span class="n">9</span>Schema, seed &amp; data</a>
+  <a href="#p10"><span class="n">10</span>Azure AD / SSO</a>
+  <a href="#p11"><span class="n">11</span>Observability &amp; backups</a>
+  <a href="#p12"><span class="n">12</span>Verification</a>
+  <a href="#p13"><span class="n">13</span>Cut-over &amp; rollback</a>
+  <a href="#p14"><span class="n">14</span>Post-migration</a>
+
+  <div class="part">Must-do &amp; risks</div>
+  <a href="#blockers" class="top">Security release-blockers</a>
+  <a href="#envstrategy">Environments (dev→prod)</a>
+  <a href="#checklist" class="top">Master checklist</a>
+  <a href="#concerns" class="top">Concerns &amp; open decisions</a>
+
+  <div class="part">Reference</div>
+  <a href="#envmap">Env-var mapping</a>
+  <a href="#mailtemplates">IT/SDE message templates</a>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA Â· NEXA Business Development &amp; Pricing Tool</div>
+  <h1>AWS Migration <b>Runbook</b></h1>
+  <p>A detailed, phase-by-phase plan to move NEXA off <strong>Vercel + Supabase</strong> onto the firm's <strong>AUXO AWS</strong> account — what to do, in what order, who owns each step, the app-side code changes it requires, how to verify it, and how to roll back. Companion to the Migration Plan, the Architecture Briefing, the AWS course, and the Service Map.</p>
+  <div class="meta">
+    <span class="chip">~55 users Â· US + India</span>
+    <span class="chip">Next.js 16 (FE + API in one process)</span>
+    <span class="chip">PostgreSQL + object storage</span>
+    <span class="chip">Azure AD SSO Â· MS Graph mail</span>
+    <span class="chip">Finance data Â· EC2 + RDS + S3</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ===== OVERVIEW ===== -->
+<h2 class="s" id="summary"><span class="n">A</span>Overview &amp; scope</h2>
+<p class="lead">NEXA is moving hosting providers, <b>not</b> changing its architecture. The same Next.js application, the same PostgreSQL data model, and the same Azure AD login are being re-platformed: Vercel → EC2, Supabase Postgres → RDS, Supabase Storage → S3, with the supporting AWS plumbing (VPC, IAM, ACM, Route 53, SSM, CloudWatch) that Vercel and Supabase previously hid.</p>
+
+<table>
+  <tr><th>Layer</th><th>Today (Vercel + Supabase)</th><th>Target (AWS · AUXO)</th><th>Migration effort</th></tr>
+  <tr><td>Compute</td><td>Vercel serverless</td><td><span class="svc">EC2</span> <code class="inl">t3.large</code> + Nginx + systemd</td><td>Config + runtime setup</td></tr>
+  <tr><td>Relational DB</td><td>Supabase Postgres (pooler)</td><td><span class="svc">RDS</span> PostgreSQL <code class="inl">db.t3.small</code>, private</td><td>Schema recreate (no data)</td></tr>
+  <tr><td>File storage</td><td>Supabase Storage</td><td><span class="svc">S3</span> private + presigned URLs</td><td><b>Real code rewrite</b> (storage layer)</td></tr>
+  <tr><td>Public URL / TLS</td><td><code class="inl">*.vercel.app</code> auto-TLS</td><td><span class="svc">ALB</span> + <span class="svc">ACM</span> + <span class="svc">Route 53</span> + stable subdomain</td><td>Config + DNS + Azure redirect</td></tr>
+  <tr><td>Secrets</td><td>Vercel env vars</td><td><span class="svc">SSM Parameter Store</span> + <span class="svc">KMS</span></td><td>Re-enter + rotate</td></tr>
+  <tr><td>Identity (login)</td><td>Azure AD SSO</td><td>Azure AD SSO — <b>unchanged</b></td><td>Only the redirect URI changes</td></tr>
+  <tr><td>Logs / ops</td><td>Vercel logging</td><td><span class="svc">CloudWatch</span> + <code class="inl">/healthz</code></td><td>New setup</td></tr>
+</table>
+
+<div class="rec"><span class="h">What's in scope vs out of scope</span>
+<b>In scope:</b> standing up the AWS infrastructure, the S3 storage-layer rewrite, connection/secret/cookie configuration changes, the schema + seed, SSO re-wiring, verification, cut-over.
+<b>Out of scope for this runbook:</b> feature changes, and the four application <b>security release-blockers</b> — which are tracked separately (<a href="#blockers">§Release-blockers</a>) and must be fixed before NEXA holds <em>real</em> client financial data, independent of the infrastructure move.</div>
+
+<div class="rec ok"><span class="h">The single biggest simplifier</span> The current data is throwaway test data. There is <b>no data migration</b> — no <code class="inl">pg_dump</code>/restore, no file copy. You recreate the schema fresh on RDS and start S3 empty. This removes the riskiest part of most migrations. The genuine engineering work collapses to: (1) the S3 storage-layer rewrite, and (2) getting the network/TLS/SSO wiring right.</div>
+
+<!-- ===== ASSUMPTIONS ===== -->
+<h2 class="s" id="assumptions"><span class="n">B</span>Assumptions this plan is built on</h2>
+<p>Three of these are genuinely open and are tracked in <a href="#concerns">§Concerns</a>. The runbook proceeds on the defaults below; if a decision flips, the affected phase is noted.</p>
+<table>
+  <tr><th>#</th><th>Assumption</th><th>Status</th></tr>
+  <tr><td>1</td><td><b>Deployment shape = EC2 + Nginx + systemd</b> (a plain long-lived Node process), not microk8s/containers.</td><td><span class="pill warn">Confirm with SDE</span> — his first note said microk8s; variant in Phase 6.</td></tr>
+  <tr><td>2</td><td><b>Region = <code class="inl">eu-central-1</code></b> (Frankfurt), matching today's <code class="inl">fra1</code>.</td><td><span class="pill warn">SDE's call</span> — residency/latency.</td></tr>
+  <tr><td>3</td><td><b>IT provisions the VPC + IAM user</b>; you self-serve EC2/RDS/S3/SGs inside it.</td><td><span class="pill info">Per your request</span></td></tr>
+  <tr><td>4</td><td><b>"No open ports" + ACM ⇒ a public ALB fronts a locked-down EC2.</b> The ALB holds the cert and is the only thing that may reach the instance.</td><td><span class="pill warn">Needs ALB</span> — see permission gap.</td></tr>
+  <tr><td>5</td><td><b>Sizes:</b> EC2 <code class="inl">t3.large</code>, RDS <code class="inl">db.t3.small</code> (per the SDE), both resizable later.</td><td><span class="pill ok">Approved</span></td></tr>
+  <tr><td>6</td><td><b>EC2 sits in a public subnet with the Elastic IP</b> for outbound (Azure AD/Graph/S3) — so no NAT gateway is required.</td><td><span class="pill info">Default</span></td></tr>
+  <tr><td>7</td><td><b>Domain</b> (e.g. <code class="inl">nexa.procdna.com</code>) will be provided + a DNS record created by IT/the DNS owner.</td><td><span class="pill bad">Long pole</span> — start early.</td></tr>
+</table>
+
+<!-- ===== PREREQUISITES ===== -->
+<h2 class="s" id="prereq"><span class="n">C</span>Prerequisites &amp; access (must be true before Phase 1)</h2>
+<ul class="chk">
+  <li><b>GitHub:</b> the code is in the ProcDNA org repo (<code class="inl">procdna-auxo/NEXA</code>), it's your default remote, history preserved. <span class="pill ok">Done</span></li>
+  <li><b>IAM user + credentials</b> from IT (the request you sent — see <a href="#perms">§Permissions</a>).</li>
+  <li><b>A VPC</b> for NEXA (IT-provisioned private VPC, with public + private subnets across ≥2 AZs, IGW, route tables).</li>
+  <li><b>An EC2 instance role</b> (S3 + SSM access) created <em>by IT</em> — you only have <code class="inl">iam:PassRole</code>, not <code class="inl">CreateRole</code>.</li>
+  <li><b>An ALB</b> (or agreement on who creates it) — your IAM request does not include load-balancer permissions.</li>
+  <li><b>A domain/subdomain</b> + the ability to add the DNS record + the ACM validation record.</li>
+  <li><b>Access to the Azure App Registration</b> (or someone who has it) to add the new SSO redirect URI before go-live.</li>
+  <li><b>An inventory of current secrets</b> to rotate and place in SSM (see <a href="#envmap">§Env-var mapping</a>).</li>
+</ul>
+
+<!-- ===== PERMISSIONS ===== -->
+<h2 class="s" id="perms"><span class="n">D</span>The permissions you're getting — and the gaps</h2>
+<p>Your request to IT asks for an IAM user scoped to manage EC2, RDS, S3, VPC (read + SGs), ACM, SSM, CloudWatch Logs, and <code class="inl">iam:PassRole</code>. That covers the bulk of self-service. But four things it <b>does not</b> grant will block specific steps — surface these now so IT can fill them.</p>
+<table>
+  <tr><th>Capability</th><th>In your request?</th><th>Consequence / action</th></tr>
+  <tr><td>EC2 (instances, EIP, SGs, key pairs, EBS)</td><td><span class="pill ok">Yes</span></td><td>You can launch + configure the app box. ✔</td></tr>
+  <tr><td>RDS (instances, subnet/parameter groups)</td><td><span class="pill ok">Yes</span></td><td>You can create the database. ✔</td></tr>
+  <tr><td>S3 (create/manage buckets)</td><td><span class="pill ok">Yes</span></td><td>You can create the documents bucket. ✔</td></tr>
+  <tr><td>VPC read + manage security groups</td><td><span class="pill ok">Yes</span></td><td>Implies <b>IT creates the VPC</b>; you place resources + write SGs. ✔</td></tr>
+  <tr><td>ACM (request/manage cert)</td><td><span class="pill ok">Yes</span></td><td>You can request the cert — but validation needs the DNS record (below).</td></tr>
+  <tr><td>SSM (Session Manager + Parameter Store)</td><td><span class="pill ok">Yes</span></td><td>Shell into the box with no SSH; store secrets. ✔</td></tr>
+  <tr><td>CloudWatch Logs</td><td><span class="pill ok">Yes</span></td><td>Ship + view logs. ✔</td></tr>
+  <tr><td><code class="inl">iam:PassRole</code></td><td><span class="pill ok">Yes</span></td><td>Attach the instance role — but you can't <em>create</em> it (next).</td></tr>
+  <tr><td><b>Load balancer (<code class="inl">elasticloadbalancing:*</code>)</b></td><td><span class="pill bad">Missing</span></td><td><b>"No open ports" + ACM requires an ALB.</b> Either IT creates it, or add ELB perms. <b>Blocks Phase 7.</b></td></tr>
+  <tr><td><b><code class="inl">iam:CreateRole</code> / instance role</b></td><td><span class="pill bad">Missing</span></td><td>You can't create the EC2 instance role. <b>IT must create it</b> (S3 + SSM + logs). <b>Blocks Phase 6.</b></td></tr>
+  <tr><td><b>Route 53 / DNS</b></td><td><span class="pill bad">Missing</span></td><td>The subdomain record + ACM validation CNAME must be added by the DNS owner. <b>Blocks Phase 7.</b></td></tr>
+  <tr><td><b>ECR (container registry)</b></td><td><span class="pill bad">Missing</span></td><td>Only needed if you go the <b>microk8s/container</b> route (assumption #1). Add if confirmed.</td></tr>
+</table>
+<div class="rec warn"><span class="h">Add this one line to your reply to IT</span> "Two things I can't do with a plain user: please also <b>create an EC2 instance role</b> (S3 read/write to the NEXA bucket + SSM + CloudWatch Logs) for me to attach, and either <b>create the ALB</b> (with the ACM cert) or grant me <code class="inl">elasticloadbalancing</code> permissions. And whoever owns DNS will need to add the subdomain record + the ACM validation record."</div>
+
+<!-- ===== ARCHITECTURE ===== -->
+<h2 class="s" id="arch"><span class="n">E</span>Target architecture (what you're building toward)</h2>
+<div class="diagram">
+  <span class="tag">NEXA on AWS — the end state</span>
+  <div class="layer"><div class="box cli"><div class="t">Browsers · US + India</div><div class="d">~55 staff · low concurrency</div></div></div>
+  <div class="varrow">▼ HTTPS · nexa.procdna.com (Route 53 + ACM)</div>
+  <div class="layer"><div class="box"><div class="t">ALB (public subnets, ≥2 AZs)</div><div class="d">TLS termination · health check /healthz · the only thing allowed to reach EC2</div></div></div>
+  <div class="varrow">▼ HTTP + X-Forwarded-Proto: https</div>
+  <div class="layer"><div class="box"><div class="t">EC2 · Next.js (public subnet, Elastic IP)</div><div class="d">FE + API in one process · Nginx + systemd · IAM instance role (no keys)</div></div></div>
+  <div class="varrow">▼</div>
+  <div class="layer">
+    <div class="box db"><div class="t">RDS PostgreSQL (private subnets)</div><div class="d">5432 from App SG only · encrypted · SSL</div></div>
+    <div class="box db"><div class="t">S3 · nexa-docs (Region)</div><div class="d">private · presigned URLs · SSE · versioning</div></div>
+    <div class="box aws"><div class="t">SSM · CloudWatch · KMS</div><div class="d">secrets · logs · encryption keys</div></div>
+    <div class="box ext"><div class="t">Azure AD · MS Graph</div><div class="d">SSO (unchanged) · approval email</div></div>
+  </div>
+  <p class="cap">One VPC, one Region, inside the AUXO account. The full conceptual breakdown of every box is in the companion "AWS, explained through NEXA" §15; this runbook is how you assemble it.</p>
+</div>
+
+<!-- ===== TIMELINE ===== -->
+<h2 class="s" id="timeline"><span class="n">F</span>Phase timeline &amp; dependencies</h2>
+<p>Phases are ordered by dependency: network → identity → data → code → compute → edge → deploy → verify → cut-over. A few can run in parallel (noted). The domain/DNS thread is the long pole — <b>start it on day one</b>, it runs alongside everything.</p>
+<div class="timeline">
+  <div class="tl"><div class="ph">P0</div><div class="tt">Access &amp; pre-flight</div><div class="td">Verify IAM, VPC, instance role</div></div>
+  <div class="tl"><div class="ph">P1</div><div class="tt">Network + SGs</div><div class="td">Confirm subnets, write App/DB SGs</div></div>
+  <div class="tl"><div class="ph">P2</div><div class="tt">Identity + secrets</div><div class="td">Instance role, SSM params</div></div>
+  <div class="tl"><div class="ph">P3</div><div class="tt">RDS</div><div class="td">Private Postgres</div></div>
+  <div class="tl"><div class="ph">P4</div><div class="tt">S3</div><div class="td">Private bucket</div></div>
+  <div class="tl"><div class="ph">P5</div><div class="tt">App code changes</div><div class="td">Storage rewrite, pool, cookies</div></div>
+  <div class="tl"><div class="ph">P6</div><div class="tt">EC2 + runtime</div><div class="td">Node, Nginx, systemd</div></div>
+  <div class="tl"><div class="ph">P7</div><div class="tt">Edge: TLS/ALB/DNS</div><div class="td">cert, load balancer, domain</div></div>
+  <div class="tl"><div class="ph">P8</div><div class="tt">CI/CD</div><div class="td">GitHub Actions + OIDC</div></div>
+  <div class="tl"><div class="ph">P9</div><div class="tt">Schema + seed</div><div class="td">migrate, admin, azure sync</div></div>
+  <div class="tl"><div class="ph">P10</div><div class="tt">SSO wiring</div><div class="td">Azure redirect URI</div></div>
+  <div class="tl"><div class="ph">P11</div><div class="tt">Observability</div><div class="td">logs, alarms, backups</div></div>
+  <div class="tl"><div class="ph">P12</div><div class="tt">Verification</div><div class="td">end-to-end smoke tests</div></div>
+  <div class="tl"><div class="ph">P13</div><div class="tt">Cut-over</div><div class="td">DNS flip + rollback ready</div></div>
+  <div class="tl"><div class="ph">P14</div><div class="tt">Post-migration</div><div class="td">decommission, monitor</div></div>
+</div>
+<div class="rec aws"><span class="h">Build it in a dev/sandbox first</span> Do Phases 1–12 once in a throwaway dev context (fake data, smallest sizes), verify end-to-end, then repeat for production with the release-blockers fixed. The first build is learning; the second is the real cut-over. (See <a href="#envstrategy">§Environments</a>.)</div>
+
+<!-- ===================== PHASE 0 ===================== -->
+<div class="phase" id="p0"><div class="pn">PHASE 0</div><h2>Access &amp; pre-flight verification</h2><div class="owns"><span class="own you">You</span><span class="own it">IT</span></div></div>
+<div class="goal">Goal: confirm you can actually sign in and that the foundational pieces IT owns exist, before you build anything on top.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">sign in</span>Log into the AWS console with the IAM user IT created. Switch the Region selector to <code class="inl">eu-central-1</code> (or the chosen Region) and <b>keep it there</b> — a wrong-Region selector is the #1 "where did my resource go" confusion.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">CLI</span>Configure the AWS CLI locally (<code class="inl">aws configure</code>) with the access key, default Region, and output format. Verify with <code class="inl">aws sts get-caller-identity</code> — confirms who you are and which account.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">VPC exists</span>Confirm the NEXA VPC is present and get its details: <code class="inl">aws ec2 describe-vpcs</code> and <code class="inl">describe-subnets</code>. Note the <b>VPC ID, CIDR, and which subnets are public vs private</b> in which AZs. You'll reference these constantly.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">instance role</span>Confirm IT created the <b>EC2 instance role</b> and that you can pass it (you have <code class="inl">iam:PassRole</code>). If it doesn't exist yet, this blocks Phase 6 — chase it now.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">permission smoke test</span>Run harmless reads against each service you'll use (<code class="inl">aws ec2 describe-instances</code>, <code class="inl">aws rds describe-db-instances</code>, <code class="inl">aws s3 ls</code>, <code class="inl">aws ssm describe-parameters</code>). Any <code class="inl">AccessDenied</code> here tells you a permission is missing <em>before</em> you're mid-build.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">budget guard</span>Set a small monthly <span class="svc">Budgets</span> alarm immediately, so a left-running instance or a surprise ALB/data charge can't grow silently. The single best day-one habit.</div></div>
+</div>
+<div class="rec warn"><span class="h">If a smoke test fails</span> Don't work around it — note the exact action denied (e.g. <code class="inl">elasticloadbalancing:CreateLoadBalancer</code>) and send it to IT as a precise ask. Precise &gt; vague when requesting permissions.</div>
+
+<!-- ===================== PHASE 1 ===================== -->
+<div class="phase" id="p1"><div class="pn">PHASE 1</div><h2>Network foundation &amp; security groups</h2><div class="owns"><span class="own you">You</span><span class="own it">IT (VPC)</span></div></div>
+<div class="goal">Goal: confirm the network layout and create the two security groups that enforce "the database is reachable only by the app." This is the backbone of the finance-data security story.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">map the subnets</span>From Phase 0, write down: 2 <b>public</b> subnets (for the ALB + the EC2) and 2 <b>private</b> subnets (for RDS), each in a distinct AZ. RDS <em>requires</em> a DB subnet group spanning ≥2 AZs (Phase 3), so confirm two private subnets exist.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create App SG</span>Create <code class="inl">nexa-app-sg</code>. Inbound: <code class="inl">443</code>/<code class="inl">80</code> <b>from the ALB SG</b> (not the internet, since "no open ports" — the ALB is the only public ingress). No SSH rule — you'll use SSM Session Manager. Outbound: default allow (the app must reach RDS, S3, Azure, Graph).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create ALB SG</span>Create <code class="inl">nexa-alb-sg</code>. Inbound: <code class="inl">443</code>/<code class="inl">80</code> from the internet (<code class="inl">0.0.0.0/0</code>) — this is the public face. (If IT creates the ALB, they may create this; coordinate.)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create DB SG</span>Create <code class="inl">nexa-db-sg</code>. Inbound: <code class="inl">5432</code> <b>only from <code class="inl">nexa-app-sg</code></b> — reference the SG, never an IP. This single rule is what makes the database private-by-trust as well as private-by-subnet.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">tag everything</span>Tag every resource from the first one: <code class="inl">Project=NEXA</code>, <code class="inl">Environment=dev</code>, <code class="inl">Owner=Shreeraj Deshmukh</code>, <code class="inl">Vertical=AUXO</code>. Tags drive cost reporting and let you find/tear-down the whole stack later.</div></div>
+</div>
+<div class="diagram">
+  <span class="tag">The three security groups</span>
+  <div class="layer"><div class="box">Internet → <b>ALB SG</b><div class="d">443/80 from 0.0.0.0/0</div></div><div class="varrow" style="transform:rotate(-90deg)">▼</div><div class="box cli"><b>App SG</b> (EC2)<div class="d">443/80 from ALB SG · outbound open</div></div><div class="varrow" style="transform:rotate(-90deg)">▼</div><div class="box db"><b>DB SG</b> (RDS)<div class="d">5432 from App SG only</div></div></div>
+  <p class="cap">Traffic is allowed strictly down the chain. Nothing on the internet can reach the EC2 directly (only via the ALB), and nothing can reach RDS except the app.</p>
+</div>
+<div class="rec"><span class="h">Conceptual reference</span> Security groups, the SG-references-SG pattern, and public-vs-private routing are covered deeply in the AWS course §4–6. If any of this is unfamiliar, read those before clicking.</div>
+
+<!-- ===================== PHASE 2 ===================== -->
+<div class="phase" id="p2"><div class="pn">PHASE 2</div><h2>Identity &amp; secrets scaffolding</h2><div class="owns"><span class="own it">IT (role)</span><span class="own you">You (SSM)</span></div></div>
+<div class="goal">Goal: have the EC2 instance role ready (so the app reaches S3/secrets with no keys on disk) and load the application secrets into SSM Parameter Store, rotated.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">instance role (IT)</span>Confirm IT created the instance role with a <b>least-privilege</b> permission policy: <code class="inl">s3:GetObject/PutObject</code> on the NEXA bucket only, <code class="inl">ssm:GetParameter*</code> on <code class="inl">/nexa/*</code> only, and <code class="inl">logs:*</code> on the <code class="inl">/nexa/*</code> log group only. Its <b>trust policy</b> must allow the EC2 service to assume it.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">rotate</span>Generate <b>fresh values</b> for every secret as part of the move (the ideal moment): <code class="inl">NEXTAUTH_SECRET</code>, <code class="inl">EMAIL_ACTION_SECRET</code>, the RDS password, etc. Treat the old Vercel/Supabase values as retired.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">load SSM</span>Put each secret into Parameter Store as a <b>SecureString</b> under <code class="inl">/nexa/&lt;ENV&gt;/...</code>, e.g. <code class="inl">/nexa/dev/NEXTAUTH_SECRET</code>. Use the full env-var inventory in <a href="#envmap">§Env-var mapping</a>.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">the Azure dual-name trap</span>Store the Azure values under <b>both</b> naming styles: the app uses <code class="inl">AZURE_AD_TENANT_ID/CLIENT_ID/CLIENT_SECRET</code>, but <code class="inl">prisma/sync-azure-users.ts</code> reads <code class="inl">AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET</code> (no <code class="inl">_AD_</code>). Miss this and the user sync silently exits with an empty table. <span class="pill warn">audit A10</span></div></div>
+</div>
+<pre><span class="c"># Example: load a secret (repeat per parameter)</span>
+aws ssm put-parameter --name <span class="y">/nexa/dev/NEXTAUTH_SECRET</span> \
+  --type <span class="o">SecureString</span> --value <span class="y">"&lt;newly-rotated-value&gt;"</span> --region eu-central-1</pre>
+<div class="rec aws"><span class="h">Why this order</span> Identity before data and compute: the instance role must exist before you launch the EC2 (Phase 6) so you can attach it at launch, and the secrets must be in SSM before the app boots and tries to read them. Roles-not-keys is the single biggest security upgrade the move buys you (AWS course §12.2).</div>
+
+<!-- ===================== PHASE 3 ===================== -->
+<div class="phase" id="p3"><div class="pn">PHASE 3</div><h2>Data layer — RDS PostgreSQL</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: a private, encrypted PostgreSQL instance the app can reach and nothing else can. No data to import — schema gets built in Phase 9.</div>
+<table>
+  <tr><th>Setting</th><th>Value</th><th>Why</th></tr>
+  <tr><td>Engine</td><td>PostgreSQL 16.x</td><td>Matches Prisma/pg; SQL is portable from Supabase.</td></tr>
+  <tr><td>Instance class</td><td><code class="inl">db.t3.small</code> (→ <code class="inl">db.t4g.medium</code> headroom)</td><td>Small DB — documents live in S3. Resizable later with a brief reboot.</td></tr>
+  <tr><td>Storage</td><td><code class="inl">gp3</code>, 20–50 GB, autoscale on</td><td>Grows slowly; files aren't here.</td></tr>
+  <tr><td>DB subnet group</td><td>The 2 private subnets (≥2 AZs)</td><td>Required even for single-AZ.</td></tr>
+  <tr><td>Public access</td><td><b>No</b></td><td>No public endpoint at all.</td></tr>
+  <tr><td>Security group</td><td><code class="inl">nexa-db-sg</code> (5432 from App SG)</td><td>Reachable only by the app.</td></tr>
+  <tr><td>Encryption</td><td>KMS at rest; <code class="inl">sslmode=require</code></td><td>At-rest + in-transit for finance data.</td></tr>
+  <tr><td>Backups</td><td>Automated, 7-day retention</td><td>You own this now; Multi-AZ is a later policy call.</td></tr>
+  <tr><td>Schema</td><td><code class="inl">procdna_database</code></td><td>The app pins this non-default schema.</td></tr>
+</table>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create</span>Create the DB subnet group from the two private subnets, then launch the RDS instance with the settings above, attached to <code class="inl">nexa-db-sg</code>, not publicly accessible, encrypted.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">record</span>Capture the <b>endpoint hostname</b> and store the connection string in SSM as <code class="inl">/nexa/dev/DATABASE_URL</code> (and <code class="inl">DIRECT_URL</code> — they can be the same RDS endpoint now; no pooler split needed).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">connectivity note</span>You <b>cannot</b> connect from your laptop (it's not in the VPC, and the DB is private) — that's correct by design. You'll run migrations from the EC2 box (Phase 9), or via SSM port-forwarding through the instance.</div></div>
+</div>
+<pre><span class="c"># the connection string shape (note the schema + sslmode)</span>
+postgresql://USER:PW@nexa.xxxx.eu-central-1.rds.amazonaws.com:5432/nexa<span class="o">?schema=procdna_database&amp;sslmode=require</span></pre>
+<div class="rec ok"><span class="h">Two things get simpler on RDS</span> (1) No more pgBouncer pooler gymnastics — point Prisma straight at 5432. (2) You can run real migrations (<code class="inl">prisma migrate deploy</code>) instead of hand-applying SQL. <b>But</b> see Phase 5 for the <code class="inl">max=1</code> connection-pool fix — that one bites under concurrency if missed.</div>
+
+<!-- ===================== PHASE 4 ===================== -->
+<div class="phase" id="p4"><div class="pn">PHASE 4</div><h2>Data layer — S3 (documents)</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: a private bucket for SOW/PO documents (and optionally logs), reachable only via presigned URLs minted by the app's instance role.</div>
+<table>
+  <tr><th>Setting</th><th>Value</th></tr>
+  <tr><td>Bucket</td><td>One private bucket, e.g. <code class="inl">nexa-docs-dev</code> (globally-unique name)</td></tr>
+  <tr><td>Block Public Access</td><td><b>ON</b> (account-level enforcement if possible) — the highest-impact safety switch in the whole migration</td></tr>
+  <tr><td>Encryption</td><td>Default SSE (SSE-S3 or SSE-KMS)</td></tr>
+  <tr><td>Versioning</td><td>ON — recovers overwritten/deleted docs (the app soft-deletes; S3 versioning is the net)</td></tr>
+  <tr><td>Access</td><td>The EC2 instance role only (<code class="inl">s3:GetObject/PutObject</code> on this bucket) — no keys in env</td></tr>
+  <tr><td>Key layout</td><td><code class="inl">&lt;oppId&gt;/&lt;version&gt;_&lt;ts&gt;.&lt;ext&gt;</code> (mirrors today's Supabase paths)</td></tr>
+</table>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create</span>Create the bucket with Block Public Access on, SSE on, versioning on. Optionally a second prefix/bucket for logs (the SDE mentioned "logs storage").</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">store config</span>Put <code class="inl">/nexa/dev/S3_BUCKET</code> and the region in SSM. Credentials are <em>not</em> stored — they come from the instance role.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">verify privacy</span>Confirm an anonymous <code class="inl">curl</code> to an object URL is denied, and a presigned URL works. This is the test that proves the design.</div></div>
+</div>
+<div class="rec bad"><span class="h">The scariest button in the project</span> One "Block Public Access = off" click makes <em>every</em> confidential pricing/SOW document world-readable. Keep it ON; if you can, set an <b>account-level</b> Block Public Access so it can't be toggled per-bucket by accident. Constrain the upload presign to a content-type + size limit (this also closes the client-claimed-MIME weakness, <span class="pill warn">audit S11</span>).</div>
+
+<!-- ===================== PHASE 5 ===================== -->
+<div class="phase" id="p5"><div class="pn">PHASE 5</div><h2>Application code changes for AWS</h2><div class="owns"><span class="own you">You (later)</span></div></div>
+<div class="goal">Goal: the code changes the move <em>requires</em>. These are <b>described here, not made now</b> (per your instruction). They're small and surgical — do them on a branch when you reach this point.</div>
+<table>
+  <tr><th>#</th><th>Change</th><th>File(s)</th><th>Why</th></tr>
+  <tr><td>1</td><td><b>Storage-layer rewrite: Supabase → S3</b>. <code class="inl">getSupabase()</code> → an S3 client; <code class="inl">getSignedUrl()</code> → <code class="inl">@aws-sdk/s3-request-presigner</code> (1-hour expiry). <b>Add cache eviction</b> (the current cache is unbounded on a long-lived process). Rewrite the four document routes' "signed upload URL" calls to S3 presigned <code class="inl">PUT</code>.</td><td><code class="inl">lib/supabase.ts</code>→<code class="inl">lib/s3.ts</code>; <code class="inl">sow</code>, <code class="inl">sow/confirm</code>, <code class="inl">po</code>, <code class="inl">po/confirm</code></td><td>The one real engineering task. <span class="pill warn">A5</span></td></tr>
+  <tr><td>2</td><td><b>Raise the Prisma pool cap.</b> <code class="inl">max=1</code> in production is correct for Vercel but a severe bottleneck on one long-lived EC2 process. Raise to ~10, sized to the RDS connection limit.</td><td><code class="inl">lib/prisma.ts</code></td><td>Or the app serialises every request through one DB connection. <span class="pill warn">A1</span></td></tr>
+  <tr><td>3</td><td><b>Trust the proxy for HTTPS.</b> Ensure the app honours <code class="inl">X-Forwarded-Proto</code> and set <code class="inl">NEXTAUTH_URL=https://nexa.procdna.com</code> so NextAuth issues the <code class="inl">Secure</code> cookie. Behind the ALB the app sees plain http internally.</td><td>env + proxy/Nginx config</td><td>Else SSO silently fails. <span class="pill bad">release-relevant · A2</span></td></tr>
+  <tr><td>4</td><td><b>Harden the cookie-name detection</b> to also check the <code class="inl">.0</code> chunk, so large Azure tokens (chunked cookies) don't cause an infinite login loop.</td><td><code class="inl">lib/getAuthToken.ts</code></td><td>Latent login loop for users in many AD groups. <span class="pill warn">C1</span></td></tr>
+  <tr><td>5</td><td><b>Env changes.</b> Drop <code class="inl">SUPABASE_*</code>; add <code class="inl">S3_BUCKET</code> + region. Converge <code class="inl">DATABASE_URL</code>/<code class="inl">DIRECT_URL</code> on the RDS endpoint. Remove the unused <code class="inl">ONEDRIVE_*</code>.</td><td>env / SSM</td><td>Provider swap.</td></tr>
+  <tr><td>6</td><td><b>Add a <code class="inl">/healthz</code> route</b> returning 200 for the ALB health check.</td><td>a new API route</td><td>Enables ALB self-healing.</td></tr>
+  <tr><td>7</td><td><b>(Container variant only)</b> add a <code class="inl">Dockerfile</code> (Next.js standalone) + k8s manifests, if the microk8s path is confirmed.</td><td>new files</td><td>Assumption #1.</td></tr>
+</table>
+<div class="rec"><span class="h">Sequencing</span> Do #2, #3, #4, #5, #6 first (small, low-risk) and validate login + DB on a dev box. Tackle #1 (the S3 rewrite) as a focused piece with its own testing — it's the part most likely to need iteration. I can scaffold the S3 layer against your current code when you reach this phase.</div>
+
+<!-- ===================== PHASE 6 ===================== -->
+<div class="phase" id="p6"><div class="pn">PHASE 6</div><h2>Compute — EC2 &amp; the runtime</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: a running app box — Node running <code class="inl">next start</code> under a process manager, reachable only via the ALB, wearing the instance role, pulling secrets from SSM.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">launch</span>Launch one EC2 <code class="inl">t3.large</code> (Amazon Linux 2023 or Ubuntu LTS) in a <b>public subnet</b>, attach the <b>Elastic IP</b>, the <b>App SG</b>, the <b>instance role</b>, and a small <code class="inl">gp3</code> root volume (~20–30 GB). No SSH key needed if you use SSM.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">shell in</span>Connect via <span class="svc">SSM Session Manager</span> (console → the instance → Connect) — no open port 22, no key. This is why SSM is in your permission set.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">runtime</span>Install Node (the version the app targets), then <b>Nginx</b> as a reverse proxy in front of <code class="inl">next start</code> on <code class="inl">localhost:3000</code>. Nginx (or the ALB) is the TLS edge; locally the app speaks http.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">secrets at boot</span>Add a small boot step that reads <code class="inl">/nexa/dev/*</code> from SSM and writes them to the process environment (not to disk). The instance role authorises the read; nothing is baked into the image.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">process manager</span>Run the app under <b>systemd</b> (<code class="inl">Restart=always</code>) so it survives crashes and reboots — reproducing what Vercel did for free.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">smoke</span>From the box, confirm the app starts, can reach RDS (5432) and S3 (presign) <b>with no keys on disk</b>, and serves <code class="inl">/healthz</code> on localhost.</div></div>
+</div>
+<pre><span class="c"># /etc/systemd/system/nexa.service (sketch)</span>
+[Service]
+WorkingDirectory=/opt/nexa
+ExecStartPre=/opt/nexa/load-ssm-env.sh        <span class="c"># pulls /nexa/* from SSM → env</span>
+ExecStart=/usr/bin/npm run start              <span class="c"># next start, on :3000</span>
+Restart=always
+User=nexa
+[Install]
+WantedBy=multi-user.target</pre>
+<div class="rec warn"><span class="h">Don't build on the box</span> <code class="inl">next build</code> is memory-hungry and can OOM on a small instance. Build the artifact in <b>CI</b> (Phase 8) and ship it; keep the runtime box lean. If you must build locally once, add swap temporarily. <span class="pill warn">audit A7</span></div>
+<div class="rec aws"><span class="h">Container variant (assumption #1)</span> If the SDE confirms <b>microk8s</b>: instead of Nginx+systemd you containerise (Dockerfile), install microk8s on the box, and apply a Deployment/Service/Ingress. The ALB then targets the microk8s NodePort. This needs ECR (a permission gap) and is more day-2 ops than a solo, app-focused owner may want — which is exactly the open question in <a href="#concerns">§Concerns #1</a>. Confirm before building this way.</div>
+
+<!-- ===================== PHASE 7 ===================== -->
+<div class="phase" id="p7"><div class="pn">PHASE 7</div><h2>Edge — TLS, ALB &amp; DNS</h2><div class="owns"><span class="own you">You (ACM)</span><span class="own it">IT (ALB, DNS)</span></div></div>
+<div class="goal">Goal: a stable HTTPS front door at <code class="inl">nexa.procdna.com</code>. This phase is the SSO long-pole and crosses team boundaries — start the domain thread early.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">request cert (ACM)</span>Request an ACM certificate for <code class="inl">nexa.procdna.com</code> <b>in the ALB's Region</b>. ACM gives you a validation CNAME.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">validate (DNS owner)</span>Whoever owns <code class="inl">procdna.com</code> DNS adds the validation CNAME. DNS validation is preferred (enables auto-renewal). <span class="pill bad">cross-team — your gap</span></div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">create ALB</span>Create the ALB across the 2 public subnets with the <code class="inl">nexa-alb-sg</code>. Listener <code class="inl">443</code> using the ACM cert; a <code class="inl">80→443</code> redirect. Target group = the EC2 instance; health check = <code class="inl">/healthz</code>. <span class="pill bad">needs ELB perms or IT</span></div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">lock the EC2</span>Now that the ALB fronts it, ensure the App SG accepts 443/80 <b>only from the ALB SG</b> — closing the "no open ports" loop.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">DNS record</span>The DNS owner creates <code class="inl">nexa.procdna.com</code> → ALB (an ALIAS/CNAME to the ALB DNS name).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">verify edge</span>Hit <code class="inl">https://nexa.procdna.com</code> — padlock valid, health check green, <code class="inl">80</code> redirects to <code class="inl">443</code>. Confirm <code class="inl">X-Forwarded-Proto</code> reaches the app (Phase 5 #3).</div></div>
+</div>
+<div class="rec bad"><span class="h">The stable-URL constraint (why this phase matters most)</span> Microsoft SSO redirect URIs and email Safe Links are registered against this exact domain. Nothing external may ever point at a raw EC2 IP. Route 53/firm-DNS + ACM + ALB solve it once, after which restarts/redeploys/scaling never disturb login or email. <b>Pre-register the redirect URI in Azure before flipping DNS</b> (Phase 10) or SSO breaks the instant the name resolves.</div>
+
+<!-- ===================== PHASE 8 ===================== -->
+<div class="phase" id="p8"><div class="pn">PHASE 8</div><h2>Build &amp; deploy — CI/CD</h2><div class="owns"><span class="own you">You</span><span class="own it">IT (OIDC role)</span></div></div>
+<div class="goal">Goal: pushing to <code class="inl">main</code> builds the app in CI and ships it to the box — keeping the memory-hungry build off the instance and using keyless AWS auth.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">OIDC trust (IT)</span>IT creates a GitHub Actions deploy role with an OIDC trust policy scoped to <code class="inl">procdna-auxo/NEXA</code>, branch <code class="inl">main</code> — so Actions gets short-lived creds and <b>no AWS key is stored in GitHub</b>.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">workflow</span>Add <code class="inl">.github/workflows/deploy.yml</code>: build the Next.js artifact in CI, assume the role via OIDC, then deploy — EC2 path: ship the build + restart the systemd service (via SSM Run Command); container path: push image to ECR + roll the service.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">branch protection</span>Confirm <code class="inl">main</code> requires a PR + passing checks (set during the GitHub migration) so deploys only flow from reviewed code.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">first deploy</span>Run it once end-to-end; confirm the new build lands and the health check stays green.</div></div>
+</div>
+<div class="rec"><span class="h">Interim reality</span> Until this is wired, you can deploy manually over SSM (pull build + restart). But stand up CI before go-live so production deploys are reviewed and repeatable. (Your old "CI/CD" was Vercel's Git integration — there were no workflow files, so this is net-new.)</div>
+
+<!-- ===================== PHASE 9 ===================== -->
+<div class="phase" id="p9"><div class="pn">PHASE 9</div><h2>Schema, seed &amp; data</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: the empty RDS becomes the live schema with real users. No data import — build fresh and seed.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">point Prisma</span>With <code class="inl">DATABASE_URL</code>/<code class="inl">DIRECT_URL</code> set to RDS (from SSM), run from the EC2 box (or via SSM port-forward).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">build schema</span><code class="inl">npx prisma migrate deploy</code> (or <code class="inl">prisma db push</code>) — creates the <code class="inl">procdna_database</code> schema, tables, enums fresh.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">bootstrap admin</span><code class="inl">npx tsx prisma/add-admin.ts</code> — creates the first ADMIN so you can get in.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">sync users</span><code class="inl">npx tsx prisma/sync-azure-users.ts</code> — pulls the real BD users from Azure AD. <b>Remember the dual env-var names</b> (Phase 2) or this silently does nothing.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">do NOT run the demo seed</span><code class="inl">prisma/seed.ts</code> references stale stage names (<code class="inl">STATUS_CHANGE_PENDING</code>, <code class="inl">PO_PENDING</code>) and a legacy <code class="inl">kindeId</code> field — it will fail against the current schema. Treat it as historical sample data, not a live seed.</div></div>
+</div>
+<pre>npx prisma migrate deploy
+npx tsx prisma/add-admin.ts
+npx tsx prisma/sync-azure-users.ts   <span class="c"># needs AZURE_TENANT_ID + AZURE_AD_TENANT_ID both set</span></pre>
+
+<!-- ===================== PHASE 10 ===================== -->
+<div class="phase" id="p10"><div class="pn">PHASE 10</div><h2>Azure AD / SSO wiring</h2><div class="owns"><span class="own you">You</span><span class="own sde">App-reg owner</span></div></div>
+<div class="goal">Goal: SSO works against the new domain. This is config-only — NextAuth runs unchanged inside the app; only the registered URL changes.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">add redirect URI</span>In the Azure App Registration, add <code class="inl">https://nexa.procdna.com/api/auth/callback/azure-ad</code> as a redirect URI — <b>before</b> go-live. If you don't own the app registration, this is a request to whoever does.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">env</span>Confirm <code class="inl">NEXTAUTH_URL=https://nexa.procdna.com</code> and the <code class="inl">AZURE_AD_*</code> secrets are in SSM and reaching the app.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">test</span>Sign in end-to-end: a provisioned, active user reaches the dashboard; an unprovisioned one is rejected. Confirm the session cookie is <code class="inl">Secure</code> (validates Phase 5 #3/#4).</div></div>
+</div>
+<div class="rec warn"><span class="h">The #1 day-one breakage</span> If the redirect URI isn't pre-registered, or <code class="inl">X-Forwarded-Proto</code>/<code class="inl">NEXTAUTH_URL</code> aren't right, login fails silently even though everything else is perfect. Treat SSO as a gating verification item, not an afterthought.</div>
+
+<!-- ===================== PHASE 11 ===================== -->
+<div class="phase" id="p11"><div class="pn">PHASE 11</div><h2>Observability &amp; backups</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: you can see what the app is doing and recover if something breaks — the things Vercel/Supabase did invisibly.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">logs</span>Install the CloudWatch agent (or systemd-journal → CloudWatch) to ship app stdout + Nginx logs into a <code class="inl">/nexa/*</code> log group. The instance role grants the log permissions.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">metrics + alarms</span>Watch EC2 CPU/credits + memory, RDS connections/CPU, ALB 5xx/latency/healthy-host count. Add 2 alarms: <b>5xx spike</b> and <b>no healthy targets</b> → SNS email.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">backups</span>Confirm RDS automated backups are on (7-day retention); take a manual snapshot before cut-over. Confirm S3 versioning is on.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">cost</span>Confirm the Budgets alarm from Phase 0 is active.</div></div>
+</div>
+<div class="rec ok"><span class="h">Proportionate ops</span> For ~55 users you don't need a heavyweight stack: logs → CloudWatch, a <code class="inl">/healthz</code> the ALB checks, RDS backups verified, two alarms. That's a solid, defensible posture — resist over-building it.</div>
+
+<!-- ===================== PHASE 12 ===================== -->
+<div class="phase" id="p12"><div class="pn">PHASE 12</div><h2>Verification — end-to-end smoke tests</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="goal">Goal: prove the whole system works before any cut-over. Test the seams the migration touched, not just "the page loads."</div>
+<ul class="chk">
+  <li><b>SSO:</b> provisioned user logs in via Azure AD → dashboard; unprovisioned user rejected; session cookie is <code class="inl">Secure</code>.</li>
+  <li><b>RBAC:</b> a SEL sees only their own opportunities; an ADMIN sees all (proves <code class="inl">resolveOwnerFilter</code> + the token role survived).</li>
+  <li><b>Database:</b> create an opportunity, a pricing version, edit staffing — confirm writes hit RDS and the pool isn't serialising (Phase 5 #2).</li>
+  <li><b>S3 round-trip:</b> upload a SOW doc (browser→S3 presigned PUT), then view it (presigned GET) — the core rewrite. Confirm the bucket is <em>not</em> publicly reachable.</li>
+  <li><b>Email:</b> request an approval → the approver gets the Graph email with working Approve/Reject links → the one-click action updates state (validates <code class="inl">MAIL_BASE_URL</code> + the stable domain).</li>
+  <li><b>Resilience:</b> restart the EC2 (stop/start) — Elastic IP holds, systemd brings the app back, SSO still works (proves the stable-URL design).</li>
+  <li><b>Logs/alarms:</b> trigger a deliberate error and confirm it appears in CloudWatch.</li>
+</ul>
+<div class="rec"><span class="h">The "did the migration break a seam?" tests</span> The high-value checks are the ones that exercise what changed: <b>S3 upload/view</b>, <b>SSO behind the ALB</b>, and <b>DB under light concurrency</b>. If those three pass cleanly, the risky parts of the move are sound.</div>
+
+<!-- ===================== PHASE 13 ===================== -->
+<div class="phase" id="p13"><div class="pn">PHASE 13</div><h2>Cut-over &amp; rollback</h2><div class="owns"><span class="own you">You</span><span class="own sde">SDE</span></div></div>
+<div class="goal">Goal: make AWS the live system with a clean, reversible switch. Because data is throwaway, cut-over is low-risk — it's mostly flipping where the name points.</div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">freeze</span>Pick a low-traffic window. Ensure the production stack has the four <a href="#blockers">release-blockers</a> fixed, real secrets in SSM, and the Azure redirect URI registered.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">flip DNS</span>Point <code class="inl">nexa.procdna.com</code> at the AWS ALB. (If the domain was already on AWS during testing, this may just be promoting prod.) DNS TTL governs propagation — keep it short beforehand.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">re-run smoke tests</span>Repeat Phase 12 on the live domain — SSO, an upload, an approval email.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">watch</span>Monitor CloudWatch + the ALB target health for the first hours.</div></div>
+</div>
+<div class="rec warn"><span class="h">Rollback plan</span> Until you decommission Vercel (Phase 14), it remains a working fallback. If something critical breaks at cut-over, <b>point DNS back</b> to Vercel — that's the rollback. Keep the old Vercel deployment intact and the Azure App Registration retaining the old redirect URI until you're confident on AWS. Because there's no data divergence (fake data), rolling back loses nothing.</div>
+
+<!-- ===================== PHASE 14 ===================== -->
+<div class="phase" id="p14"><div class="pn">PHASE 14</div><h2>Post-migration &amp; decommission</h2><div class="owns"><span class="own you">You</span></div></div>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">soak</span>Run on AWS for a defined soak period (e.g. a week) with monitoring before decommissioning anything.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">decommission</span>Once confident: remove the Vercel project's Git connection / pause the deployment, and retire the Supabase project. Remove the old redirect URI from Azure. Revoke the old (now-rotated) secrets everywhere.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">harden</span>Apply the deferred items: WAF/rate-limiting on the secret-bearing endpoints (the ALB is the attach point), the <code class="inl">xlsx</code> dependency fix, account-level S3 Block Public Access.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">capture as code (optional)</span>Once stable, capture the stack as <b>CDK/CloudFormation</b> so dev↔prod are reproducible and you can rebuild from code.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">update docs</span>Refresh AGENTS.md / the plan docs to reflect the AWS reality (endpoints, env, deploy process).</div></div>
+</div>
+
+<!-- ===================== RELEASE BLOCKERS ===================== -->
+<h2 class="s" id="blockers"><span class="n">G</span>Security release-blockers — fix before real financial data</h2>
+<p class="lead">These are <b>application-level</b> issues from the codebase audit, independent of the infrastructure move. The migration can proceed and be tested with them open, but they must be closed before NEXA holds <em>real</em> client financials in production. Treat them as gating items for the production cut-over.</p>
+<table>
+  <tr><th>#</th><th>Blocker</th><th>Risk</th><th>Fix direction</th></tr>
+  <tr><td>1</td><td><b>Shared-password backup login</b> (<code class="inl">/login2</code>) — one shared secret signs you in as <em>any</em> user, including ADMIN.</td><td><span class="pill bad">Critical</span></td><td>Remove it (SSO-only), or per-user hashed passwords. At minimum IP-restrict + rotate.</td></tr>
+  <tr><td>2</td><td><b>Emergency admin via URL token</b> (<code class="inl">/api/emergency</code>) — static token in the query string mints an admin session.</td><td><span class="pill bad">High</span></td><td>POST + short-lived token + IP allow-list/WAF, or remove in prod.</td></tr>
+  <tr><td>3</td><td><b>Write-side IDOR</b> — most mutating routes authenticate but don't <em>authorise</em>; a user can act on another team's records by ID.</td><td><span class="pill bad">High</span></td><td>One shared ownership/role guard at the top of every mutating route (mirror the read-side filter).</td></tr>
+  <tr><td>4</td><td><b>Audit logging not enforced</b> — the <code class="inl">ActivityLog</code> table exists but isn't consistently written; finance data needs a who-did-what trail.</td><td><span class="pill warn">Medium</span></td><td>Write ActivityLog on every create/update/approve/export.</td></tr>
+</table>
+<div class="rec bad"><span class="h">Where these meet AWS</span> AWS <em>helps</em> (WAF/rate-limiting in front of #1 and #2; CloudTrail for infra audit alongside #4), but it does not fix the app logic. The full findings, including the XSS/HTML-escaping and the chunked-cookie items, are in <code class="inl">docs/codebase-audit.html</code>.</div>
+
+<!-- ===================== ENVIRONMENTS ===================== -->
+<h2 class="s" id="envstrategy"><span class="n">H</span>Environment strategy (dev → prod)</h2>
+<p>Stamp the same architecture at increasing realness. For NEXA's size, <b>dev + prod</b> is a defensible minimum; staging is optional.</p>
+<div class="layer">
+  <div class="box cli"><div class="t">DEV</div><div class="d">your sandbox · fake data · smallest sizes · break freely · build &amp; learn here first</div></div>
+  <div class="varrow" style="transform:rotate(-90deg)">▶</div>
+  <div class="box"><div class="t">STAGING (optional)</div><div class="d">prod-like · dress-rehearse the cut-over &amp; SSO</div></div>
+  <div class="varrow" style="transform:rotate(-90deg)">▶</div>
+  <div class="box db"><div class="t">PRODUCTION</div><div class="d">real users + financials · release-blockers fixed · backups · (Multi-AZ optional)</div></div>
+</div>
+<div class="rec"><span class="h">The principle that matters</span> The <b>same build artifact</b> moves up the chain (build once in CI, promote the identical thing), so "works in dev" means something in prod. SSM paths separate by env (<code class="inl">/nexa/dev/*</code> vs <code class="inl">/nexa/prod/*</code>); ideally dev and prod live in separate sub-accounts so a dev mistake can't touch production financial data.</div>
+
+<!-- ===================== MASTER CHECKLIST ===================== -->
+<h2 class="s" id="checklist"><span class="n">I</span>Master checklist</h2>
+<div class="twocol">
+  <div>
+    <h4>Provisioning (mostly you, some IT)</h4>
+    <ul class="chk">
+      <li>IAM user works; Region pinned; Budgets alarm set</li>
+      <li>VPC + subnets confirmed (2 public, 2 private, 2 AZs)</li>
+      <li>App SG, ALB SG, DB SG created &amp; tagged</li>
+      <li>EC2 instance role created (IT) &amp; attachable</li>
+      <li>Secrets rotated &amp; loaded to SSM (incl. dual Azure names)</li>
+      <li>RDS up: private, encrypted, SSL, backups</li>
+      <li>S3 bucket: Block Public Access ON, SSE, versioning</li>
+      <li>EC2 launched: public subnet, EIP, role, App SG</li>
+      <li>Node + Nginx + systemd; secrets-at-boot working</li>
+      <li>ACM cert issued &amp; validated (DNS owner)</li>
+      <li>ALB created (IT or you) + 80→443 + /healthz target</li>
+      <li>DNS record nexa.procdna.com → ALB</li>
+      <li>CloudWatch logs + 2 alarms; RDS snapshot taken</li>
+    </ul>
+  </div>
+  <div>
+    <h4>App, data &amp; cut-over (you)</h4>
+    <ul class="chk">
+      <li>Code: S3 storage rewrite</li>
+      <li>Code: Prisma pool max raised</li>
+      <li>Code: X-Forwarded-Proto / NEXTAUTH_URL / cookie chunk fix</li>
+      <li>Code: /healthz route; env swap (drop SUPABASE_*, add S3_*)</li>
+      <li>CI/CD: GitHub Actions + OIDC role (IT) building &amp; deploying</li>
+      <li>Schema: <code class="inl">prisma migrate deploy</code></li>
+      <li>Seed: add-admin + azure sync (NOT the demo seed)</li>
+      <li>Azure: new redirect URI registered (pre-go-live)</li>
+      <li>Smoke tests pass: SSO, RBAC, S3 round-trip, approval email, restart</li>
+      <li><b>Release-blockers fixed</b> (login2, emergency, IDOR, audit log) — prod only</li>
+      <li>Cut-over: DNS flipped; rollback (Vercel) kept ready</li>
+      <li>Post: decommission Vercel/Supabase; WAF; xlsx fix; rotate-out old secrets</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===================== CONCERNS ===================== -->
+<h2 class="s" id="concerns"><span class="n">J</span>Concerns, risks &amp; open decisions</h2>
+<p class="lead">The honest list of what could bite, what's unresolved, and what to decide with the SDE/IT. Ordered roughly by impact.</p>
+
+<div class="rec bad"><span class="h">1 · Deployment shape is unresolved (microk8s vs simple) <span class="pill bad">decide first</span></span> The SDE's first note said microk8s; this runbook assumes <b>EC2 + Nginx + systemd</b>. microk8s on a single box adds real day-2 Kubernetes operations (a broken pod, ingress, upgrades) that a solo, app-focused owner without DevOps support will struggle to maintain — and it needs ECR (a permission gap). <b>Action:</b> confirm with the SDE. If he wants microk8s for firm consistency, ask explicitly <em>who supports the k8s layer</em>; if it's on you, the simpler path is the maintainable choice. This single decision changes Phases 6 and 8.</div>
+
+<div class="rec bad"><span class="h">2 · Permission gaps will block specific phases <span class="pill bad">act now</span></span> Your IAM request omits <b>load-balancer (ELB/ALB)</b>, <b><code class="inl">iam:CreateRole</code></b> (the instance role), <b>Route 53/DNS</b>, and <b>ECR</b>. "No open ports + ACM" <em>requires</em> an ALB, and the app needs the instance role. <b>Action:</b> ask IT to create the ALB + the instance role + the DNS record (or grant the matching permissions). Until then, Phases 6/7 are blocked. (See <a href="#perms">§Permissions</a>.)</div>
+
+<div class="rec warn"><span class="h">3 · The domain is the long pole <span class="pill warn">start day one</span></span> SSO and email can't be finalised until <code class="inl">nexa.procdna.com</code> exists, and DNS changes cross a team boundary with their own approval process. <b>Action:</b> open the domain + ACM-validation conversation immediately, in parallel with everything else.</div>
+
+<div class="rec warn"><span class="h">4 · Region / data residency is the SDE's call <span class="pill warn">confirm</span></span> Default <code class="inl">eu-central-1</code> matches today, but US+India users raise a residency/latency question. Region is sticky (resources can't move). <b>Action:</b> confirm before Phase 1 — it's cheap to choose now (no data), expensive to change later.</div>
+
+<div class="rec warn"><span class="h">5 · "No open ports" + Elastic IP + ALB need reconciling <span class="pill warn">clarify</span></span> A public-subnet EC2 with an Elastic IP egresses fine (no NAT), but if the instance is genuinely private behind the ALB it needs a NAT gateway (or VPC endpoints) for outbound to Azure/Graph/S3. <b>Action:</b> confirm the intended placement (public-EIP vs private-behind-ALB) so the egress path is right — otherwise the app can't reach Azure AD and login dies.</div>
+
+<div class="rec"><span class="h">6 · The S3 storage rewrite is the only real engineering risk</span> Everything else is configuration; the Supabase→S3 layer (presigning, the four routes, cache eviction) needs its own testing. <b>Action:</b> isolate it on a branch, test upload/view thoroughly, and budget time for iteration. I can scaffold it against the current code when you reach Phase 5.</div>
+
+<div class="rec"><span class="h">7 · The release-blockers are prod-gating, not migration-gating</span> The four security items (login2, emergency, IDOR, audit logging) don't block <em>testing</em> on AWS, but must be fixed before <em>real</em> financial data. <b>Action:</b> schedule them into the production cut-over, not after.</div>
+
+<div class="rec"><span class="h">8 · Solo ownership of new infrastructure <span class="pill info">support model</span></span> You'll own EC2/RDS/S3/deploys with limited DevOps background, and IT is a separate vertical. <b>Action:</b> agree a support/escalation path with the SDE/IT for day-2 incidents (a broken deploy, a DB issue at 2am) <em>before</em> go-live — don't discover the gap during an outage.</div>
+
+<div class="rec"><span class="h">9 · Smaller, known traps (already handled in the phases)</span>
+<ul style="margin:6px 0 0">
+  <li><b>Prisma <code class="inl">max=1</code></b> — raise it or the app crawls under concurrency (Phase 5 #2).</li>
+  <li><b>Chunked cookies</b> — large Azure tokens cause a login loop without the <code class="inl">.0</code> fix (Phase 5 #4).</li>
+  <li><b>Azure sync env names</b> — dual-name or the user table silently stays empty (Phase 2/9).</li>
+  <li><b><code class="inl">next build</code> OOM</b> — build in CI, not on the box (Phase 6/8).</li>
+  <li><b>Demo seed is stale</b> — don't run <code class="inl">prisma/seed.ts</code> (Phase 9).</li>
+  <li><b><code class="inl">xlsx@0.18.5</code> CVEs</b> — patch as part of post-migration hardening (Phase 14).</li>
+  <li><b>Cost surprises</b> — ALB + any data transfer bill hourly; the Budgets alarm is your safety net (Phase 0).</li>
+</ul></div>
+
+<div class="rec aws"><span class="h">10 · Questions worth putting to the SDE/IT in one message</span>
+<ol style="margin:6px 0 0">
+  <li>microk8s or a plain container/Node deploy — and who operates the k8s layer if microk8s?</li>
+  <li>Region (eu-central-1 vs ap-south-1/us-east-1) — any residency rule?</li>
+  <li>Will IT create the <b>ALB</b> and the <b>EC2 instance role</b>, or grant me the permissions?</li>
+  <li>Who owns the <b>domain/DNS</b> and the <b>Azure App Registration</b> (for the redirect URI)?</li>
+  <li>Is the EC2 public-with-EIP or private-behind-ALB (decides NAT)?</li>
+  <li>What's the day-2 <b>support/escalation</b> path once it's live?</li>
+</ol></div>
+
+<!-- ===================== APPENDIX: ENV MAP ===================== -->
+<h2 class="s" id="envmap"><span class="n">K</span>Appendix — environment variable mapping</h2>
+<p>Every config value, where it lived, and where it goes. Store the AWS column in SSM under <code class="inl">/nexa/&lt;env&gt;/</code>.</p>
+<table>
+  <tr><th>Variable</th><th>Today</th><th>On AWS</th><th>Note</th></tr>
+  <tr><td><code class="inl">DATABASE_URL</code> / <code class="inl">DIRECT_URL</code></td><td>Supabase (pooled 6543 / direct 5432)</td><td>RDS endpoint :5432, <code class="inl">?schema=procdna_database&amp;sslmode=require</code></td><td>Can converge on one endpoint now</td></tr>
+  <tr><td><code class="inl">NEXTAUTH_URL</code></td><td><code class="inl">*.vercel.app</code></td><td><code class="inl">https://nexa.procdna.com</code></td><td>Must be the https public URL</td></tr>
+  <tr><td><code class="inl">NEXTAUTH_SECRET</code></td><td>Vercel env</td><td>SSM SecureString</td><td><b>Rotate</b></td></tr>
+  <tr><td><code class="inl">AZURE_AD_TENANT_ID/CLIENT_ID/CLIENT_SECRET</code></td><td>Vercel env</td><td>SSM</td><td>App reads these</td></tr>
+  <tr><td><code class="inl">AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET</code></td><td>—</td><td>SSM (same values, no <code class="inl">_AD_</code>)</td><td><b>Sync script reads these</b> — set both</td></tr>
+  <tr><td><code class="inl">SUPABASE_URL</code> / <code class="inl">SUPABASE_SERVICE_ROLE_KEY</code></td><td>Vercel env</td><td><b>Removed</b></td><td>Replaced by the instance role</td></tr>
+  <tr><td><code class="inl">S3_BUCKET</code> / region</td><td>—</td><td>SSM (new)</td><td>Credentials via instance role, not env</td></tr>
+  <tr><td><code class="inl">MAIL_SENDER</code></td><td>Vercel env</td><td>SSM</td><td>Graph sender mailbox</td></tr>
+  <tr><td><code class="inl">MAIL_BASE_URL</code></td><td>Vercel URL</td><td><code class="inl">https://nexa.procdna.com</code></td><td>Email links + Safe Links</td></tr>
+  <tr><td><code class="inl">EMAIL_ACTION_SECRET</code></td><td>Vercel env</td><td>SSM</td><td><b>Rotate</b></td></tr>
+  <tr><td><code class="inl">CREDENTIALS_SECRET</code></td><td>Vercel env</td><td>SSM <em>(or remove with /login2)</em></td><td>Tied to release-blocker #1</td></tr>
+  <tr><td><code class="inl">EMERGENCY_TOKEN</code></td><td>Vercel env</td><td>SSM <em>(or remove)</em></td><td>Tied to release-blocker #2</td></tr>
+  <tr><td><code class="inl">ONEDRIVE_USER</code> / <code class="inl">ONEDRIVE_FILE_PATH</code></td><td>Vercel env</td><td><b>Removed</b></td><td>Unused (export uses a hardcoded SharePoint URL)</td></tr>
+</table>
+
+<!-- ===================== APPENDIX: TEMPLATES ===================== -->
+<h2 class="s" id="mailtemplates"><span class="n">L</span>Appendix — the IT/SDE follow-up you should send</h2>
+<p>Your IAM request is in flight. Send this short follow-up to close the gaps this runbook surfaced:</p>
+<pre>Hi [IT/SDE],
+
+Thanks — following up with a few specifics so I'm not blocked mid-build:
+
+1. <span class="o">EC2 instance role</span>: my user has iam:PassRole but not CreateRole, so could you
+   create an instance role (S3 read/write to the NEXA bucket + SSM Parameter Store
+   read on /nexa/* + CloudWatch Logs) for me to attach to the EC2?
+
+2. <span class="o">ALB</span>: "no open ports + ACM cert" needs an Application Load Balancer in front.
+   Could you create it (with the ACM cert), or grant me elasticloadbalancing perms?
+
+3. <span class="o">DNS</span>: whoever owns procdna.com will need to add the nexa.procdna.com record
+   (→ the ALB) and the ACM validation CNAME. Who should I coordinate with?
+
+4. <span class="o">Deployment</span>: are we set on microk8s, or is a plain container / Node+Nginx
+   acceptable? If microk8s, who owns the k8s layer day-to-day? (I'm app-side, not DevOps.)
+
+5. <span class="o">Region</span>: defaulting to eu-central-1 to match today — any residency reason to change?
+
+6. <span class="o">EC2 placement</span>: public subnet with the Elastic IP, or private behind the ALB?
+   (Decides whether we need a NAT gateway for outbound to Azure AD / Graph.)
+
+Happy to hop on a call. Thanks!</pre>
+
+<div class="rec aws" style="margin-top:28px"><span class="h">How to use this runbook</span> Work it top-to-bottom in a dev/sandbox first, with the companion docs open beside it: the <b>Migration Plan</b> and <b>Architecture Briefing</b> for the "why," the <b>AWS course</b> for any concept that's unfamiliar, and the <b>Service Map</b> for "which service does this." Resolve the <a href="#concerns">§Concerns</a> with the SDE/IT before you start Phase 1 — especially the deployment shape and the permission gaps. Then build it once to learn, tear it down, and build it again as production with the release-blockers fixed.</div>
+
+</div><!-- /.body -->
+
+<div class="foot">
+  <b>NEXA — AWS Migration Runbook.</b> Companion to the Migration Plan, the Architecture Briefing, “AWS, explained through NEXA,” and the Service Map.
+  This runbook re-platforms the app; it does not change features. Sizes, Region, and the deployment shape are starting points to confirm with the senior SDE against the firm's AWS standards. The four security release-blockers (login2, emergency endpoint, write-side IDOR, audit logging) remain gating items for handling real client financial data, independent of any infrastructure choice here. No application code was changed in producing this plan.
+  <br><br>Print to PDF via your browser's “Print → Save as PDF.”
+</div>
+
+</main>
+</div>
+</body>
+</html>

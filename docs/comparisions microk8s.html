@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA — microk8s vs non-microk8s deployment comparison</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6; --chip:#EEF2F9;
+    --aws:#EC7211; --awsDeep:#C25A0A; --squid:#232F3E;
+    --k8s:#326CE5; --k8sbg:#EAF1FE; --simple:#1F6B3C; --simplebg:#E9F7EF; --mid:#B45309; --midbg:#FEF3E2;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:280px 1fr;max-width:1340px;margin:0 auto;}
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 16px 60px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 14px/1.2 'Segoe UI';letter-spacing:.14em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand b{color:var(--k8s)}
+  nav .sub{font-size:11px;color:var(--muted);margin:7px 0 14px;}
+  nav a{display:block;font-size:12.4px;color:var(--ink2);padding:3px 0;line-height:1.4}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:10px;}
+  nav a .n{color:var(--aws);font:800 11px/1 'Courier New',monospace;margin-right:6px;}
+  nav .part{font:700 10px/1 'Courier New',monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:15px 0 4px;padding-top:9px;border-top:1px dashed var(--line)}
+  main{padding:0 0 140px;min-width:0;}
+  .hero{background:linear-gradient(125deg,#0A1F44 0%,#001E96 50%,#326CE5 110%);color:#EAF0FB;padding:44px 52px 36px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-70px;top:-90px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(50,108,229,.40),transparent 60%);}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.22em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:31px;margin:13px 0 8px;letter-spacing:-.015em;color:#fff;max-width:26ch;line-height:1.14}
+  .hero h1 b{color:#9DC0FF}
+  .hero p{max-width:78ch;color:#CBD8F2;margin:.45em 0;font-size:15px}
+  .hero .meta{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+  .body{padding:8px 52px 0}
+  h2.s{font-size:23px;margin:50px 0 6px;padding-top:15px;border-top:2px solid var(--ink);scroll-margin-top:10px;letter-spacing:-.01em}
+  h2.s .n{font:800 14px/1 'Courier New',monospace;color:var(--aws);margin-right:12px;}
+  h3{font-size:17px;margin:26px 0 6px;color:var(--accentDeep);scroll-margin-top:10px}
+  h4{font-size:13px;margin:18px 0 4px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:84ch} ul,ol{max-width:84ch} li{margin:4px 0}
+  .lead{font-size:16px;color:var(--ink2);max-width:82ch}
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:9px;padding:14px 16px;overflow:auto;font:12.3px/1.6 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0} pre .o{color:#FFB066} pre .s{color:#A8C7FF}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.2px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+  th.simple{background:var(--simplebg);color:var(--simple)} th.k8s{background:var(--k8sbg);color:var(--k8s)} th.mid{background:var(--midbg);color:var(--mid)}
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:13px 17px;margin:16px 0;}
+  .rec b{color:var(--accentDeep)}
+  .rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)} .rec.k8s{border-left-color:var(--k8s)} .rec.k8s b{color:var(--k8s)}
+  .rec .h{display:block;font-weight:800;margin-bottom:3px;font-size:13.3px}
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;vertical-align:middle}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#F3C4C4}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  .pill.k8s{color:var(--k8s);background:var(--k8sbg);border-color:#BAD2FA}
+  .svc{display:inline-block;font:700 11px/1 'Segoe UI';color:#fff;background:var(--squid);border-radius:5px;padding:2px 7px 2px 6px;white-space:nowrap}
+  .svc::before{content:"";display:inline-block;width:7px;height:7px;border-radius:1.5px;background:var(--aws);margin-right:6px}
+  /* option cards */
+  .opts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:18px 0}
+  .opt{border:1px solid var(--line);border-radius:12px;padding:16px;background:#fff;border-top:5px solid}
+  .opt.s{border-top-color:var(--simple)} .opt.m{border-top-color:var(--mid)} .opt.k{border-top-color:var(--k8s)}
+  .opt .ot{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+  .opt.s .ot{color:var(--simple)} .opt.m .ot{color:var(--mid)} .opt.k .ot{color:var(--k8s)}
+  .opt .osub{font-size:11.5px;color:var(--muted);margin:3px 0 9px}
+  .opt .ol{font-size:12.6px;color:var(--ink2);line-height:1.5}
+  .opt .ol b{color:var(--ink)}
+  .opt .tagrow{margin-top:9px;display:flex;gap:5px;flex-wrap:wrap}
+  /* scorecard */
+  .score td .bar{display:inline-block;height:9px;border-radius:5px;vertical-align:middle;margin-right:7px}
+  .rate{display:inline-flex;gap:2px;vertical-align:middle}
+  .rate i{width:9px;height:9px;border-radius:50%;background:#D7DEEA;display:inline-block}
+  .rate i.on{background:var(--accent)}
+  .rate.good i.on{background:var(--ok)} .rate.bad i.on{background:var(--bad)} .rate.warn i.on{background:var(--warn)}
+  .win{font:700 10px/1 'Segoe UI';text-transform:uppercase;letter-spacing:.04em;padding:3px 7px;border-radius:5px;white-space:nowrap}
+  .win.s{background:var(--simplebg);color:var(--simple)} .win.k{background:var(--k8sbg);color:var(--k8s)} .win.tie{background:#EEF2F9;color:var(--ink2)}
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;margin:18px 0;overflow:auto;}
+  .diagram .cap{font-size:12px;color:var(--muted);margin:10px 2px 0;max-width:none}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:0 0 10px;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .stage{background:#EDEFF7;border:1.5px solid #C2C9E6;border-radius:8px;padding:8px 16px;font-weight:700;font-size:12.5px;color:var(--accentDeep);text-align:center;min-width:250px;}
+  .stage .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+  .stage.k{background:var(--k8sbg);border-color:#BAD2FA;color:var(--k8s)}
+  .varrow{text-align:center;color:var(--accent);font-size:19px;line-height:1;margin:3px 0;}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .foot{margin:58px 52px 0;padding:18px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  @media(max-width:1040px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body,.foot{padding-left:20px;padding-right:20px}.opts{grid-template-columns:1fr}.twocol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">microk8s <b>vs</b> non-k8s</div>
+  <div class="sub">NEXA deployment decision</div>
+  <a href="#tldr" class="top">TL;DR &amp; recommendation</a>
+  <a href="#options" class="top">The three options</a>
+  <a href="#arch">Architecture, side by side</a>
+  <a href="#matrix" class="top">The full comparison matrix</a>
+  <a href="#scorecard" class="top">Scorecard (rated metrics)</a>
+
+  <div class="part">Deep dives</div>
+  <a href="#setup">Day-1 setup complexity</a>
+  <a href="#ops">Day-2 operations (the real cost)</a>
+  <a href="#tls">TLS / ALB / ingress nuance</a>
+  <a href="#overhead">Resource overhead &amp; cost</a>
+  <a href="#scaling">Scaling &amp; resilience</a>
+  <a href="#cicd">CI/CD differences</a>
+  <a href="#future">Future-proofing</a>
+
+  <div class="part">If you drop microk8s</div>
+  <a href="#changes" class="top">What changes (the answer)</a>
+  <a href="#phasedelta">Runbook phase deltas</a>
+  <a href="#middle">The middle ground: plain Docker</a>
+
+  <div class="part">Deciding</div>
+  <a href="#whenwins">When each genuinely wins</a>
+  <a href="#ask">What to ask the SDE</a>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA · NEXA · deployment architecture decision</div>
+  <h1>microk8s vs <b>non-microk8s</b> — the full comparison</h1>
+  <p>The SDE floated <strong>microk8s</strong> (Kubernetes) for running NEXA on the EC2 box. This document lays out, in detail, what that choice actually costs versus the simpler <strong>EC2 + Nginx + systemd</strong> path the runbook assumes — every concrete change, the operational metrics, the complexity, and an honest recommendation for a single integrated app owned by an app-focused engineer.</p>
+  <div class="meta">
+    <span class="chip">Worked example: NEXA (one Next.js app, ~55 users)</span>
+    <span class="chip">3 options compared</span>
+    <span class="chip">Rated scorecard + phase deltas</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ===== TL;DR ===== -->
+<section id="tldr">
+<h3 style="margin-top:26px">TL;DR</h3>
+<div class="rec ok"><span class="h">Recommendation for NEXA: <span class="pill ok">non-microk8s</span> (EC2 + Nginx + systemd)</span>
+For a <b>single, integrated, stateless</b> app with ~55 internal users on <b>one box</b>, owned <b>solo by an app-focused engineer</b>, microk8s adds a full Kubernetes control plane and a steep day-2 operations burden while delivering <b>almost none of its benefits</b> — a one-node "cluster" has no real high-availability, and you have exactly one container to run. The simpler path gets you live faster, is dramatically easier to operate alone, and (because NEXA is stateless) loses <em>nothing</em> on the path to containers/ECS later if scale ever demands it.
+<br><br><b>microk8s is the right call only if</b> the firm <em>standardises</em> on Kubernetes and there is a DevOps team that will actually operate the k8s layer for you. If that support doesn't exist, the simpler path is the maintainable one — and "who operates the k8s layer day-to-day" is the single question to settle with the SDE before committing.</div>
+</section>
+
+<!-- ===== OPTIONS ===== -->
+<h2 class="s" id="options"><span class="n">1</span>The three options on the table</h2>
+<p class="lead">"Non-microk8s" can mean two different things, so there are really three rungs on a ladder of how much machinery sits between your code and the OS. The headline decision is the first vs the third; the middle is an honest compromise worth knowing.</p>
+
+<div class="opts">
+  <div class="opt s"><div class="ot">① EC2 + Nginx + systemd</div>
+    <div class="osub">"non-microk8s" · no containers · the runbook baseline</div>
+    <div class="ol">The app runs as a plain Node process managed by <b>systemd</b>, with <b>Nginx</b> reverse-proxying in front. No Docker, no orchestrator. The OS runs your app directly.
+    <br><br><b>You manage:</b> the OS, Node, Nginx, the systemd unit. <b>New concepts:</b> basically none beyond Linux service basics.</div>
+    <div class="tagrow"><span class="pill ok">simplest</span><span class="pill info">fastest to live</span><span class="pill ok">solo-friendly</span></div>
+  </div>
+  <div class="opt m"><div class="ot">② Plain Docker</div>
+    <div class="osub">containerized · no orchestration · the middle ground</div>
+    <div class="ol">The app is packaged as a <b>Docker image</b> and run with <code class="inl">docker run</code> (kept alive by systemd or <code class="inl">--restart</code>). You get image portability and reproducibility, but <b>no Kubernetes</b>.
+    <br><br><b>You manage:</b> the OS, Docker, the image, one container. <b>New concepts:</b> Docker (a Dockerfile, image build) — but not orchestration.</div>
+    <div class="tagrow"><span class="pill warn">a Dockerfile</span><span class="pill info">portable</span><span class="pill ok">easy path to ECS</span></div>
+  </div>
+  <div class="opt k"><div class="ot">③ microk8s</div>
+    <div class="osub">containerized + Kubernetes orchestration · the SDE's suggestion</div>
+    <div class="ol">The app is a Docker image run inside a <b>single-node Kubernetes cluster</b> (microk8s) via a Deployment + Service + Ingress, managed with <code class="inl">kubectl</code>.
+    <br><br><b>You manage:</b> the OS, microk8s itself, the image, k8s manifests, and the whole k8s control plane. <b>New concepts:</b> Docker <em>and</em> the entire Kubernetes model.</div>
+    <div class="tagrow"><span class="pill k8s">k8s control plane</span><span class="pill warn">steep day-2</span><span class="pill bad">heavy for 1 app</span></div>
+  </div>
+</div>
+<div class="rec"><span class="h">How to read the rest of this doc</span> The big comparisons below put <b>①</b> and <b>③</b> head-to-head (the real decision). <b>②</b> appears wherever it changes the answer — it's the option to reach for if the firm wants <em>containers</em> but not <em>Kubernetes</em>.</div>
+
+<!-- ===== ARCHITECTURE ===== -->
+<h2 class="s" id="arch"><span class="n">2</span>Architecture, side by side</h2>
+<p>The external architecture (browser → ALB → app → RDS/S3) is <b>identical</b> in all three — the ALB still terminates TLS with the ACM cert, RDS is still private, S3 is still presigned. What differs is only <b>what's running on the EC2 box</b> between Nginx/the ALB and your Node code.</p>
+
+<div class="twocol">
+  <div class="diagram">
+    <span class="tag">① / ② &nbsp; non-microk8s — what's on the box</span>
+    <div class="flow">
+      <div class="stage">ALB (TLS, ACM)<span class="sub">unchanged</span></div>
+      <div class="varrow">▼ HTTP</div>
+      <div class="stage">Nginx (reverse proxy)<span class="sub">optional with an ALB</span></div>
+      <div class="varrow">▼ localhost:3000</div>
+      <div class="stage">systemd → <b>next start</b><span class="sub">① the process directly, or ② a docker container</span></div>
+    </div>
+    <p class="cap">Two or three moving parts on the box. To debug: <code class="inl">journalctl</code>, <code class="inl">systemctl status</code>, (or <code class="inl">docker logs</code>). That's the whole surface.</p>
+  </div>
+  <div class="diagram">
+    <span class="tag">③ &nbsp; microk8s — what's on the box</span>
+    <div class="flow">
+      <div class="stage">ALB (TLS, ACM)<span class="sub">unchanged</span></div>
+      <div class="varrow">▼ HTTP → NodePort</div>
+      <div class="stage k">microk8s Ingress<span class="sub">nginx-ingress addon</span></div>
+      <div class="varrow">▼</div>
+      <div class="stage k">Service → Deployment → Pod<span class="sub">+ kubelet, API server, scheduler, controller-manager, etcd/dqlite</span></div>
+      <div class="varrow">▼</div>
+      <div class="stage">container → <b>next start</b></div>
+    </div>
+    <p class="cap">A full Kubernetes control plane between the edge and your code. To debug: <code class="inl">kubectl get/describe/logs</code>, pod/ingress/service troubleshooting, plus the cluster's own health.</p>
+  </div>
+</div>
+<div class="rec k8s"><span class="h">The core observation</span> microk8s doesn't change <em>what NEXA is</em> or how users reach it — it inserts an entire orchestration layer to manage <b>one container on one machine</b>. On a single node, the orchestration has nothing to orchestrate. You pay the full complexity tax for a fraction of the benefit.</div>
+
+<!-- ===== MATRIX ===== -->
+<h2 class="s" id="matrix"><span class="n">3</span>The full comparison matrix</h2>
+<p>Every dimension that differs, with the winner for <em>NEXA's situation</em> (one app, one box, solo owner). "Tie" means it genuinely doesn't differ enough to matter here.</p>
+<table>
+  <tr><th style="width:20%">Dimension</th><th class="simple">① EC2 + Nginx + systemd</th><th class="k8s">③ microk8s</th><th style="width:10%">Winner</th></tr>
+  <tr><td><b>Containers required?</b></td><td>No — runs the Node process directly</td><td>Yes — must build &amp; maintain a Docker image</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>New tools to learn</b></td><td>Linux services (systemd, Nginx) — likely already familiar</td><td>Docker <em>and</em> Kubernetes (kubectl, manifests, ingress, services, deployments, probes)</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Files you author</b></td><td>An Nginx config + a ~10-line systemd unit</td><td>A Dockerfile + Deployment + Service + Ingress (+ ConfigMap/Secret) manifests</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Initial setup time</b></td><td>Hours — install Node/Nginx, write the unit, run</td><td>Days — install microk8s, learn the model, write/debug manifests, wire ingress to the ALB</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Deploy mechanism</b></td><td>Ship the build artifact, <code class="inl">systemctl restart</code></td><td>Build image → push to registry → <code class="inl">kubectl rollout</code></td><td><span class="win tie">Tie*</span></td></tr>
+  <tr><td><b>Zero-downtime deploys</b></td><td>Brief blip on restart (acceptable internal tool); or run 2 instances behind the ALB</td><td>Built-in rolling deploys (but on one node, limited real benefit)</td><td><span class="win k">microk8s</span></td></tr>
+  <tr><td><b>Rollback</b></td><td>Redeploy the previous artifact</td><td><code class="inl">kubectl rollout undo</code> — clean, one command</td><td><span class="win k">microk8s</span></td></tr>
+  <tr><td><b>Self-healing (crash restart)</b></td><td><code class="inl">systemd Restart=always</code> restarts the process</td><td>kubelet restarts the pod via liveness probe</td><td><span class="win tie">Tie</span></td></tr>
+  <tr><td><b>High availability</b></td><td>None on one box (same as microk8s here)</td><td><b>None on one node</b> — k8s HA needs multiple nodes (more EC2)</td><td><span class="win tie">Tie</span></td></tr>
+  <tr><td><b>Horizontal scaling</b></td><td>Resize the box, or add boxes behind the ALB manually</td><td>Change replica count — but bounded by the single node until you add nodes</td><td><span class="win k">microk8s*</span></td></tr>
+  <tr><td><b>Resource overhead on the box</b></td><td>~0 — just your app + Nginx</td><td>~0.5–1 GB RAM + baseline CPU for the control plane (etcd/dqlite, API server, kubelet…)</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Day-2 debugging</b></td><td><code class="inl">journalctl -u nexa</code>, <code class="inl">systemctl status</code> — flat, familiar</td><td><code class="inl">kubectl describe/logs</code>, pod/ingress/endpoint/DNS troubleshooting — many layers to check</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Platform upgrades/patching</b></td><td>OS + Node only</td><td>OS + Node + <b>microk8s/Kubernetes version upgrades</b> (a real, recurring, can-break task)</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Secrets injection</b></td><td>Pull SSM → process env at boot</td><td>k8s Secrets (often synced from SSM via an operator) → mounted into the pod</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Logging</b></td><td>stdout/journald → CloudWatch agent</td><td>pod logs → a log shipper (Fluent Bit) → CloudWatch</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>TLS / edge</b></td><td>ALB (ACM) → Nginx/app. Clean.</td><td>ALB (ACM) → NodePort → ingress. ACM still can't live in-cluster (see §6).</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Solo-maintainability</b> (app-focused owner)</td><td>High — within reach of one app engineer</td><td>Low — k8s is a specialty; day-2 incidents need real ops comfort</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Firm-standard consistency</b></td><td>Differs if the firm runs everything on k8s</td><td>Matches if the firm standardises on Kubernetes + has a platform team</td><td><span class="win k">microk8s*</span></td></tr>
+  <tr><td><b>Path to ECS/EKS later</b></td><td>Need to containerize first (low friction — app is stateless)</td><td>Already containerized — conceptually closer to EKS</td><td><span class="win k">microk8s</span></td></tr>
+  <tr><td><b>Cost</b></td><td>Lowest (no overhead, smaller box headroom)</td><td>Slightly higher (control-plane RAM/CPU; +ECR if used)</td><td><span class="win s">Simple</span></td></tr>
+  <tr><td><b>Blast radius of a mistake</b></td><td>Small, well-understood</td><td>Larger surface — a misconfigured ingress/probe/RBAC can take the app down in non-obvious ways</td><td><span class="win s">Simple</span></td></tr>
+</table>
+<p style="font-size:12.5px;color:var(--muted)">* <b>Tie/microk8s-with-asterisk:</b> deploy mechanism is a wash once CI is wired; zero-downtime and horizontal scaling are microk8s strengths <em>in principle</em> but deliver little on a single node for a 55-user app; firm-standard consistency only counts if the firm actually runs k8s with platform support.</p>
+
+<!-- ===== SCORECARD ===== -->
+<h2 class="s" id="scorecard"><span class="n">4</span>Scorecard — the metrics, rated</h2>
+<p>Each factor rated 1–5 for <b>NEXA's specific context</b> (one integrated app, one box, ~55 users, solo app-focused owner). For "burden/complexity/overhead" rows, <b>fewer dots = better</b>; for "capability" rows, <b>more dots = better</b>. The summary weights toward what actually matters at this scale.</p>
+<table class="score">
+  <tr><th style="width:34%">Metric</th><th class="simple" style="width:25%">① non-microk8s</th><th class="k8s" style="width:25%">③ microk8s</th><th>Lower/higher better</th></tr>
+  <tr><td>Initial setup effort</td><td><span class="rate good"><i class="on"></i><i></i><i></i><i></i><i></i></span> very low</td><td><span class="rate bad"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> high</td><td>lower better</td></tr>
+  <tr><td>New concepts / learning curve</td><td><span class="rate good"><i class="on"></i><i></i><i></i><i></i><i></i></span> minimal</td><td><span class="rate bad"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> steep</td><td>lower better</td></tr>
+  <tr><td>Day-2 operational burden</td><td><span class="rate good"><i class="on"></i><i></i><i></i><i></i><i></i></span> low</td><td><span class="rate bad"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> high</td><td>lower better</td></tr>
+  <tr><td>Resource overhead on the box</td><td><span class="rate good"><i class="on"></i><i></i><i></i><i></i><i></i></span> ~none</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> ~0.5–1GB</td><td>lower better</td></tr>
+  <tr><td>Failure debuggability (by you, solo)</td><td><span class="rate good"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> easy</td><td><span class="rate bad"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> hard solo</td><td>higher better</td></tr>
+  <tr><td>Solo-maintainability</td><td><span class="rate good"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> high</td><td><span class="rate bad"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> low</td><td>higher better</td></tr>
+  <tr><td>Zero-downtime / rolling deploys</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> good-enough</td><td><span class="rate"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> excellent</td><td>higher better</td></tr>
+  <tr><td>Rollback ergonomics</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> manual-ish</td><td><span class="rate"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> one command</td><td>higher better</td></tr>
+  <tr><td>Horizontal scale readiness</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> manual</td><td><span class="rate"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> declarative</td><td>higher better (low value at 55 users)</td></tr>
+  <tr><td>HA on the current single box</td><td><span class="rate warn"><i class="on"></i><i></i><i></i><i></i><i></i></span> none</td><td><span class="rate warn"><i class="on"></i><i></i><i></i><i></i><i></i></span> none</td><td>tie — both need ≥2 nodes</td></tr>
+  <tr><td>Firm-standard fit (if firm uses k8s)</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> maybe off-standard</td><td><span class="rate"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> on-standard</td><td>higher better (only if true)</td></tr>
+  <tr><td>Path to managed orchestration (EKS/ECS)</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span> containerize first</td><td><span class="rate"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> already there</td><td>higher better</td></tr>
+  <tr><td>Cost</td><td><span class="rate good"><i class="on"></i><i></i><i></i><i></i><i></i></span> lowest</td><td><span class="rate warn"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span> slightly more</td><td>lower better</td></tr>
+</table>
+<div class="rec"><span class="h">Reading the scorecard</span> microk8s wins on the <b>capability</b> rows (rolling deploys, rollback, scale-readiness, EKS path, firm-standard fit) — but every one of those is either low-value at 55 users on one box, or contingent on the firm actually running k8s with support. Non-microk8s wins decisively on every <b>cost/complexity/solo-operability</b> row — which is precisely the axis that matters for one engineer shipping one app. <b>The deciding question isn't "which is more capable" (microk8s) — it's "which can you actually build and run alone, sustainably" (non-microk8s).</b></div>
+
+<!-- ===== SETUP ===== -->
+<h2 class="s" id="setup"><span class="n">5</span>Day-1 setup complexity, concretely</h2>
+<div class="twocol">
+  <div>
+    <h4>① non-microk8s — what you actually do</h4>
+    <pre><span class="c"># on the EC2 box (via SSM)</span>
+sudo dnf install -y nodejs nginx
+<span class="c"># drop the build in /opt/nexa, write 2 files:</span>
+<span class="c">#  /etc/nginx/conf.d/nexa.conf  (reverse proxy → :3000)</span>
+<span class="c">#  /etc/systemd/system/nexa.service  (Restart=always)</span>
+sudo systemctl enable --now nexa
+sudo systemctl enable --now nginx</pre>
+    <p style="font-size:13px">Two config files, two services. If it breaks, the failure is one of two places. A few hours, mostly familiar Linux.</p>
+  </div>
+  <div>
+    <h4>③ microk8s — what you actually do</h4>
+    <pre><span class="c"># install the cluster</span>
+sudo snap install microk8s --classic
+sudo microk8s enable dns ingress registry storage
+<span class="c"># build &amp; push an image</span>
+docker build -t nexa . &amp;&amp; <span class="c">push to registry…</span>
+<span class="c"># author &amp; apply manifests:</span>
+<span class="c">#  deployment.yaml · service.yaml · ingress.yaml</span>
+<span class="c">#  configmap/secret for env</span>
+microk8s kubectl apply -f k8s/
+<span class="c"># then wire the ALB → NodePort, debug ingress, probes…</span></pre>
+    <p style="font-size:13px">A cluster to stand up, an image pipeline, 3–5 manifests to write <em>and debug</em>, ingress↔ALB wiring. Days, and most of it new.</p>
+  </div>
+</div>
+<div class="rec warn"><span class="h">The hidden day-1 cost of microk8s</span> It's not the happy path that hurts — it's the <em>first time a manifest is subtly wrong</em>: a pod stuck <code class="inl">CrashLoopBackOff</code>, an ingress returning 503, a readiness probe failing, a service selector mismatch. Each is routine for a k8s practitioner and a multi-hour rabbit hole for a newcomer. With systemd, the equivalent failures are <code class="inl">systemctl status</code> away.</div>
+
+<!-- ===== OPS ===== -->
+<h2 class="s" id="ops"><span class="n">6</span>Day-2 operations — where the real cost lives</h2>
+<p class="lead">Setup happens once; <b>operations happen forever</b>. This is the most important section, because the gap between the two options is widest here — and it's the part the SDE's "just use microk8s" suggestion doesn't price in.</p>
+<table>
+  <tr><th>Task</th><th class="simple">① non-microk8s</th><th class="k8s">③ microk8s</th></tr>
+  <tr><td>"The app is down"</td><td><code class="inl">systemctl status nexa</code> → restart or read the log</td><td>Check pod status → events → logs → ingress → service → endpoints → node — many layers, each a possible culprit</td></tr>
+  <tr><td>Read logs</td><td><code class="inl">journalctl -u nexa -f</code></td><td><code class="inl">kubectl logs -f deploy/nexa</code> (+ which pod? + a shipper for history)</td></tr>
+  <tr><td>Restart the app</td><td><code class="inl">systemctl restart nexa</code></td><td><code class="inl">kubectl rollout restart deploy/nexa</code></td></tr>
+  <tr><td>Change an env var</td><td>Update SSM, restart the service</td><td>Update a ConfigMap/Secret, restart the deployment (and ensure the sync works)</td></tr>
+  <tr><td>Patch the platform</td><td><code class="inl">dnf update</code> (OS), bump Node</td><td>OS + Node + <b>microk8s/k8s version upgrades</b> — periodic, and capable of breaking the cluster if mishandled</td></tr>
+  <tr><td>Certificate for the app</td><td>ACM on the ALB — auto-renews, nothing to do</td><td>ACM on the ALB (same) — but the <b>cluster's own</b> internal certs also rotate and can expire if the box is off for a long stretch (a known microk8s gotcha)</td></tr>
+  <tr><td>Disk fills up</td><td>OS-level — clear logs/artifacts</td><td>Plus image cache, stopped pods, the registry addon — more places for disk to vanish</td></tr>
+  <tr><td>Who can fix it at 2am?</td><td><b>You can</b> — it's Linux</td><td><b>You probably can't, solo</b> — it's Kubernetes</td></tr>
+</table>
+<div class="rec bad"><span class="h">The honest framing for a solo, app-focused owner</span> microk8s asks you to become a part-time Kubernetes operator on top of being the app developer. Initial setup is learnable (and I can scaffold it). But <b>day-2 — a broken pod, an ingress misroute, a version upgrade, an expired cluster cert</b> — is where zero DevOps background genuinely bites, and where "IT is a separate vertical that won't own the k8s layer" turns into you being stuck. That operational reality, more than any feature on the matrix, is why the simpler path wins here.</div>
+
+<!-- ===== TLS ===== -->
+<h2 class="s" id="tls"><span class="n">7</span>TLS / ALB / ingress — the nuance that surprises people</h2>
+<p>A common assumption is that microk8s "handles TLS for you." For NEXA's setup it largely doesn't change the edge, and it adds a wrinkle:</p>
+<ul>
+  <li><b>ACM certificates cannot live inside microk8s.</b> AWS public ACM certs only attach to an ALB/CloudFront — never to a microk8s ingress controller. So with microk8s you <em>still</em> run the ALB (with the ACM cert) in front, and it forwards to the cluster's NodePort. microk8s does <b>not</b> remove the ALB.</li>
+  <li><b>The alternative — terminating TLS in-cluster</b> — means abandoning ACM for <code class="inl">cert-manager</code> + Let's Encrypt inside the cluster. That's <em>more</em> moving parts, not fewer, and diverges from the SDE's "ACM cert" instruction.</li>
+  <li><b>Net:</b> on the edge, microk8s adds an ingress layer (ALB → NodePort → ingress → service → pod) where non-microk8s has none (ALB → app). Same cert, same ALB, one extra hop to configure and debug.</li>
+</ul>
+<div class="rec"><span class="h">Implication</span> The ALB + ACM work in your runbook (Phase 7) is required <b>either way</b>. microk8s doesn't simplify TLS; it adds an ingress to wire to the ALB. This quietly undercuts a common reason people reach for k8s ("it does TLS/routing") — here the ALB already does that.</div>
+
+<!-- ===== OVERHEAD ===== -->
+<h2 class="s" id="overhead"><span class="n">8</span>Resource overhead &amp; cost</h2>
+<table>
+  <tr><th></th><th class="simple">① non-microk8s</th><th class="k8s">③ microk8s</th></tr>
+  <tr><td>Idle RAM consumed by the platform</td><td>~nil (just Nginx, a few MB)</td><td>~<b>0.5–1 GB</b> for the control plane (API server, etcd/dqlite, kubelet, controllers)</td></tr>
+  <tr><td>Baseline CPU</td><td>~nil</td><td>A steady low-but-nonzero draw from the control plane (relevant on a burstable <code class="inl">t3</code> — it nibbles credits)</td></tr>
+  <tr><td>Effective app headroom on a <code class="inl">t3.large</code> (8 GB)</td><td>~7.5 GB for the app</td><td>~7 GB after the control plane</td></tr>
+  <tr><td>Extra AWS services</td><td>None</td><td>Usually <b>ECR</b> (image registry) — a permission you don't currently have</td></tr>
+  <tr><td>Cost delta</td><td>Baseline</td><td>Marginally higher (overhead + ECR); not large, but real</td></tr>
+</table>
+<div class="rec"><span class="h">At this scale it's a footnote, but a telling one</span> Reserving ~1 GB and steady CPU to orchestrate <em>one</em> container is the overhead made concrete. It won't break a <code class="inl">t3.large</code>, but it's resources spent on machinery you don't need — and on a burstable instance, the constant control-plane CPU works against the very "quiet most of the day" profile that makes <code class="inl">t3</code> cheap.</div>
+
+<!-- ===== SCALING ===== -->
+<h2 class="s" id="scaling"><span class="n">9</span>Scaling &amp; resilience — the usual case <em>for</em> k8s, examined honestly</h2>
+<p>Kubernetes earns its complexity at scale: many services, many nodes, autoscaling, self-healing across machines. Holding that up against NEXA:</p>
+<table>
+  <tr><th>k8s strength</th><th>Does NEXA get it on one microk8s node?</th></tr>
+  <tr><td>Self-healing (restart crashed workloads)</td><td>Yes — but <code class="inl">systemd Restart=always</code> already does this for a single process. <span class="pill warn">parity</span></td></tr>
+  <tr><td>High availability (survive a machine failure)</td><td><b>No</b> — one node is a single point of failure regardless. Real HA needs multiple nodes = more EC2 = more cost/ops. <span class="pill bad">not delivered</span></td></tr>
+  <tr><td>Horizontal autoscaling</td><td>Only up to the one node's capacity; true scale-out needs more nodes. At 55 users you won't approach the limit. <span class="pill warn">low value now</span></td></tr>
+  <tr><td>Rolling / blue-green deploys</td><td>Yes — a genuine win, but a brief restart blip on an internal tool is rarely a real problem, and you can get zero-downtime non-k8s by running 2 instances behind the ALB if it ever matters. <span class="pill info">nice-to-have</span></td></tr>
+  <tr><td>Bin-packing many services onto nodes</td><td>NEXA is <b>one</b> service. Nothing to bin-pack. <span class="pill bad">N/A</span></td></tr>
+</table>
+<div class="rec k8s"><span class="h">The crux</span> Kubernetes' marquee benefits are about <b>many services across many machines</b>. NEXA is <b>one service on one machine</b>. The shape of the problem doesn't match the shape of the tool. If NEXA ever became many services or needed true multi-node HA, the right move wouldn't be self-managed microk8s anyway — it'd be <b>managed ECS Fargate or EKS</b> (no control plane for you to babysit). Which is the future-proofing point next.</div>
+
+<!-- ===== CICD ===== -->
+<h2 class="s" id="cicd"><span class="n">10</span>CI/CD differences</h2>
+<p>Both use GitHub Actions + OIDC (keyless AWS auth). The pipeline tail differs:</p>
+<div class="twocol">
+  <div class="diagram"><span class="tag">① non-microk8s pipeline</span>
+    <div class="flow">
+      <div class="stage">build artifact (CI)</div><div class="varrow">▼</div>
+      <div class="stage">assume AWS role (OIDC)</div><div class="varrow">▼</div>
+      <div class="stage">ship build + <code class="inl">systemctl restart</code><span class="sub">via SSM Run Command</span></div>
+    </div>
+  </div>
+  <div class="diagram"><span class="tag">③ microk8s pipeline</span>
+    <div class="flow">
+      <div class="stage k">build image (CI)</div><div class="varrow">▼</div>
+      <div class="stage k">push to ECR</div><div class="varrow">▼</div>
+      <div class="stage k"><code class="inl">kubectl set image</code> / rollout<span class="sub">needs cluster credentials in CI</span></div>
+    </div>
+  </div>
+</div>
+<p>The microk8s pipeline adds an <b>image build + registry push</b> and needs <b>cluster access from CI</b> (a kubeconfig/credential to reach the microk8s API) — another secret/access path to set up and secure. The non-microk8s pipeline reuses the SSM access you already have.</p>
+
+<!-- ===== FUTURE ===== -->
+<h2 class="s" id="future"><span class="n">11</span>Future-proofing — does microk8s actually help later?</h2>
+<p>The strongest honest argument for microk8s is "we'll want orchestration eventually, so start now." Examined:</p>
+<ul>
+  <li><b>NEXA is stateless</b> (all state in RDS + S3). Containerizing later is <em>low-friction</em> whenever you want it — you're not painting yourself into a corner by starting on systemd.</li>
+  <li><b>If you ever need orchestration, the destination is managed</b> — <span class="svc">ECS Fargate</span> (simplest) or <span class="svc">EKS</span> — where AWS runs the control plane. Self-managed microk8s on EC2 is <em>not</em> that destination; it's a different thing you'd still have to migrate off.</li>
+  <li><b>The genuinely useful "phase-2" step</b> is to <b>containerize (option ②, plain Docker)</b> — that gets you the portable image and the on-ramp to ECS/EKS <em>without</em> running a Kubernetes control plane yourself.</li>
+</ul>
+<div class="rec ok"><span class="h">The future-proof move isn't microk8s — it's "stateless now, container when needed"</span> Start simple (systemd), keep the app stateless (it already is), and if scale ever demands orchestration, jump straight to <b>managed</b> ECS/EKS by adding a Dockerfile. microk8s is a self-managed-Kubernetes detour that costs you operational pain now and isn't even the place you'd end up.</div>
+
+<!-- ===== CHANGES ===== -->
+<h2 class="s" id="changes"><span class="n">12</span>If you drop microk8s — exactly what changes</h2>
+<p class="lead">The direct answer to your question. Choosing non-microk8s means you <b>remove</b> a whole column of work and <b>add</b> almost nothing. Here's the delta.</p>
+<div class="twocol">
+  <div class="rec ok"><span class="h">What you NO LONGER have to do</span>
+  <ul style="margin:6px 0 0">
+    <li>Write a <b>Dockerfile</b> and maintain an image build</li>
+    <li>Stand up and patch <b>microk8s</b> (the cluster)</li>
+    <li>Author/debug <b>Deployment, Service, Ingress</b> manifests</li>
+    <li>Learn <b>kubectl</b> and the Kubernetes model</li>
+    <li>Set up <b>ECR</b> (and the IAM permission for it)</li>
+    <li>Wire the <b>ALB → NodePort → ingress</b> hop</li>
+    <li>Sync secrets into <b>k8s Secrets</b> / manage ConfigMaps</li>
+    <li>Ship logs out of <b>pods</b> via a log collector</li>
+    <li>Give <b>CI cluster credentials</b> for kubectl deploys</li>
+    <li>Carry ~<b>0.5–1 GB</b> control-plane overhead on the box</li>
+    <li>Own <b>day-2 Kubernetes operations</b> solo</li>
+  </ul></div>
+  <div class="rec"><span class="h">What you do INSTEAD (much smaller)</span>
+  <ul style="margin:6px 0 0">
+    <li>Install <b>Node + Nginx</b> on the box</li>
+    <li>Write one <b>Nginx reverse-proxy</b> config</li>
+    <li>Write one ~10-line <b>systemd unit</b> (<code class="inl">Restart=always</code>)</li>
+    <li>Pull secrets <b>SSM → env</b> at boot (a small script)</li>
+    <li>Deploy = <b>ship build + <code class="inl">systemctl restart</code></b></li>
+  </ul>
+  <p style="margin-top:8px;font-size:13px">Everything else in the migration — VPC, security groups, RDS, S3, the instance role, ACM, the <b>ALB</b>, Route 53, SSM secrets, CloudWatch, the S3 storage-layer rewrite, the schema/seed, the Azure redirect URI — is <b>identical</b> in both worlds. The deployment choice touches only what runs <em>on the box</em>.</p></div>
+</div>
+<div class="rec ok"><span class="h">The headline</span> Dropping microk8s removes the single biggest source of new complexity and ongoing operational risk in the whole migration, and replaces it with two config files. The app, the data, the network, the security, and the edge are unchanged. <b>You lose declarative rollouts and a k8s-standard footprint; you gain a system you can actually build and operate alone.</b></div>
+
+<!-- ===== PHASE DELTAS ===== -->
+<h2 class="s" id="phasedelta"><span class="n">13</span>Runbook phase deltas</h2>
+<p>Mapping the choice onto the migration runbook — only two phases change, plus one permission line.</p>
+<table>
+  <tr><th>Runbook item</th><th class="simple">① non-microk8s</th><th class="k8s">③ microk8s</th></tr>
+  <tr><td><b>Phase 5</b> — app code changes</td><td>No Dockerfile/manifests. (storage rewrite, pool, cookies, /healthz — same)</td><td><b>+</b> add a Dockerfile + k8s manifests</td></tr>
+  <tr><td><b>Phase 6</b> — compute &amp; runtime</td><td>Node + Nginx + systemd; secrets SSM→env</td><td><b>Replace</b> with: install microk8s, build/push image, apply manifests, wire ingress→ALB</td></tr>
+  <tr><td><b>Phase 8</b> — CI/CD</td><td>build artifact → ship → restart (SSM)</td><td>build image → ECR → <code class="inl">kubectl rollout</code> (CI needs cluster access)</td></tr>
+  <tr><td><b>Permissions</b> (Phase D)</td><td>No change to your IAM request</td><td><b>+ ECR</b> permission; + cluster credentials path for CI</td></tr>
+  <tr><td>All other phases (0–4, 7, 9–14)</td><td colspan="2" style="text-align:center"><b>Identical</b> — network, RDS, S3, ALB/ACM/DNS, schema, SSO, observability, cut-over are the same either way</td></tr>
+</table>
+
+<!-- ===== MIDDLE ===== -->
+<h2 class="s" id="middle"><span class="n">14</span>The middle ground: plain Docker (option ②)</h2>
+<p class="lead">If the firm wants <b>containers</b> (for image portability, reproducibility, or a future ECS path) but not <b>Kubernetes</b>, plain Docker is the sensible compromise — most of the container upside, almost none of the orchestration cost.</p>
+<table>
+  <tr><th></th><th class="simple">① systemd</th><th class="mid">② plain Docker</th><th class="k8s">③ microk8s</th></tr>
+  <tr><td>Dockerfile?</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+  <tr><td>Orchestrator to operate?</td><td>No</td><td>No</td><td><b>Yes</b> (the cost)</td></tr>
+  <tr><td>Run command</td><td><code class="inl">systemctl</code></td><td><code class="inl">docker run --restart=always</code> (or compose, under systemd)</td><td><code class="inl">kubectl apply</code></td></tr>
+  <tr><td>New learning</td><td>~none</td><td>Docker only</td><td>Docker + Kubernetes</td></tr>
+  <tr><td>Reproducibility / portability</td><td>Lower</td><td><b>High</b> (same image everywhere)</td><td>High</td></tr>
+  <tr><td>On-ramp to ECS/EKS</td><td>Containerize later</td><td><b>Already done</b></td><td>Already done</td></tr>
+  <tr><td>Day-2 burden</td><td>Lowest</td><td><b>Low</b></td><td>High</td></tr>
+</table>
+<div class="rec warn"><span class="h">When to pick option ②</span> Choose plain Docker if you want the image-portability and the clean ECS path now, and are comfortable learning <em>just Docker</em>. It gives you ~80% of the "containerized future-proofing" people reach for microk8s to get, at a fraction of the operational cost. It's the strongest answer if the SDE's real concern is "we want containers," not "we want Kubernetes." If even that feels like extra, option ① is perfectly sufficient for NEXA today.</div>
+
+<!-- ===== WHEN WINS ===== -->
+<h2 class="s" id="whenwins"><span class="n">15</span>When each genuinely wins</h2>
+<div class="twocol">
+  <div class="rec ok"><span class="h">Pick non-microk8s (① or ②) when…</span>
+  <ul style="margin:6px 0 0">
+    <li>It's <b>one app</b> (or a few) — NEXA is one.</li>
+    <li>It runs on <b>one box</b> for now.</li>
+    <li>The owner is <b>app-focused</b>, operating solo, without a platform/DevOps team behind them.</li>
+    <li>You want to be <b>live quickly</b> and operate it <b>sustainably</b>.</li>
+    <li>The firm has <b>no hard Kubernetes standard</b>, or will accept a documented exception for a small internal tool.</li>
+  </ul>
+  <b>→ This is NEXA.</b></div>
+  <div class="rec k8s"><span class="h">Pick microk8s when…</span>
+  <ul style="margin:6px 0 0">
+    <li>The firm <b>standardises on Kubernetes</b> and there's a <b>platform/DevOps team that operates the k8s layer</b> for you.</li>
+    <li>You're running <b>many services</b> that benefit from shared orchestration.</li>
+    <li>You need <b>declarative, GitOps-style</b> deploys across environments as a hard requirement.</li>
+    <li>There's a <b>genuine multi-node</b> story (real HA, autoscaling) on the roadmap.</li>
+    <li>The team's <b>existing tooling/runbooks</b> all assume kubectl.</li>
+  </ul>
+  <b>→ Only if the firm's reality matches this.</b></div>
+</div>
+
+<!-- ===== ASK ===== -->
+<h2 class="s" id="ask"><span class="n">16</span>What to settle with the SDE</h2>
+<p>The decision turns on a few facts only the SDE/firm can confirm. Put these to him:</p>
+<ol>
+  <li><b>Is microk8s a hard firm standard, or a default suggestion?</b> If it's "how we run things," that weighs heavily. If it's "seemed reasonable," the simpler path is on the table.</li>
+  <li><b>Who operates the Kubernetes layer day-to-day?</b> If there's a platform team, microk8s is viable. If it's you alone (app-focused, IT is a separate vertical), that's the strongest argument for non-microk8s.</li>
+  <li><b>Would the firm accept containers-without-Kubernetes (plain Docker)?</b> If the real goal is portability/standardization rather than orchestration, option ② satisfies it with far less burden.</li>
+  <li><b>Is there a real multi-service / multi-node future</b> for NEXA, or is it a stable single internal app? The former leans (managed) orchestration; the latter doesn't.</li>
+</ol>
+<div class="rec"><span class="h">A fair, confident way to put it</span> "For a single integrated app on one box that I'll own solo, microk8s adds a Kubernetes control plane and day-2 operations without the HA/scale benefits that justify it — a one-node cluster has nothing to orchestrate. I'd propose <b>EC2 + Nginx + systemd</b> (or plain Docker if you want a container), keeping the app stateless so we can move to managed ECS/EKS later if it ever needs real orchestration. Happy to go microk8s if it's a firm standard <em>and</em> there's a platform team to operate it — just want whatever stays maintainable."</div>
+
+<div class="rec ok" style="margin-top:28px"><span class="h">Bottom line</span> For NEXA as it is today, <b>non-microk8s wins clearly</b>: same external architecture, dramatically less to build and operate, no loss of the future path (the app is stateless), and no real sacrifice of capability at this scale. microk8s is the answer to a problem NEXA doesn't have yet — and if it ever does, the answer would be managed ECS/EKS, not a self-run cluster on one EC2. Settle "is k8s a firm standard with platform support?" with the SDE; absent a clear yes, ship the simple path.</div>
+
+</div><!-- /.body -->
+
+<div class="foot">
+  <b>NEXA — microk8s vs non-microk8s deployment comparison.</b> Companion to the AWS Migration Runbook, the Migration Plan, and the Architecture Briefing. Ratings are scoped to NEXA's specific context (one integrated app, one box, ~55 users, solo app-focused owner); a different app or team would re-weight them. Resource-overhead figures are typical ranges — confirm against the chosen instance and microk8s version. The deployment choice affects only what runs on the EC2 box; the rest of the migration is identical either way.
+  <br><br>Print to PDF via your browser's “Print → Save as PDF.”
+</div>
+
+</main>
+</div>
+</body>
+</html>
