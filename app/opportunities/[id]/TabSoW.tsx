@@ -359,6 +359,35 @@ export function TabSoW({
   return (
     <div style={{ padding: '28px 32px', maxWidth: 680 }}>
 
+      {/* ── Approved banner ── */}
+      {verification?.status === 'APPROVED' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '14px 18px', borderRadius: 10, marginBottom: 28,
+          background: '#F0FDF4', border: '1.5px solid #86EFAC',
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+            background: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#15803D' }}>
+              SOW &amp; PO Verification Approved
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#166534' }}>
+              Approved by <strong>{verification.approver.name}</strong> — this opportunity is cleared for project code generation.
+            </p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#166534', opacity: 0.75 }}>
+              SoW / PO / PCA has been approved, there is no work to do here.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Confirm modal ── */}
       {confirmOpen && (
         <>

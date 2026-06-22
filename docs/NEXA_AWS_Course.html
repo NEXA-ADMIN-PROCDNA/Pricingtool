@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AWS, Explained Through NEXA — A Hands-On Course</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6;
+    --chip:#EEF2F9;
+    /* AWS subject accent — used with restraint for service names only */
+    --aws:#EC7211; --awsDeep:#C25A0A; --awsbg:#FFF3E8; --squid:#232F3E;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:286px 1fr;max-width:1320px;margin:0 auto;}
+
+  /* ---------- nav ---------- */
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 16px 60px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 15px/1 'Segoe UI';letter-spacing:.18em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand b{color:var(--aws)}
+  nav .sub{font-size:11px;color:var(--muted);margin:7px 0 16px;}
+  nav a{display:block;font-size:12.4px;color:var(--ink2);padding:3px 0;line-height:1.4}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:13px;}
+  nav a .n{color:var(--accent);font:700 11px/1 'Courier New',monospace;margin-right:6px;}
+  nav .part{font:700 10px/1 'Courier New',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:18px 0 4px;padding-top:10px;border-top:1px dashed var(--line)}
+
+  main{padding:0 0 140px;min-width:0;}
+
+  /* ---------- hero ---------- */
+  .hero{background:linear-gradient(125deg,#0A1F44 0%,#001E96 55%,#003a8f 100%);color:#EAF0FB;padding:46px 52px 38px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(236,114,17,.32),transparent 60%);}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.24em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:33px;margin:14px 0 8px;letter-spacing:-.015em;color:#fff;max-width:24ch;line-height:1.12}
+  .hero h1 b{color:var(--aws)}
+  .hero p{max-width:74ch;color:#CBD8F2;margin:.45em 0;font-size:15.5px}
+  .hero .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+
+  .body{padding:8px 52px 0}
+
+  /* ---------- headings ---------- */
+  h2.s{font-size:24px;margin:54px 0 6px;padding-top:16px;border-top:2px solid var(--ink);scroll-margin-top:10px;letter-spacing:-.01em}
+  h2.s .n{font:800 15px/1 'Courier New',monospace;color:var(--aws);margin-right:12px;}
+  h3{font-size:18px;margin:30px 0 6px;color:var(--accentDeep);scroll-margin-top:10px}
+  h4{font-size:13px;margin:20px 0 4px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:82ch} ul,ol{max-width:82ch} li{margin:4px 0}
+  .lead{font-size:16.5px;color:var(--ink2);max-width:80ch}
+
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:9px;padding:14px 16px;overflow:auto;font:12.5px/1.6 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0} pre .o{color:#FFB066} pre .s{color:#A8C7FF}
+
+  /* ---------- tables ---------- */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+
+  /* ---------- callouts ---------- */
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:18px 0;}
+  .rec b{color:var(--accentDeep)}
+  .rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)}
+  .rec.aws{border-left-color:var(--aws)} .rec.aws b{color:var(--awsDeep)}
+  .rec .h{display:block;font-weight:800;margin-bottom:3px;font-size:13.5px}
+
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;vertical-align:middle}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#F3C4C4}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  .pill.aws{color:var(--awsDeep);background:var(--awsbg);border-color:#F3CBA0}
+
+  /* AWS service inline badge */
+  .svc{display:inline-block;font:700 11px/1 'Segoe UI';color:#fff;background:var(--squid);border-radius:5px;padding:3px 7px 3px 6px;letter-spacing:.01em;white-space:nowrap}
+  .svc::before{content:"";display:inline-block;width:7px;height:7px;border-radius:1.5px;background:var(--aws);margin-right:6px;transform:translateY(0)}
+
+  /* ---------- diagram primitives (shared with NEXA docs) ---------- */
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;margin:18px 0;overflow:auto;}
+  .diagram .cap{font-size:12px;color:var(--muted);margin:10px 2px 0;max-width:none}
+  .layer{display:flex;gap:12px;align-items:stretch;justify-content:center;flex-wrap:wrap;margin:6px 0}
+  .box{background:#F7F9FD;border:1.5px solid #C9D6EC;border-radius:9px;padding:10px 14px;min-width:148px;text-align:center;}
+  .box .t{font-weight:700;font-size:13px;color:var(--accentDeep);}
+  .box .d{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .box.ext{background:#FFF7EC;border-color:#EAD3A6}
+  .box.db{background:#EAF6EF;border-color:#B6E2C7}
+  .box.cli{background:#EDEFF7;border-color:#C2C9E6}
+  .box.aws{background:var(--awsbg);border-color:#F3CBA0}
+  .box.aws .t{color:var(--awsDeep)}
+  .varrow{text-align:center;color:var(--accent);font-size:20px;line-height:1;margin:3px 0;}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:12px 0 6px;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .stage{background:#EDEFF7;border:1.5px solid #C2C9E6;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;color:var(--accentDeep);text-align:center;min-width:250px;}
+  .stage .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+  .branch{font-size:11.5px;color:var(--ink2);background:#FAFBFE;border:1px dashed var(--line);border-radius:6px;padding:4px 10px;margin:5px 0;text-align:center}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .threecol{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+  /* numbered step ladder */
+  .steps{counter-reset:step;display:flex;flex-direction:column;gap:0;margin:14px 0}
+  .step{position:relative;display:flex;gap:15px;padding:0 0 18px 0;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:33px;bottom:-2px;width:2px;background:#C9D6EC;}
+  .step .num{counter-increment:step;flex:0 0 34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:800 14px/1 'Segoe UI';z-index:1;}
+  .step .c2{background:#F7F9FD;border:1px solid #C9D6EC;border-radius:9px;padding:11px 15px;flex:1;}
+  .step .c2 b{color:var(--accentDeep)}
+  .step .c2 .k{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+
+  /* containment / nesting hierarchy */
+  .nest{font:13px/1.5 'Cascadia Code','Consolas',monospace;margin:6px 0}
+  .nest .n{border:1.5px solid;border-radius:9px;padding:9px 12px;margin:7px 0;position:relative}
+  .nest .n .lbl{font-weight:800;font-size:12.5px;letter-spacing:.02em}
+  .nest .n .meta{font:600 9.5px/1 'Courier New',monospace;letter-spacing:.08em;text-transform:uppercase;float:right;color:var(--muted)}
+  .nest .org{border-color:#1F6B3C;background:#F2FAF5}
+  .nest .acct{border-color:#005CD9;background:#F2F7FF}
+  .nest .region{border-color:#7C3AED;background:#F7F3FF}
+  .nest .az{border-color:#0891B2;background:#EFFBFE}
+  .nest .vpc{border-color:#0A1F44;background:#F6F8FC}
+  .nest .subnet{border-color:#B45309;background:#FFF8EF}
+  .nest .res{border-color:#C9D6EC;background:#fff}
+  .nest .desc{font-family:'Segoe UI',sans-serif;font-size:11.5px;color:var(--ink2);margin-top:3px;font-weight:400}
+
+  /* ladder (hierarchy ranking) */
+  .ladder{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+  .rung{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 14px}
+  .rung .lv{flex:0 0 92px;font:800 11px/1 'Courier New',monospace;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--accent);border-radius:6px;padding:6px 8px;text-align:center}
+  .rung .lv.a{background:var(--accentDeep)} .rung .lv.b{background:#2563EB} .rung .lv.c{background:#3B82F6} .rung .lv.d{background:#60A5FA;color:#0A1F44} .rung .lv.e{background:#93C5FD;color:#0A1F44}
+  .rung .body2{flex:1} .rung .body2 b{color:var(--accentDeep)} .rung .body2 .d{font-size:12px;color:var(--ink2)}
+
+  .kbd{font:600 12px/1 'Cascadia Code',monospace;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;}
+  .tocgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .tocgrid a{display:block;border:1px solid var(--line);border-radius:9px;padding:11px 14px;background:#fff;color:var(--ink)}
+  .tocgrid a:hover{border-color:var(--accent);text-decoration:none;box-shadow:0 2px 10px rgba(0,40,150,.06)}
+  .tocgrid a .n{font:800 12px/1 'Courier New',monospace;color:var(--aws)}
+  .tocgrid a .t{font-weight:700;display:block;margin:3px 0 2px}
+  .tocgrid a .d{font-size:12px;color:var(--muted)}
+
+  .glos dt{font-weight:700;color:var(--accentDeep);margin-top:12px}
+  .glos dd{margin:2px 0 0;color:var(--ink2);max-width:82ch}
+
+  .foot{margin:64px 52px 0;padding:18px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+
+  svg{max-width:100%;height:auto;display:block}
+  .svgwrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin:18px 0;overflow:auto}
+
+  @media(max-width:1040px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body,.foot{padding-left:20px;padding-right:20px}.twocol,.threecol,.tocgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">AWS · <b>NEXA</b></div>
+  <div class="sub">A hands-on course, taught through one real app</div>
+
+  <a href="#start" class="top">Start here</a>
+
+  <div class="part">Part I · The map</div>
+  <a href="#mental"><span class="n">1</span>The mental model</a>
+  <a href="#hierarchy"><span class="n">2</span>The AWS hierarchy</a>
+  <a href="#regions"><span class="n">3</span>Regions &amp; Availability Zones</a>
+
+  <div class="part">Part II · Networking</div>
+  <a href="#vpc"><span class="n">4</span>VPC &amp; subnets</a>
+  <a href="#routing"><span class="n">5</span>Routing: IGW &amp; NAT</a>
+  <a href="#sg"><span class="n">6</span>Security Groups &amp; NACLs</a>
+
+  <div class="part">Part III · Compute &amp; edge</div>
+  <a href="#ec2"><span class="n">7</span>EC2 — the app server</a>
+  <a href="#alb"><span class="n">8</span>ALB — load balancing</a>
+  <a href="#dns"><span class="n">9</span>Route 53 &amp; ACM</a>
+
+  <div class="part">Part IV · Data</div>
+  <a href="#rds"><span class="n">10</span>RDS — the database</a>
+  <a href="#s3"><span class="n">11</span>S3 — object storage</a>
+
+  <div class="part">Part V · Identity &amp; ops</div>
+  <a href="#iam"><span class="n">12</span>IAM — the big one</a>
+  <a href="#secrets"><span class="n">13</span>Secrets &amp; KMS</a>
+  <a href="#observe"><span class="n">14</span>CloudWatch</a>
+
+  <div class="part">Part VI · The whole picture</div>
+  <a href="#reference"><span class="n">15</span>NEXA reference architecture</a>
+  <a href="#projecthier"><span class="n">16</span>Structuring the project</a>
+  <a href="#deploy"><span class="n">17</span>CI/CD &amp; environments</a>
+
+  <div class="part">Reference</div>
+  <a href="#path"><span class="n">18</span>A learning path</a>
+  <a href="#glossary"><span class="n">19</span>Glossary</a>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA · Internal learning doc · companion to the NEXA migration plan</div>
+  <h1>AWS, explained through <b>NEXA</b></h1>
+  <p>A course that teaches the core of AWS — <strong>VPC, IAM, EC2, ALB, RDS, S3</strong> and the pieces around them — not in the abstract, but by mapping every concept onto a real application you already understand: the NEXA Business Development &amp; Pricing tool you are moving off Vercel + Supabase onto AWS.</p>
+  <p>The through-line is <strong>hierarchy</strong>: how AWS nests an account inside an organisation, a network inside a region, a server inside a subnet, a permission inside a role — and how a project like NEXA is structured in layers that mirror that nesting.</p>
+  <div class="meta">
+    <span class="chip">For: an AWS newcomer shipping a real app</span>
+    <span class="chip">Worked example throughout: NEXA</span>
+    <span class="chip">19 sections · diagrams · gotchas</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ============ START HERE ============ -->
+<section id="start">
+<h3 style="margin-top:26px">How to read this</h3>
+<p class="lead">Most AWS material teaches services one at a time, in isolation, with a generic "to-do app" you don't care about. The problem is that AWS only makes sense as a <em>system</em> — the value is in how the pieces fit, not in any one of them. So this course does the opposite: it keeps <b>one</b> app in view the whole time and shows where each AWS service plugs in.</p>
+
+<p>That app is <b>NEXA</b>. You already know it cold, so you can spend all your attention on the AWS half. As a one-line refresher, here is the shape of NEXA, because everything below hangs off it:</p>
+
+<div class="rec aws"><span class="h">NEXA in one breath</span> A single <b>Next.js 16</b> application (UI <i>and</i> API in one deployable process) used by ~55 internal staff across the US and India. It tracks business-development opportunities through pricing, multi-level approval, and SOW/PO signing. Login is <b>Azure AD SSO</b>. All structured data lives in <b>PostgreSQL</b>; signed SOW/PO documents live in <b>object storage</b>; approval emails go out through <b>Microsoft Graph</b>. The data is commercially sensitive — deal pricing, cost &amp; bill rates, margins. It runs on Vercel + Supabase today; you are moving it to AWS.</div>
+
+<p>Each AWS service section follows the same rhythm, so you always know where you are:</p>
+<div class="threecol">
+  <div class="box" style="min-width:0"><div class="t">① What it is</div><div class="d">Plain-language definition, no jargon up front</div></div>
+  <div class="box" style="min-width:0"><div class="t">② Where it sits</div><div class="d">Its place in the AWS hierarchy — what contains it, what it contains</div></div>
+  <div class="box" style="min-width:0"><div class="t">③ NEXA &amp; gotchas</div><div class="d">Exactly how NEXA uses it, and the traps that bite newcomers</div></div>
+</div>
+
+<div class="rec"><span class="h">A note on the running example's mapping</span> Wherever you see a Vercel/Supabase concept, this course shows its AWS counterpart, because migration <em>is</em> the act of translating one platform's hierarchy into another's:
+<table style="margin-top:8px">
+  <tr><th>NEXA today (Vercel + Supabase)</th><th>What you'll learn it becomes on AWS</th><th>Section</th></tr>
+  <tr><td>Vercel serverless functions</td><td><span class="svc">Amazon EC2</span> in a subnet, under a process manager</td><td>§7</td></tr>
+  <tr><td><code class="inl">*.vercel.app</code> URL + automatic TLS</td><td><span class="svc">ALB</span> + <span class="svc">ACM</span> + <span class="svc">Route 53</span></td><td>§8–9</td></tr>
+  <tr><td>Supabase Postgres (pooler)</td><td><span class="svc">Amazon RDS</span> in a private subnet</td><td>§10</td></tr>
+  <tr><td>Supabase Storage</td><td><span class="svc">Amazon S3</span> with presigned URLs</td><td>§11</td></tr>
+  <tr><td>Vercel env vars</td><td><span class="svc">SSM Parameter Store</span> / <span class="svc">Secrets Manager</span> + <span class="svc">KMS</span></td><td>§13</td></tr>
+  <tr><td>Platform-managed identity</td><td><span class="svc">IAM</span> roles &amp; policies you define</td><td>§12</td></tr>
+</table>
+</div>
+</section>
+
+<!-- ============ 1. MENTAL MODEL ============ -->
+<h2 class="s" id="mental"><span class="n">1</span>The mental model: AWS is a data centre you rent by the piece</h2>
+<p class="lead">Before any single service, fix this picture. AWS is one enormous set of data centres around the world. You do not rent a building; you rent <em>individual capabilities</em> out of it — a virtual machine here, a managed database there, a chunk of disk for files — and you wire them together over a private network you also rent. Everything else is detail.</p>
+
+<p>On Vercel + Supabase, those decisions were made <em>for</em> you. Vercel decided where your function ran, how it scaled, what TLS certificate it used, how logs were collected. Supabase decided the network around your database. Moving to AWS means you now make — and own — each of those choices. That is the whole reason this feels like more moving parts: AWS hands you the pieces Vercel had pre-assembled.</p>
+
+<div class="diagram">
+  <span class="tag">The shift in who owns each decision</span>
+  <table style="margin:0">
+    <tr><th>Decision</th><th>On Vercel/Supabase</th><th>On AWS</th></tr>
+    <tr><td>Where the app runs</td><td>Platform picks an edge region</td><td><b>You</b> pick a Region, AZ, subnet, instance</td></tr>
+    <tr><td>The network around it</td><td>Invisible / managed</td><td><b>You</b> design a VPC, subnets, routes, firewalls</td></tr>
+    <tr><td>Who/what can touch what</td><td>Platform tokens</td><td><b>You</b> write IAM roles &amp; policies</td></tr>
+    <tr><td>The public URL &amp; cert</td><td>Automatic</td><td><b>You</b> wire Route 53 + ACM + ALB</td></tr>
+    <tr><td>Restart on crash, logs, backups</td><td>Automatic</td><td><b>You</b> configure systemd/PM2, CloudWatch, RDS backups</td></tr>
+  </table>
+  <p class="cap">This is the trade: more control and a clean security story, in exchange for assembling pieces the old platform hid. NEXA's plan deliberately starts on the simplest assembly (one EC2) so the number of new pieces is small.</p>
+</div>
+
+<h3>Two ideas that unlock everything else</h3>
+<p>If you internalise only two things from this course, make them these — every service later is a special case of one or the other.</p>
+
+<div class="twocol">
+  <div class="rec aws"><span class="h">Idea 1 — Containment (the nesting)</span> AWS resources sit <em>inside</em> one another like Russian dolls. A server is inside a subnet, which is inside a VPC, which is inside a Region, which is inside your account. You cannot understand "where" something is until you can name every doll around it. This is the hierarchy of <b>place</b>. Section 2 is entirely about this.</div>
+  <div class="rec"><span class="h">Idea 2 — Explicit permission (deny by default)</span> Nothing in AWS can talk to anything else unless something explicitly allows it. An EC2 server cannot read an S3 bucket, reach a database, or even leave the network unless a rule (a security group) or a permission (an IAM policy) grants it. This is the hierarchy of <b>trust</b>. Sections 6 and 12 are about this.</div>
+</div>
+<p>Place and trust. Almost every AWS error you will hit as a newcomer is one of two sentences: <i>"it's not where I think it is"</i> (a containment/routing mistake) or <i>"it isn't allowed to do that"</i> (a security-group or IAM mistake). Knowing which of the two you're debugging is half the battle.</p>
+
+<!-- ============ 2. THE HIERARCHY ============ -->
+<h2 class="s" id="hierarchy"><span class="n">2</span>The AWS hierarchy — where everything lives</h2>
+<p class="lead">This is the spine of the course, so it comes first. AWS has a strict containment hierarchy. Every resource you ever create lands at some level of it. Learn the ladder once and every service afterward has an obvious home.</p>
+
+<h3>2.1 — The containment ladder, top to bottom</h3>
+<p>Read this from the outside in. Each box <em>contains</em> the ones below it; nothing can escape its container.</p>
+
+<div class="diagram">
+<div class="nest">
+  <div class="n org"><span class="meta">billing &amp; policy root</span><span class="lbl">AWS Organization</span> — ProcDNA's whole AWS footprint
+    <div class="desc">The top of the tree. Groups many accounts under one bill and one set of guardrails (Service Control Policies). The "AUXO" account NEXA targets lives here, beside other ProcDNA accounts.</div>
+    <div class="n acct"><span class="meta">isolation boundary</span><span class="lbl">Account</span> — e.g. <code class="inl">AUXO</code> (or a <code class="inl">nexa-dev</code> sub-account)
+      <div class="desc">The hard wall of AWS. Resources, permissions, and bills are scoped to an account. This is the cleanest blast-radius boundary — a mistake in one account can't touch another. Decision #2 in your plan ("existing VPC or new?") really lives here: which account does NEXA belong in.</div>
+      <div class="n region"><span class="meta">geography</span><span class="lbl">Region</span> — e.g. <code class="inl">eu-central-1</code> (Frankfurt) or <code class="inl">ap-south-1</code> (Mumbai)
+        <div class="desc">A physical cluster of data centres in one part of the world. You pick one per deployment. Data residency and latency live here — this is your plan's Decision #1.</div>
+        <div class="n az"><span class="meta">fault domain</span><span class="lbl">Availability Zone (AZ)</span> — e.g. <code class="inl">eu-central-1a</code>, <code class="inl">…-1b</code>
+          <div class="desc">One or more discrete data centres inside a Region, isolated from the others (separate power, cooling, network). You spread across ≥2 AZs so one failing doesn't take you down. RDS <em>requires</em> two AZs even for a single-AZ database (see §10).</div>
+          <div class="n vpc"><span class="meta">your private network</span><span class="lbl">VPC</span> — e.g. <code class="inl">10.0.0.0/16</code>
+            <div class="desc">Your own isolated virtual network inside the Region. It spans all AZs in that Region. This is the "data centre floor" NEXA's servers and database plug into. Everything below here is yours to wire. (§4)</div>
+            <div class="n subnet"><span class="meta">a slice per AZ</span><span class="lbl">Subnet</span> — public <code class="inl">10.0.1.0/24</code> · private <code class="inl">10.0.11.0/24</code>
+              <div class="desc">A range of the VPC's addresses pinned to <em>one</em> AZ, marked public (can reach the internet) or private (cannot). NEXA's app server sits in a public subnet; RDS sits in private subnets. (§4–5)</div>
+              <div class="n res"><span class="meta">the actual thing</span><span class="lbl">Resource</span> — the EC2 instance, the RDS database, an ENI
+                <div class="desc">The leaf. An EC2 instance lives in exactly one subnet (one AZ). An RDS instance lives in a subnet group spanning AZs. S3 and IAM are the exceptions — see the note below.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <p class="cap">The containment ladder. When someone asks "where is the NEXA app server?" the full answer is a path down this tree: <code class="inl">AUXO account → eu-central-1 → AZ&nbsp;a → VPC 10.0.0.0/16 → public subnet 10.0.1.0/24 → this EC2 instance</code>.</p>
+</div>
+
+<div class="rec warn"><span class="h">The two famous exceptions to the ladder</span>
+<ul style="margin:6px 0 0">
+  <li><b><span class="svc">Amazon S3</span> and <span class="svc">IAM</span> are not inside a VPC.</b> S3 buckets live at the <em>Region</em> level (with a globally-unique name) and IAM lives at the <em>account</em> level (global). They float above the network. That's <em>why</em> reaching S3 from a private subnet needs special routing (a NAT gateway or a VPC endpoint) — S3 isn't "in" the network with your server. Keep this in your pocket; it explains a confusing class of "why can't my app reach the bucket" problems.</li>
+  <li><b>A few services are global</b> (IAM, Route 53, CloudFront, Organizations). Everything else is Regional. When the console says "N. Virginia" in the corner, global services ignore it.</li>
+</ul></div>
+
+<h3>2.2 — Where each NEXA piece lands on the ladder</h3>
+<p>Now place the actual app. This single table is the answer to "where does everything live," and it's worth memorising because it doubles as your build checklist.</p>
+<table>
+  <tr><th>NEXA piece</th><th>AWS resource</th><th>Lives at this level</th><th>Public?</th></tr>
+  <tr><td>The Next.js app process</td><td><span class="svc">EC2</span> instance</td><td>Public subnet, one AZ</td><td>Reachable via the load balancer / Elastic IP</td></tr>
+  <tr><td>Load balancer / stable entry</td><td><span class="svc">ALB</span></td><td>Public subnets, ≥2 AZs</td><td>Yes — the public face</td></tr>
+  <tr><td>PostgreSQL database</td><td><span class="svc">RDS</span> instance</td><td>Private subnets (DB subnet group, ≥2 AZs)</td><td><b>No</b> — never public</td></tr>
+  <tr><td>SOW / PO documents</td><td><span class="svc">S3</span> bucket</td><td>Region (above the VPC)</td><td><b>No</b> — Block Public Access on; presigned URLs only</td></tr>
+  <tr><td>App's machine identity</td><td><span class="svc">IAM</span> instance role</td><td>Account (global)</td><td>n/a</td></tr>
+  <tr><td>Secrets (DB pw, Azure secret…)</td><td><span class="svc">SSM</span> / <span class="svc">Secrets Manager</span></td><td>Region</td><td>No — KMS-encrypted</td></tr>
+  <tr><td>Public DNS name</td><td><span class="svc">Route 53</span> record</td><td>Global (hosted zone)</td><td>Yes</td></tr>
+  <tr><td>TLS certificate</td><td><span class="svc">ACM</span> cert</td><td>Region (must match the ALB's Region)</td><td>n/a</td></tr>
+</table>
+
+<h3>2.3 — There is a second hierarchy: permission</h3>
+<p>The ladder above is the hierarchy of <b>place</b>. Sitting across it is a hierarchy of <b>permission</b> — who is allowed to do what. They are independent: a resource can be physically reachable (place) and still refuse an action (permission), or vice-versa. You debug them separately. We give permission its own full treatment in §12 (IAM), but here is the shape so the two hierarchies live side by side in your head from the start:</p>
+
+<div class="svgwrap">
+<svg viewBox="0 0 860 300" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <!-- place column -->
+  <text x="20" y="28" font-size="13" font-weight="800" fill="#001E96">HIERARCHY OF PLACE — "where is it?"</text>
+  <g font-size="12.5">
+    <rect x="20" y="42" width="360" height="34" rx="7" fill="#F2F7FF" stroke="#005CD9"/>
+    <text x="34" y="64" fill="#0A1F44">Account → Region → AZ → VPC → Subnet → Resource</text>
+    <rect x="20" y="86" width="360" height="34" rx="7" fill="#F6F8FC" stroke="#0A1F44"/>
+    <text x="34" y="108" fill="#0A1F44">Fixed by containment &amp; routing (subnets, route tables)</text>
+    <rect x="20" y="130" width="360" height="34" rx="7" fill="#FFF8EF" stroke="#B45309"/>
+    <text x="34" y="152" fill="#0A1F44">Gatekeeper: Security Groups (can the packet arrive?)</text>
+  </g>
+  <text x="20" y="206" font-size="12.5" fill="#3A4A6A">Failure looks like: timeout, "can't reach host",</text>
+  <text x="20" y="224" font-size="12.5" fill="#3A4A6A">connection refused, route not found.</text>
+
+  <!-- divider -->
+  <line x1="430" y1="30" x2="430" y2="270" stroke="#E2E7F0" stroke-dasharray="4 4"/>
+
+  <!-- permission column -->
+  <text x="470" y="28" font-size="13" font-weight="800" fill="#C25A0A">HIERARCHY OF TRUST — "is it allowed?"</text>
+  <g font-size="12.5">
+    <rect x="470" y="42" width="370" height="34" rx="7" fill="#FFF3E8" stroke="#EC7211"/>
+    <text x="484" y="64" fill="#0A1F44">Principal (a role/user) → Policy → Action on a Resource</text>
+    <rect x="470" y="86" width="370" height="34" rx="7" fill="#FFF3E8" stroke="#EC7211"/>
+    <text x="484" y="108" fill="#0A1F44">Default is DENY. A policy must explicitly Allow.</text>
+    <rect x="470" y="130" width="370" height="34" rx="7" fill="#FFF3E8" stroke="#EC7211"/>
+    <text x="484" y="152" fill="#0A1F44">Gatekeeper: IAM (can this identity perform this call?)</text>
+  </g>
+  <text x="470" y="206" font-size="12.5" fill="#3A4A6A">Failure looks like: "AccessDenied",</text>
+  <text x="470" y="224" font-size="12.5" fill="#3A4A6A">"not authorized to perform s3:GetObject".</text>
+</svg>
+<p class="cap" style="margin:6px 4px 0;font-size:12px;color:#7B7C7F">Two independent ladders. NEXA's EC2 app needs <b>both</b> to read a document: a network path to S3 (place) <em>and</em> an IAM role allowing <code class="inl">s3:GetObject</code> (trust). Miss either and the read fails — but with different error messages, which is how you tell them apart.</p>
+</div>
+
+<!-- ============ 3. REGIONS & AZ ============ -->
+<h2 class="s" id="regions"><span class="n">3</span>Regions &amp; Availability Zones — choosing geography</h2>
+<p class="lead">A <b>Region</b> is a named geographic area containing multiple isolated data centres. An <b>Availability Zone</b> is one (or a small cluster) of those data centres. You always pick a Region; within it you spread across AZs for resilience. This is the first real decision in NEXA's plan, so it's worth getting the reasoning right.</p>
+
+<h3>3.1 — Why two levels and not one</h3>
+<p>AWS splits geography into two levels for two different jobs:</p>
+<table>
+  <tr><th>Level</th><th>Job it solves</th><th>NEXA relevance</th></tr>
+  <tr><td><b>Region</b> (far apart, e.g. Frankfurt vs Mumbai)</td><td><b>Latency &amp; law.</b> Put data near users; keep data inside a legal boundary.</td><td>Users in US + India; current data sits in Frankfurt. The plan's open question is whether residency/latency justifies moving Region.</td></tr>
+  <tr><td><b>AZ</b> (close together, same Region)</td><td><b>Fault tolerance.</b> A power/cooling/network failure in one data centre shouldn't end your service.</td><td>You spread the ALB and the RDS subnet group across ≥2 AZs so a single-DC outage doesn't take NEXA offline.</td></tr>
+</table>
+<p>The mental shortcut: <b>Regions are for users and lawyers; AZs are for uptime.</b> They're chosen for completely different reasons, which is why AWS keeps them as separate levels of the ladder.</p>
+
+<h3>3.2 — The NEXA Region decision, laid out honestly</h3>
+<p>This is Decision #1 in the briefing. There is no single right answer; there's a trade you make explicitly with the SDE. The variables:</p>
+<div class="threecol">
+  <div class="box" style="min-width:0"><div class="t">eu-central-1 (Frankfurt)</div><div class="d">Matches where the data is today (fra1). Zero residency surprises if the firm already accepted EU hosting. Worst latency for both US and India.</div></div>
+  <div class="box" style="min-width:0"><div class="t">ap-south-1 (Mumbai)</div><div class="d">Best for the India user base. If most active users are in India, this is the latency win. Check whether US client data is allowed to sit in India.</div></div>
+  <div class="box" style="min-width:0"><div class="t">us-east-1 (N. Virginia)</div><div class="d">Best for US users; the cheapest, most feature-complete Region. Worst for India. Often the default for US-headquartered firms.</div></div>
+</div>
+<div class="rec"><span class="h">How to actually decide</span> For an internal tool with ~55 low-concurrency users, <b>latency differences of 100–200 ms are barely perceptible</b> on a server-rendered app — so this is mostly a <em>data-residency and firm-standard</em> decision, not a performance one. Ask: (1) Is there a contractual or legal rule about where client financial data may live? That dominates. (2) Does the firm already standardise on a Region in AUXO? Match it. (3) Only if both are open, optimise for the larger active user base. Pick <b>one</b> Region and keep all of NEXA's pieces in it — cross-Region wiring is a tax you don't want for an app this size.</div>
+
+<div class="rec warn"><span class="h">Gotcha: Region is sticky</span> Most resources cannot move Regions. An RDS instance, an EC2 instance, an ACM certificate, an ALB — all are created <em>in</em> a Region and stay there. "Moving Region" later means rebuilding. This is exactly why it's Decision #1 and why your plan flags it as a long pole. Because NEXA's current data is throwaway, you get one cheap chance to choose; spend it deliberately.</div>
+
+<h3>3.3 — Spreading NEXA across AZs (what it actually means)</h3>
+<p>Concretely, "multi-AZ" for NEXA means:</p>
+<div class="diagram">
+  <span class="tag">One Region · two Availability Zones</span>
+  <div class="twocol">
+    <div class="box cli"><div class="t">AZ &nbsp;eu-central-1a</div><div class="d">Public subnet 10.0.1.0/24 → EC2 app server<br>Private subnet 10.0.11.0/24 → RDS primary</div></div>
+    <div class="box cli"><div class="t">AZ &nbsp;eu-central-1b</div><div class="d">Public subnet 10.0.2.0/24 → ALB node<br>Private subnet 10.0.12.0/24 → RDS standby slot</div></div>
+  </div>
+  <p class="cap">The ALB always spans ≥2 AZs (that's how it stays up). The RDS <b>subnet group</b> must list subnets in ≥2 AZs even if you run a single-AZ database — AWS needs the second AZ available so it <em>could</em> fail the DB over later. The single EC2 app server starts in one AZ; if you later move to ECS/ALB with 2 tasks, you'd put one task per AZ.</p>
+</div>
+
+<!-- ============ 4. VPC ============ -->
+<h2 class="s" id="vpc"><span class="n">4</span>VPC &amp; subnets — building NEXA's private network</h2>
+<p class="lead">A <b>VPC</b> (Virtual Private Cloud) is your own private, isolated network inside a Region. Think of it as renting an empty data-centre floor: AWS gives you the room and the address space; you decide how to partition it, what's wired to the internet, and what's locked away. Everything compute- or data-related in NEXA plugs into this network.</p>
+
+<h3>4.1 — Addresses: CIDR, the language of the network</h3>
+<p>A VPC is defined by a <b>CIDR block</b> — a range of private IP addresses, written like <code class="inl">10.0.0.0/16</code>. The <code class="inl">/16</code> says "the first 16 bits are fixed; the rest are mine to hand out," which gives you 65,536 addresses (10.0.0.0 → 10.0.255.255). You then carve that range into smaller <b>subnets</b>, each a slice like <code class="inl">10.0.1.0/24</code> (256 addresses).</p>
+<div class="rec"><span class="h">The /16 ÷ /24 mental model</span> The number after the slash is "how many bits are locked." Bigger number = smaller range. A <code class="inl">/16</code> VPC split into <code class="inl">/24</code> subnets gives you up to 256 subnets of 256 addresses each — far more than NEXA needs, which is exactly why it's the comfortable default. You'll use a handful: two public, two private.</div>
+
+<h3>4.2 — Public vs private subnets: the one distinction that matters</h3>
+<p>A subnet is just a range of addresses <em>pinned to one AZ</em>. What makes it "public" or "private" is <b>not a checkbox on the subnet itself</b> — it's whether its route table has a path to the internet. That subtlety trips up everyone once:</p>
+<table>
+  <tr><th>Subnet is "public" if…</th><th>Subnet is "private" if…</th></tr>
+  <tr><td>Its route table sends internet-bound traffic (<code class="inl">0.0.0.0/0</code>) to an <b>Internet Gateway (IGW)</b>. Resources here <em>can</em> have public IPs and be reached from outside.</td><td>Its route table has <b>no</b> direct route to an IGW. Resources here have only private IPs and cannot be reached from the internet at all.</td></tr>
+  <tr><td><b>NEXA:</b> the EC2 app server and the ALB live here — they must be reachable.</td><td><b>NEXA:</b> RDS lives here — it must <em>never</em> be reachable from outside.</td></tr>
+</table>
+<p>So "public/private" is a property of <em>routing</em>, covered next in §5. For now, the design intent: <b>put the front door in public, lock the valuables in private.</b></p>
+
+<h3>4.3 — NEXA's network, drawn out</h3>
+<p>This is the two-tier layout from the briefing, made concrete. Study it — almost every later section refers back to this single picture.</p>
+
+<div class="svgwrap">
+<svg viewBox="0 0 900 540" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <!-- internet -->
+  <ellipse cx="450" cy="34" rx="120" ry="22" fill="#EDEFF7" stroke="#C2C9E6"/>
+  <text x="450" y="39" text-anchor="middle" font-size="13" font-weight="700" fill="#0A1F44">Internet (US + India users)</text>
+
+  <!-- region box -->
+  <rect x="30" y="78" width="840" height="440" rx="14" fill="#FBFCFE" stroke="#7C3AED" stroke-width="1.5"/>
+  <text x="46" y="100" font-size="12" font-weight="800" fill="#7C3AED">REGION · eu-central-1</text>
+
+  <!-- VPC box -->
+  <rect x="52" y="112" width="796" height="392" rx="12" fill="#fff" stroke="#0A1F44" stroke-width="1.5"/>
+  <text x="66" y="132" font-size="12" font-weight="800" fill="#0A1F44">VPC · 10.0.0.0/16</text>
+
+  <!-- IGW -->
+  <rect x="392" y="118" width="116" height="30" rx="7" fill="#FFF3E8" stroke="#EC7211"/>
+  <text x="450" y="138" text-anchor="middle" font-size="12" font-weight="700" fill="#C25A0A">Internet Gateway</text>
+  <line x1="450" y1="56" x2="450" y2="118" stroke="#005CD9" stroke-width="2"/>
+  <polygon points="450,118 445,108 455,108" fill="#005CD9"/>
+
+  <!-- AZ a -->
+  <rect x="70" y="162" width="370" height="328" rx="10" fill="#EFFBFE" stroke="#0891B2" stroke-dasharray="5 4"/>
+  <text x="84" y="182" font-size="11.5" font-weight="800" fill="#0891B2">AVAILABILITY ZONE · a</text>
+  <!-- AZ b -->
+  <rect x="460" y="162" width="370" height="328" rx="10" fill="#EFFBFE" stroke="#0891B2" stroke-dasharray="5 4"/>
+  <text x="474" y="182" font-size="11.5" font-weight="800" fill="#0891B2">AVAILABILITY ZONE · b</text>
+
+  <!-- public subnet a -->
+  <rect x="84" y="196" width="342" height="132" rx="9" fill="#F2F7FF" stroke="#005CD9"/>
+  <text x="98" y="214" font-size="11" font-weight="800" fill="#005CD9">PUBLIC SUBNET · 10.0.1.0/24</text>
+  <rect x="100" y="226" width="150" height="44" rx="7" fill="#fff" stroke="#C9D6EC"/>
+  <text x="175" y="244" text-anchor="middle" font-size="11.5" font-weight="700" fill="#001E96">ALB node</text>
+  <text x="175" y="259" text-anchor="middle" font-size="10" fill="#7B7C7F">TLS termination</text>
+  <rect x="260" y="226" width="150" height="44" rx="7" fill="#fff" stroke="#C9D6EC"/>
+  <text x="335" y="244" text-anchor="middle" font-size="11.5" font-weight="700" fill="#001E96">EC2 — Next.js</text>
+  <text x="335" y="259" text-anchor="middle" font-size="10" fill="#7B7C7F">the app process</text>
+
+  <!-- public subnet b -->
+  <rect x="474" y="196" width="342" height="92" rx="9" fill="#F2F7FF" stroke="#005CD9"/>
+  <text x="488" y="214" font-size="11" font-weight="800" fill="#005CD9">PUBLIC SUBNET · 10.0.2.0/24</text>
+  <rect x="490" y="226" width="170" height="44" rx="7" fill="#fff" stroke="#C9D6EC"/>
+  <text x="575" y="244" text-anchor="middle" font-size="11.5" font-weight="700" fill="#001E96">ALB node (2nd AZ)</text>
+  <text x="575" y="259" text-anchor="middle" font-size="10" fill="#7B7C7F">ALB spans ≥2 AZs</text>
+
+  <!-- private subnet a -->
+  <rect x="84" y="344" width="342" height="128" rx="9" fill="#FFF8EF" stroke="#B45309"/>
+  <text x="98" y="362" font-size="11" font-weight="800" fill="#B45309">PRIVATE SUBNET · 10.0.11.0/24</text>
+  <rect x="120" y="376" width="270" height="46" rx="7" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="255" y="395" text-anchor="middle" font-size="12" font-weight="700" fill="#1F6B3C">RDS PostgreSQL — primary</text>
+  <text x="255" y="411" text-anchor="middle" font-size="10" fill="#7B7C7F">no public IP · port 5432 only from app</text>
+  <text x="98" y="450" font-size="10.5" fill="#B45309">no route to the Internet Gateway →</text>
+  <text x="98" y="464" font-size="10.5" fill="#B45309">unreachable from outside</text>
+
+  <!-- private subnet b -->
+  <rect x="474" y="344" width="342" height="128" rx="9" fill="#FFF8EF" stroke="#B45309"/>
+  <text x="488" y="362" font-size="11" font-weight="800" fill="#B45309">PRIVATE SUBNET · 10.0.12.0/24</text>
+  <rect x="510" y="376" width="270" height="46" rx="7" fill="#EAF6EF" stroke="#1F6B3C" stroke-dasharray="4 3"/>
+  <text x="645" y="395" text-anchor="middle" font-size="12" font-weight="700" fill="#1F6B3C">RDS standby slot</text>
+  <text x="645" y="411" text-anchor="middle" font-size="10" fill="#7B7C7F">required for the DB subnet group</text>
+
+  <!-- arrows -->
+  <line x1="250" y1="248" x2="260" y2="248" stroke="#005CD9" stroke-width="2"/>
+  <polygon points="260,248 252,244 252,252" fill="#005CD9"/>
+  <line x1="335" y1="270" x2="255" y2="376" stroke="#1F6B3C" stroke-width="2"/>
+  <polygon points="255,376 261,367 251,366" fill="#1F6B3C"/>
+  <text x="300" y="330" font-size="10" fill="#1F6B3C">5432 / SSL</text>
+</svg>
+<p class="cap" style="margin:6px 4px 0;font-size:12px;color:#7B7C7F">NEXA's two-tier VPC. Traffic enters through the IGW → ALB (public) → EC2 app (public) → RDS (private). The database has no path back to the IGW, so even if someone learned its address they could not reach it from the internet. This single property — "the DB is in a private subnet" — is the backbone of the finance-data security story.</p>
+</div>
+
+<h3>4.4 — Existing VPC or new? (Decision #2)</h3>
+<p>The briefing asks whether NEXA goes into an existing AUXO VPC or a fresh one. The trade:</p>
+<table>
+  <tr><th></th><th>Reuse an existing AUXO VPC</th><th>New dedicated VPC for NEXA</th></tr>
+  <tr><td>Pros</td><td>Follows firm CIDR/subnet standards; shared egress/inspection already set up; less for you to design.</td><td>Clean isolation; you control the whole layout; no risk of colliding with other workloads.</td></tr>
+  <tr><td>Cons</td><td>Must fit the firm's existing address plan and rules; shared blast radius.</td><td>You own more setup; must coordinate non-overlapping CIDR if it ever needs to peer.</td></tr>
+  <tr><td>Pick when…</td><td>The firm has a standard landing-zone VPC and wants everything in it.</td><td>NEXA is going into its own sub-account, or the firm has no standard yet.</td></tr>
+</table>
+<p>For a newcomer, <b>defer to the SDE's standard.</b> If AUXO has a landing zone, slot into it and inherit the network conventions; you'll spend your learning budget on the app-specific pieces (RDS, S3, IAM) rather than re-deriving a network design the firm already made.</p>
+
+<!-- ============ 5. ROUTING ============ -->
+<h2 class="s" id="routing"><span class="n">5</span>Routing — how a subnet reaches (or can't reach) the internet</h2>
+<p class="lead">Routing is what actually makes a subnet "public" or "private." Each subnet has a <b>route table</b>: a list of "for this destination, send traffic there." Two special destinations — the <b>Internet Gateway</b> and the <b>NAT Gateway</b> — control internet access in opposite directions.</p>
+
+<h3>5.1 — The two gateways, and the direction each one opens</h3>
+<table>
+  <tr><th>Gateway</th><th>What it does</th><th>Direction</th></tr>
+  <tr><td><b>Internet Gateway (IGW)</b></td><td>The VPC's door to the public internet. A subnet whose route table points <code class="inl">0.0.0.0/0</code> at the IGW is, by definition, <b>public</b>. Allows traffic <em>in and out</em>.</td><td>Inbound <b>and</b> outbound</td></tr>
+  <tr><td><b>NAT Gateway</b></td><td>Lets resources in a <b>private</b> subnet make <em>outbound</em> connections (e.g. download OS updates, call an external API) without being reachable from the internet. One-way valve.</td><td>Outbound <b>only</b></td></tr>
+</table>
+
+<div class="rec"><span class="h">The valve analogy</span> An <b>IGW</b> is a two-way door. A <b>NAT gateway</b> is a one-way valve: things inside can reach out, but nothing outside can reach in. Private resources that need to <em>initiate</em> calls outward (but must stay unreachable) sit behind NAT. Resources that need to be <em>reached</em> sit in public subnets behind the IGW.</div>
+
+<h3>5.2 — Why NEXA's plan says "NAT Gateway: not required"</h3>
+<p>The briefing notes NAT isn't needed, and the reasoning is a clean illustration of the whole routing model:</p>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">The app server is in a public subnet</span>The EC2 box already has a route to the IGW for its outbound needs (OS patches, calling Azure AD, calling MS Graph). It egresses directly through the IGW — no NAT needed.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">RDS doesn't need outbound internet</span>The database only ever <em>receives</em> connections from the app on port 5432. It never calls out to the internet, so it has no reason for a NAT gateway either.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">S3 access goes through the app, not the DB</span>Because the app server is public, it reaches S3 over its normal egress. (If you later moved the app into a <em>private</em> subnet for tighter security, you'd then need either a NAT gateway or — better — an <b>S3 VPC endpoint</b> so it could reach the bucket without touching the public internet.)</div></div>
+</div>
+<div class="rec aws"><span class="h">Cost footnote worth knowing</span> NAT gateways bill per hour <em>and</em> per GB processed — they're a common surprise line on AWS bills. Avoiding one (as NEXA does, by keeping the app public) is a legitimate simplification for a small internal tool. If security review later pushes the app into a private subnet, prefer a <b>VPC endpoint</b> for S3 over a NAT gateway: it's cheaper and keeps S3 traffic off the public internet entirely.</div>
+
+<h3>5.3 — Route tables, concretely</h3>
+<div class="diagram">
+  <span class="tag">What each subnet's route table says</span>
+  <div class="twocol">
+    <div>
+      <h4 style="margin-top:0">Public subnet route table</h4>
+      <pre style="margin:0"><span class="c"># local VPC traffic stays internal</span>
+10.0.0.0/16   <span class="o">→ local</span>
+<span class="c"># everything else → the internet</span>
+0.0.0.0/0     <span class="o">→ igw-xxxx</span></pre>
+    </div>
+    <div>
+      <h4 style="margin-top:0">Private subnet route table</h4>
+      <pre style="margin:0"><span class="c"># local VPC traffic stays internal</span>
+10.0.0.0/16   <span class="o">→ local</span>
+<span class="c"># NO 0.0.0.0/0 route at all</span>
+<span class="c"># → cannot reach the internet</span></pre>
+    </div>
+  </div>
+  <p class="cap">The presence or absence of that one <code class="inl">0.0.0.0/0 → igw</code> line is the <em>entire</em> difference between public and private. RDS sits where that line doesn't exist.</p>
+</div>
+
+<!-- ============ 6. SECURITY GROUPS ============ -->
+<h2 class="s" id="sg"><span class="n">6</span>Security Groups &amp; NACLs — the network firewalls</h2>
+<p class="lead">Routing decides where traffic <em>can</em> flow. <b>Security Groups</b> decide what's <em>allowed</em> to flow. A security group is a stateful firewall attached to a resource (an EC2 instance, an RDS database, an ALB) that says which traffic may come in and go out. This is the first half of "the hierarchy of trust" — the network half.</p>
+
+<h3>6.1 — The single most important trick: groups reference groups</h3>
+<p>A newcomer's instinct is to allow traffic by IP address: "let 10.0.1.5 talk to the database." AWS lets you do something far better — <b>allow by security group</b>. NEXA's design is the canonical example:</p>
+
+<div class="diagram">
+  <span class="tag">NEXA's two security groups</span>
+  <div class="flow">
+    <div class="box cli" style="min-width:300px"><div class="t">App Security Group &nbsp;(on EC2 + ALB)</div><div class="d">Inbound: 443/80 from the internet (or from the ALB SG)<br>Outbound: allowed (to reach RDS, S3, Azure, Graph)</div></div>
+    <div class="varrow">▼ &nbsp; the app SG is <i>named as the source</i> in the DB rule</div>
+    <div class="box db" style="min-width:300px"><div class="t">DB Security Group &nbsp;(on RDS)</div><div class="d">Inbound: <b>port 5432 only from the App Security Group</b><br>Outbound: default<br>— no IPs hard-coded, nothing else can connect</div></div>
+  </div>
+  <p class="cap">The RDS rule says "accept 5432 from anything wearing the App SG badge." You never write an IP. When the app server's IP changes (a restart, a replacement, a second instance), the rule still works because membership — not address — is what's checked. This is why SG-references-SG is the AWS-idiomatic way and IP allow-lists are the amateur way.</p>
+</div>
+
+<h3>6.2 — Stateful: you only write one direction</h3>
+<p>Security groups are <b>stateful</b>, which removes a whole category of mistakes. If you allow an inbound request, the <em>response</em> is automatically allowed back out — you don't write a matching outbound rule. So for RDS you write exactly one line ("inbound 5432 from App SG") and the query results flow back without a second rule. (NACLs, below, are the stateless exception.)</p>
+
+<h3>6.3 — Security Groups vs NACLs (and why you'll mostly ignore NACLs)</h3>
+<table>
+  <tr><th></th><th>Security Group</th><th>Network ACL (NACL)</th></tr>
+  <tr><td>Attached to</td><td>A resource (instance, RDS, ALB)</td><td>A whole subnet</td></tr>
+  <tr><td>State</td><td><b>Stateful</b> — return traffic auto-allowed</td><td><b>Stateless</b> — you must allow both directions</td></tr>
+  <tr><td>Rules</td><td>Allow only</td><td>Allow <em>and</em> deny, evaluated in order</td></tr>
+  <tr><td>Can reference a group?</td><td><b>Yes</b> (the killer feature)</td><td>No — IP ranges only</td></tr>
+  <tr><td>You use it for…</td><td><b>Almost everything.</b> This is your primary tool.</td><td>Coarse subnet-wide guardrails; an extra deny layer. Often left at default.</td></tr>
+</table>
+<div class="rec"><span class="h">Practical guidance for NEXA</span> Do all your work with <b>security groups</b>; leave NACLs at their default "allow all" unless the firm's security standard requires an explicit subnet-level deny. For an app this size, two well-written security groups (App SG, DB SG) plus the default NACL is the correct, idiomatic setup. Don't over-engineer the NACL layer — it's a common newcomer time-sink with little payoff here.</div>
+
+<div class="rec warn"><span class="h">The classic first-day error</span> "I can't connect to my RDS." Nine times out of ten it's the DB security group: either it doesn't reference the app's SG, or it's referencing the wrong one. The second most common cause is the database being marked publicly-accessible=false (correct!) while you try to connect from your laptop (which isn't in the VPC). For NEXA, the app connects from <em>inside</em> the VPC, so this is right by design — but it means you debug DB connectivity from the EC2 box, not your laptop.</div>
+
+<!-- ============ 7. EC2 ============ -->
+<h2 class="s" id="ec2"><span class="n">7</span>EC2 — the box that runs the app</h2>
+<p class="lead"><b>EC2</b> (Elastic Compute Cloud) is a virtual machine you rent by the hour: a Linux box with CPU, RAM, and disk, living in one subnet of your VPC. For NEXA it's the single most important compute decision — it's the thing that actually runs <code class="inl">next start</code> and serves every page and API call. It replaces what Vercel did invisibly.</p>
+
+<h3>7.1 — Why NEXA needs a real server at all</h3>
+<p>This catches people coming from Vercel: <b>Next.js 16 is not a static site.</b> It needs a live Node process running <code class="inl">next start</code> to server-render pages and handle the API routes. Vercel ran that process for you on ephemeral serverless instances. On AWS, <em>something</em> has to run it continuously — and the simplest "something" is one EC2 instance. (The container alternative, ECS Fargate, is the same idea with the VM hidden; see §15/§17.)</p>
+
+<h3>7.2 — Anatomy of the NEXA instance</h3>
+<table>
+  <tr><th>Choice</th><th>NEXA setting</th><th>Why</th></tr>
+  <tr><td><b>AMI</b> (the disk image to boot)</td><td>Amazon Linux 2023 or Ubuntu LTS</td><td>The OS template. Pick the firm's standard; both run Node fine.</td></tr>
+  <tr><td><b>Instance type</b> (CPU/RAM)</td><td><code class="inl">t3.large</code> (2 vCPU / 4 GB) to start; <code class="inl">t4g.large</code> for headroom</td><td>4 GB is the comfortable floor for SSR. <code class="inl">t</code>-family is "burstable" — cheap, good for spiky internal load. <code class="inl">t4g</code> is ARM/Graviton, ~20% cheaper, and Node runs on ARM fine.</td></tr>
+  <tr><td><b>Subnet</b></td><td>Public subnet</td><td>So the ALB/IGW can reach it and it can egress to Azure/Graph/S3.</td></tr>
+  <tr><td><b>Security group</b></td><td>App SG (§6)</td><td>Inbound 443/80 from the ALB; the DB trusts this SG.</td></tr>
+  <tr><td><b>IAM instance role</b></td><td>NEXA app role (§12)</td><td>Lets the app reach S3 and pull secrets <em>with no keys on disk</em>.</td></tr>
+  <tr><td><b>Storage (EBS)</b></td><td><code class="inl">gp3</code>, ~20–30 GB</td><td>The OS + app + build. Documents live in S3, so this stays small.</td></tr>
+</table>
+
+<h3>7.3 — Burstable instances (the t-family), explained</h3>
+<p>NEXA uses <code class="inl">t3</code>/<code class="inl">t4g</code> instances, which work on a <b>credit</b> system worth understanding so a billing or performance surprise doesn't blindside you:</p>
+<div class="rec aws"><span class="h">How burstable works</span> A <code class="inl">t</code>-instance earns CPU credits while idle and spends them when busy. For an internal tool that's quiet most of the day with occasional spikes (someone opens the pricing editor, an Excel export runs), this is ideal and cheap — you're not paying for full CPU you rarely use. The watch-out: a sustained heavy workload can <em>exhaust</em> credits and throttle. NEXA's one sustained-CPU risk is <code class="inl">next build</code> and the synchronous Excel parse — which is exactly why the plan says build in CI, not on the box (next note).</div>
+
+<div class="rec warn"><span class="h">The OOM trap — don't build on the box</span> <code class="inl">next build</code> is memory-hungry and will OOM-kill on a small instance. NEXA's plan handles this correctly: <b>build the artifact in GitHub Actions (CI)</b> and ship it to the instance, so the runtime box can stay a modest 4 GB. If you ever must build on the instance, add swap temporarily. Also note the synchronous <code class="inl">xlsx</code> parse and the 5000-row export run on the request thread and briefly block other requests on a single Node process — fine at NEXA's scale, but know it exists.</div>
+
+<h3>7.4 — Keeping the process alive: systemd / PM2</h3>
+<p>Vercel restarted crashed functions for free. On EC2 you arrange that yourself with a <b>process manager</b>: either <code class="inl">systemd</code> (built into Linux) or <b>PM2</b> (Node-specific). Either way the contract is "if <code class="inl">next start</code> dies or the box reboots, bring it back automatically."</p>
+<pre><span class="c"># systemd unit (sketch): /etc/systemd/system/nexa.service</span>
+[Service]
+ExecStart=/usr/bin/node /opt/nexa/server.js   <span class="c"># or: next start</span>
+Restart=always                                <span class="c"># ← the crucial line</span>
+EnvironmentFile=/opt/nexa/.runtime-env        <span class="c"># pulled from SSM at boot</span>
+User=nexa
+[Install]
+WantedBy=multi-user.target</pre>
+<div class="rec"><span class="h">NEXA's plan, in one line</span> EC2 + <b>Nginx</b> in front (TLS + reverse proxy) + <b>systemd/PM2</b> keeping <code class="inl">next start</code> alive + a stable address (Elastic IP or ALB). That stack reproduces, piece by piece, what Vercel did automatically — and it's the easiest place to get the SSO cookie behaviour right, which is why it's the recommended starting point over jumping straight to containers.</div>
+
+<h3>7.5 — The TLS-and-cookies gotcha (the one that breaks login)</h3>
+<p>This deserves its own flag because it's the single most likely thing to break NEXA's login after migration:</p>
+<div class="rec bad"><span class="h">Trust the proxy, or secure cookies vanish</span> TLS terminates at Nginx/ALB, so the Node app receives plain <code class="inl">http</code> internally. If you don't tell it "you're really behind HTTPS," NextAuth won't set the <code class="inl">Secure</code> session cookie correctly and SSO silently fails. The fix is two settings: forward <code class="inl">X-Forwarded-Proto: https</code> from the proxy, and set <code class="inl">NEXTAUTH_URL=https://nexa.procdna.com</code>. This is audit item A2 in your plan — treat it as a release-blocker, because everything else can be perfect and login will still fail without it.</div>
+
+<!-- ============ 8. ALB ============ -->
+<h2 class="s" id="alb"><span class="n">8</span>ALB — the load balancer and stable front door</h2>
+<p class="lead">An <b>Application Load Balancer</b> sits in front of your app server(s), accepts incoming HTTPS, and forwards requests to healthy targets. For NEXA its job is less "balance load" (there's barely any) and more "<b>be a stable, AZ-spanning front door with clean TLS</b>" — which turns out to be the thing that protects login and email.</p>
+
+<h3>8.1 — The vocabulary (three nouns)</h3>
+<table>
+  <tr><th>Term</th><th>What it is</th><th>NEXA</th></tr>
+  <tr><td><b>Listener</b></td><td>"Accept traffic on this port/protocol." Usually HTTPS:443 (with the ACM cert) and a HTTP:80 → 443 redirect.</td><td>443 with the <code class="inl">nexa.procdna.com</code> cert; 80 redirects to 443.</td></tr>
+  <tr><td><b>Target group</b></td><td>The pool of things to send traffic to (the EC2 instance, or ECS tasks), plus the health-check definition.</td><td>One target group containing the EC2 app; later, the ECS tasks.</td></tr>
+  <tr><td><b>Health check</b></td><td>A URL the ALB polls; unhealthy targets stop receiving traffic.</td><td>A <code class="inl">/healthz</code> route the app exposes (the plan calls for adding one).</td></tr>
+</table>
+
+<h3>8.2 — Why an ALB instead of just an Elastic IP (Decision #3)</h3>
+<p>The briefing asks: single EC2 + Elastic IP (cheapest) vs ALB (cleaner). Here's the honest comparison for an app whose hard constraint is a <em>stable public URL</em>:</p>
+<table>
+  <tr><th></th><th>Elastic IP on the EC2 box</th><th>ALB in front</th></tr>
+  <tr><td>Stable address</td><td>Yes — the EIP stays fixed across stop/start</td><td>Yes — the ALB's DNS name is fixed</td></tr>
+  <tr><td>TLS</td><td>You manage certs on Nginx (renewals are on you)</td><td><span class="svc">ACM</span> cert attached to the listener — auto-renews</td></tr>
+  <tr><td>Multi-AZ / HA later</td><td>Hard — one box, one AZ</td><td>Built-in — spans AZs, add targets freely</td></tr>
+  <tr><td>Health checks &amp; zero-downtime deploys</td><td>Manual</td><td>Built-in (essential once you move to ECS)</td></tr>
+  <tr><td>Cost</td><td>Cheapest (EIP is ~free while attached)</td><td>A fixed hourly charge (~$16–25/mo) + small data fees</td></tr>
+  <tr><td>WAF attach point</td><td>No</td><td>Yes — AWS WAF attaches to an ALB</td></tr>
+</table>
+<div class="rec"><span class="h">Recommendation for NEXA</span> Start with the <b>ALB</b> unless cost is genuinely scrutinised. It gives you ACM auto-renewing TLS (no manual cert chores), an attach point for WAF/rate-limiting (the plan wants this for the secret-bearing endpoints), and a painless path to ECS later — all for the price of one small fixed monthly charge. The Elastic-IP route is defensible for a pure cost-minimised single box, but you'll likely re-introduce an ALB the moment you want HA or WAF, so doing it now avoids a migration. Either way: <b>the public DNS name must be stable</b>, because Microsoft SSO redirect URIs and email Safe Links are registered against it.</div>
+
+<h3>8.3 — Where the ALB sits, and the X-Forwarded-Proto handoff</h3>
+<div class="diagram">
+  <span class="tag">The edge handoff (ties back to §7.5)</span>
+  <div class="flow">
+    <div class="stage">Browser → HTTPS<span class="sub">request to https://nexa.procdna.com</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">ALB listener :443<span class="sub">terminates TLS using the ACM cert · checks target health</span></div>
+    <div class="varrow">▼ &nbsp; forwards as HTTP, adds X-Forwarded-Proto: https</div>
+    <div class="stage">EC2 — Next.js app<span class="sub">sees http internally, but trusts the header → issues Secure cookies correctly</span></div>
+  </div>
+  <p class="cap">The ALB does the TLS work and hands a plain-HTTP request to the app <em>with a header saying it was originally HTTPS</em>. The app must trust that header. This is the same gotcha as §7.5 — whether the front door is Nginx or an ALB, the app has to be told "you're behind HTTPS" or secure cookies (and thus SSO) break.</p>
+</div>
+
+<!-- ============ 9. ROUTE 53 + ACM ============ -->
+<h2 class="s" id="dns"><span class="n">9</span>Route 53 &amp; ACM — the name and the certificate</h2>
+<p class="lead">Two small services that together give NEXA its stable, trusted public identity. <b>Route 53</b> is AWS's DNS — it maps a human name (<code class="inl">nexa.procdna.com</code>) to your ALB. <b>ACM</b> (Certificate Manager) issues and auto-renews the TLS certificate that makes the browser show a padlock. They're the literal answer to "what's the URL" — which, for NEXA, is the long-pole constraint.</p>
+
+<h3>9.1 — Route 53: hosted zones and records</h3>
+<table>
+  <tr><th>Concept</th><th>Meaning</th><th>NEXA</th></tr>
+  <tr><td><b>Hosted zone</b></td><td>A container for all DNS records of a domain (<code class="inl">procdna.com</code>).</td><td>Likely owned by firm IT. You need a record <em>inside</em> it.</td></tr>
+  <tr><td><b>A / ALIAS record</b></td><td>Maps a name to an address. An ALIAS to an ALB is the AWS-native way (no IP to manage).</td><td><code class="inl">nexa.procdna.com</code> → ALIAS → the ALB.</td></tr>
+  <tr><td><b>CNAME</b></td><td>Maps a name to another name.</td><td>Used during ACM validation (next).</td></tr>
+</table>
+<div class="rec warn"><span class="h">Decision #6 is a people problem, not a tech one</span> The plan flags domain ownership as the long pole — and it's right. Whoever controls <code class="inl">procdna.com</code> (firm IT) must create the subdomain record. This often takes longer than any AWS step because it crosses a team boundary and a change-approval process. <b>Start this conversation on day one</b>, because SSO and email can't be finalised until the name exists. You don't necessarily need Route 53 itself — if the firm runs DNS elsewhere, they just add a record pointing at the ALB. Route 53 is simply the option if the zone lives in AWS.</div>
+
+<h3>9.2 — ACM: the certificate, and the validation dance</h3>
+<p>ACM issues a free TLS certificate for <code class="inl">nexa.procdna.com</code>, attaches it to the ALB listener, and <b>auto-renews it forever</b> — no more expiry-day fire drills. The one step that confuses newcomers is <em>proving you own the domain</em>:</p>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">request</span>Ask ACM for a cert covering <code class="inl">nexa.procdna.com</code>. ACM gives you a special CNAME record to add.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">validate</span>Whoever owns the DNS zone adds that CNAME. This proves to ACM "yes, this domain is ours." (DNS validation is preferred because it's what enables auto-renewal.)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">attach</span>Once validated, attach the cert to the ALB's 443 listener. The padlock appears; renewals now happen automatically.</div></div>
+</div>
+<div class="rec aws"><span class="h">Region gotcha</span> An ACM certificate must be issued <em>in the same Region as the ALB</em> that uses it. (The exception is CloudFront, which only reads certs from us-east-1 — not relevant to NEXA's ALB setup.) So issue NEXA's cert in whatever Region you chose in §3. Mismatched Region is a quiet, common stumble.</div>
+
+<h3>9.3 — Why this trio is the SSO long-pole</h3>
+<div class="rec bad"><span class="h">The constraint that drives the whole migration</span> NEXA's Microsoft SSO redirect URIs and email Safe Links are registered against a <em>fixed domain</em>. Nothing external may ever point at a raw EC2 IP, because the moment the address changes, login and email break. Route 53 + ACM + ALB solve this <b>once</b>: a stable name, a trusted cert, an AZ-spanning front door. After that, an EC2 stop/start, a redeploy, or a scale event never disturbs login. And critically — the new redirect URI must be added to the Azure App Registration <em>before</em> go-live, or SSO breaks the instant DNS flips. Pre-register it; don't discover this at cut-over.</div>
+
+<!-- ============ 10. RDS ============ -->
+<h2 class="s" id="rds"><span class="n">10</span>RDS — the managed PostgreSQL database</h2>
+<p class="lead"><b>RDS</b> (Relational Database Service) is AWS running PostgreSQL <em>for</em> you: it provisions the engine, patches it, backs it up, and can fail it over — you just get an endpoint and a password. It's the direct replacement for Supabase's managed Postgres, and it holds <em>everything in NEXA except the documents</em>: users, clients, opportunities, pricing versions, approvals, rate cards.</p>
+
+<h3>10.1 — "Managed" means AWS owns the boring parts</h3>
+<p>The point of RDS over "install Postgres on an EC2 box yourself" is that AWS handles the operational toil:</p>
+<div class="threecol">
+  <div class="box" style="min-width:0"><div class="t">Backups</div><div class="d">Automated daily snapshots + point-in-time recovery, retention you set</div></div>
+  <div class="box" style="min-width:0"><div class="t">Patching</div><div class="d">Engine minor-version patches in a maintenance window</div></div>
+  <div class="box" style="min-width:0"><div class="t">Failover</div><div class="d">Optional Multi-AZ standby that takes over automatically</div></div>
+</div>
+<p>Supabase did all of this invisibly. On RDS you now <em>own the policy</em> (how many days of backups, whether Multi-AZ) — but AWS still does the mechanics.</p>
+
+<h3>10.2 — The NEXA RDS spec</h3>
+<table>
+  <tr><th>Setting</th><th>NEXA value</th><th>Why</th></tr>
+  <tr><td>Engine</td><td>PostgreSQL 16.x</td><td>Matches Prisma/pg; SQL ports straight over from Supabase.</td></tr>
+  <tr><td>Instance class</td><td><code class="inl">db.t3.small</code> → <code class="inl">db.t4g.medium</code></td><td>Small DB (docs are in S3). Burstable suits spiky internal use; <code class="inl">t4g</code> is cheaper.</td></tr>
+  <tr><td>Storage</td><td><code class="inl">gp3</code>, 20–50 GB, autoscaling on</td><td>Grows slowly; files don't live here.</td></tr>
+  <tr><td>Network</td><td><b>Private subnet, not publicly accessible</b></td><td>The cornerstone of the security story.</td></tr>
+  <tr><td>Security group</td><td>Inbound 5432 only from the App SG</td><td>Tightest blast radius (§6).</td></tr>
+  <tr><td>Encryption</td><td>Storage encryption ON (KMS); <code class="inl">sslmode=require</code></td><td>At-rest + in-transit — table stakes for finance data.</td></tr>
+  <tr><td>Backups</td><td>Automated, 7-day retention; snapshot before cut-over</td><td>You own this now; Multi-AZ optional (doubles cost, adds auto-failover).</td></tr>
+  <tr><td>Schema</td><td><code class="inl">procdna_database</code> (multi-schema)</td><td>The app pins this non-default schema in <code class="inl">lib/prisma.ts</code>.</td></tr>
+</table>
+
+<h3>10.3 — DB subnet groups &amp; Multi-AZ (the AZ thing again)</h3>
+<p>RDS requires a <b>DB subnet group</b> — a named set of subnets spanning <em>at least two AZs</em>. This holds even if you run a single-AZ database, because AWS needs a second AZ available so it <em>could</em> place a standby. This is why §4's diagram shows a "standby slot" private subnet in AZ-b even though the primary lives in AZ-a.</p>
+<div class="diagram">
+  <span class="tag">Single-AZ vs Multi-AZ (Decision #5)</span>
+  <div class="twocol">
+    <div class="box db"><div class="t">Single-AZ</div><div class="d">One instance in one AZ. Cheaper. If that AZ fails, the DB is down until you restore. Fine for an internal tool that can tolerate brief downtime.</div></div>
+    <div class="box db"><div class="t">Multi-AZ</div><div class="d">A synchronous standby in a second AZ; automatic failover in ~60–120s. Roughly doubles DB cost. Buy it when downtime is genuinely unacceptable.</div></div>
+  </div>
+  <p class="cap">For NEXA (internal, low-stakes-uptime), single-AZ with solid backups is a reasonable start; Multi-AZ is a policy call for the SDE. Either way the subnet group needs two AZs.</p>
+</div>
+
+<h3>10.4 — Two things that get simpler, one that needs care (migration notes)</h3>
+<div class="rec ok"><span class="h">Simpler: no more pooler gymnastics</span> Supabase forced the pgBouncer transaction pooler (port 6543) because Vercel opened many short-lived serverless connections. A single long-lived Node process on EC2 doesn't do that — so point Prisma straight at RDS on 5432, and <code class="inl">DATABASE_URL</code> / <code class="inl">DIRECT_URL</code> can converge on one endpoint. You also get to run real migrations (<code class="inl">prisma migrate deploy</code>) instead of hand-applying SQL.</div>
+<div class="rec warn"><span class="h">Care: the connection pool cap (audit A1)</span> <code class="inl">lib/prisma.ts</code> hard-caps the pool at <code class="inl">max=1</code> in production — correct for Vercel, but a <em>severe bottleneck</em> on one long-lived EC2 process, where the whole app would serialise through a single DB connection. Raise it (e.g. 10), sized to the RDS instance's connection limit. This is a one-line change that's easy to miss and produces baffling "the app feels slow under any concurrency" symptoms if you don't.</div>
+
+<h3>10.5 — Cut-over: there's no data to move</h3>
+<p>Because NEXA's current data is throwaway, the database migration is unusually easy — you build the schema fresh and seed, rather than copying rows:</p>
+<pre><span class="c"># point Prisma at RDS, then build the schema and bootstrap</span>
+<span class="k">DATABASE_URL</span>="postgresql://USER:PW@nexa.xxxx.eu-central-1.rds.amazonaws.com:5432/nexa?schema=procdna_database&amp;sslmode=require"
+npx prisma migrate deploy          <span class="c"># creates tables/enums fresh</span>
+npx tsx prisma/add-admin.ts        <span class="c"># bootstrap the first ADMIN</span>
+npx tsx prisma/sync-azure-users.ts <span class="c"># pull real BD users from Azure AD</span></pre>
+<div class="rec bad"><span class="h">The env-var-name trap (audit A10)</span> <code class="inl">prisma/sync-azure-users.ts</code> reads <code class="inl">AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET</code> (no <code class="inl">_AD_</code>), while the app uses <code class="inl">AZURE_AD_*</code>. Provide <b>both</b> naming styles in the EC2 environment or the sync silently exits and you get an empty user table with no error. This is the kind of thing that costs an afternoon if you don't know it's there.</div>
+
+<!-- ============ 11. S3 ============ -->
+<h2 class="s" id="s3"><span class="n">11</span>S3 — object storage for the documents</h2>
+<p class="lead"><b>S3</b> (Simple Storage Service) stores <em>files</em> — not in a filesystem and not in the database, but as named "objects" in a "bucket." It's where NEXA's signed SOW and PO documents live, replacing Supabase Storage. Of all the migration pieces, S3 is the one that requires real <em>code</em> changes (rewriting the storage layer), and it's also the one with the single highest-impact security footgun.</p>
+
+<h3>11.1 — Buckets, keys, objects (and why S3 isn't in your VPC)</h3>
+<table>
+  <tr><th>Term</th><th>Meaning</th><th>NEXA</th></tr>
+  <tr><td><b>Bucket</b></td><td>A top-level container with a globally-unique name, living at the Region level.</td><td>One private bucket, e.g. <code class="inl">nexa-docs</code>.</td></tr>
+  <tr><td><b>Key</b></td><td>The object's full "path"-like name. S3 has no real folders — the slashes are just part of the key.</td><td><code class="inl">&lt;oppId&gt;/&lt;version&gt;_&lt;ts&gt;.pdf</code></td></tr>
+  <tr><td><b>Object</b></td><td>The file itself plus metadata.</td><td>A SOW or PO PDF.</td></tr>
+</table>
+<div class="rec aws"><span class="h">Remember the ladder exception</span> S3 sits <em>above</em> the VPC (§2.1), not inside it. That's why your EC2 app reaches it over normal egress, and why a future <em>private</em>-subnet app would need a NAT gateway or — better — an S3 VPC endpoint. S3 access is gated by <b>IAM</b>, not security groups, precisely because it's not on your network.</div>
+
+<h3>11.2 — The NEXA S3 spec</h3>
+<table>
+  <tr><th>Setting</th><th>NEXA value</th></tr>
+  <tr><td>Public access</td><td><b>Block Public Access = ON.</b> Files are only ever reached via short-lived presigned URLs.</td></tr>
+  <tr><td>Encryption</td><td>Default SSE (SSE-S3 or SSE-KMS) — encryption at rest by default.</td></tr>
+  <tr><td>Versioning</td><td>ON — recovers an overwritten/deleted document (the app soft-deletes; S3 versioning is the safety net).</td></tr>
+  <tr><td>Access from app</td><td><b>IAM instance role</b> granting <code class="inl">s3:GetObject/PutObject</code> on this one bucket. <b>No AWS keys in <code class="inl">.env</code>.</b></td></tr>
+  <tr><td>URLs</td><td><code class="inl">@aws-sdk/s3-request-presigner</code>, <code class="inl">expiresIn: 3600</code> — the 1-hour expiry the app already assumes.</td></tr>
+</table>
+
+<h3>11.3 — Presigned URLs: the pattern that keeps the bucket private</h3>
+<p>This is the elegant core of NEXA's document handling. The bucket is <em>never</em> public; instead, the app — which <em>is</em> allowed to touch S3 via its IAM role — mints a <b>temporary, signed URL</b> for one specific object, valid for one hour. The browser uses that URL directly. Files never stream through the app server in bulk, and the link dies after an hour.</p>
+<div class="diagram">
+  <span class="tag">Upload, then view — both via short-lived signed URLs</span>
+  <div class="flow">
+    <div class="stage">Upload<span class="sub">browser asks app → app issues presigned PUT → browser uploads straight to S3</span></div>
+    <div class="branch">the file goes browser → S3 directly; the app never holds the bytes</div>
+    <div class="stage">View<span class="sub">browser opens doc → app issues 1-hour presigned GET → browser fetches from S3</span></div>
+    <div class="branch">link expires in 60 min; bucket stays private the whole time</div>
+  </div>
+  <p class="cap">The app authenticates to S3 with its <b>instance role</b> (no stored keys), and hands out scoped, expiring links. This is why "Block Public Access = ON" and "presigned URLs" are two halves of one design — together they mean a confidential SOW is reachable only by someone the app just handed a fresh link to.</p>
+</div>
+
+<div class="rec bad"><span class="h">The single highest-impact new risk in the whole migration</span> One "Block Public Access = off" click and <em>every</em> confidential pricing/SOW document becomes world-readable. There is no scarier button in this project. Keep buckets private; serve only via presigned URLs; and constrain the upload presign to a content-type + size limit (which also closes the "client-claimed MIME" weakness, audit S11). If you set up <em>one</em> guardrail in this migration, make it an account-level "block public access" enforcement so this can't be toggled by accident.</div>
+
+<h3>11.4 — The code that actually changes</h3>
+<p>S3 is the one part that's real engineering, not just configuration:</p>
+<ul>
+  <li><code class="inl">lib/supabase.ts</code> → a new <code class="inl">lib/s3.ts</code>: <code class="inl">getSupabase()</code> becomes an S3 client; <code class="inl">getSignedUrl()</code> becomes the presigner. Keep the 55-minute cache <b>but add eviction</b> — on a long-lived process the current unbounded cache grows forever (audit A5).</li>
+  <li>The four document routes (<code class="inl">…/sow</code>, <code class="inl">…/sow/confirm</code>, <code class="inl">…/po</code>, <code class="inl">…/po/confirm</code>): swap "signed upload URL" calls for S3 presigned <code class="inl">PUT</code>.</li>
+  <li>Env: drop <code class="inl">SUPABASE_*</code>; add <code class="inl">S3_BUCKET</code> + region. Credentials come from the instance role, <em>not</em> env — that's the whole point of §12.</li>
+</ul>
+
+<!-- ============ 12. IAM ============ -->
+<h2 class="s" id="iam"><span class="n">12</span>IAM — the hierarchy of permission</h2>
+<p class="lead"><b>IAM</b> (Identity and Access Management) is how AWS answers one question millions of times a second: <em>"is this identity allowed to perform this action on this resource?"</em> It's the second of the two great hierarchies (place was §2; this is trust). It's also the part that feels most alien coming from Vercel, where the platform handled identity for you. Get IAM right and the whole "no keys on disk" security story falls into place; get it wrong and you either can't deploy or you've left the door open.</p>
+
+<h3>12.1 — The four nouns of IAM</h3>
+<table>
+  <tr><th>Noun</th><th>What it is</th><th>NEXA example</th></tr>
+  <tr><td><b>Principal</b></td><td>The "who" — an identity that makes requests. A user, or (better) a role.</td><td>The EC2 app server; the GitHub Actions deployer; you.</td></tr>
+  <tr><td><b>Policy</b></td><td>A JSON document listing allowed (or denied) actions on resources. The "what's permitted."</td><td>"Allow <code class="inl">s3:GetObject</code> on <code class="inl">nexa-docs/*</code>."</td></tr>
+  <tr><td><b>Role</b></td><td>An identity with policies attached that something <em>assumes</em> temporarily — no long-lived password.</td><td>The NEXA instance role the EC2 box wears.</td></tr>
+  <tr><td><b>Action / Resource</b></td><td>The verb (<code class="inl">s3:PutObject</code>) and the noun (a specific bucket/ARN) a policy grants.</td><td><code class="inl">ssm:GetParameter</code> on the <code class="inl">/nexa/*</code> path.</td></tr>
+</table>
+
+<h3>12.2 — Roles, not keys: the idea that makes this secure</h3>
+<p>The most important IAM concept for NEXA is the difference between a <b>user</b> (has a permanent password/access key) and a <b>role</b> (assumed temporarily, credentials auto-rotate). The migration's security depends on using <em>roles</em> everywhere a machine acts:</p>
+<div class="rec aws"><span class="h">Why "no AWS keys in .env" is possible at all</span> When the EC2 instance wears an <b>instance role</b>, the AWS SDK inside the Node app automatically receives <em>temporary</em>, auto-rotating credentials from the instance metadata — it never needs a stored access key. So <code class="inl">lib/s3.ts</code> calls S3 with zero secrets on disk. Compare the alternative — pasting an access key into <code class="inl">.env</code> — which would then bake into AMIs, snapshots, and backups forever. Roles eliminate an entire class of leak. This is the single biggest security upgrade the AWS move buys you.</div>
+
+<h3>12.3 — The trust hierarchy, drawn</h3>
+<p>A role has <em>two</em> policies, and conflating them is the #1 IAM confusion. One says <em>who may wear it</em> (the trust policy); the other says <em>what the wearer may do</em> (the permission policy). Here is NEXA's app role as the worked example:</p>
+
+<div class="svgwrap">
+<svg viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <!-- principal -->
+  <rect x="20" y="150" width="180" height="70" rx="10" fill="#EDEFF7" stroke="#C2C9E6"/>
+  <text x="110" y="178" text-anchor="middle" font-size="13" font-weight="800" fill="#001E96">EC2 instance</text>
+  <text x="110" y="197" text-anchor="middle" font-size="11" fill="#7B7C7F">the NEXA app server</text>
+  <text x="110" y="211" text-anchor="middle" font-size="11" fill="#7B7C7F">(the principal)</text>
+
+  <!-- trust arrow -->
+  <line x1="200" y1="185" x2="300" y2="185" stroke="#EC7211" stroke-width="2.5"/>
+  <polygon points="300,185 290,180 290,190" fill="#EC7211"/>
+  <text x="250" y="176" text-anchor="middle" font-size="11" font-weight="700" fill="#C25A0A">assumes</text>
+
+  <!-- role -->
+  <rect x="300" y="120" width="220" height="130" rx="12" fill="#FFF3E8" stroke="#EC7211" stroke-width="1.6"/>
+  <text x="410" y="146" text-anchor="middle" font-size="13" font-weight="800" fill="#C25A0A">NEXA instance ROLE</text>
+  <!-- trust policy chip -->
+  <rect x="316" y="158" width="188" height="38" rx="7" fill="#fff" stroke="#F3CBA0"/>
+  <text x="410" y="174" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1F44">Trust policy</text>
+  <text x="410" y="188" text-anchor="middle" font-size="10" fill="#7B7C7F">"EC2 service may assume me"</text>
+  <!-- permission policy chip -->
+  <rect x="316" y="202" width="188" height="38" rx="7" fill="#fff" stroke="#F3CBA0"/>
+  <text x="410" y="218" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1F44">Permission policy</text>
+  <text x="410" y="232" text-anchor="middle" font-size="10" fill="#7B7C7F">"may do these actions →"</text>
+
+  <!-- permission arrows to resources -->
+  <line x1="520" y1="185" x2="610" y2="120" stroke="#1F6B3C" stroke-width="2"/>
+  <polygon points="610,120 600,122 605,130" fill="#1F6B3C"/>
+  <line x1="520" y1="200" x2="610" y2="200" stroke="#1F6B3C" stroke-width="2"/>
+  <polygon points="610,200 600,195 600,205" fill="#1F6B3C"/>
+  <line x1="520" y1="215" x2="610" y2="280" stroke="#1F6B3C" stroke-width="2"/>
+  <polygon points="610,280 605,270 600,278" fill="#1F6B3C"/>
+
+  <!-- resources -->
+  <rect x="612" y="96" width="248" height="46" rx="8" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="624" y="116" font-size="12" font-weight="700" fill="#1F6B3C">S3: nexa-docs bucket</text>
+  <text x="624" y="132" font-size="10.5" fill="#7B7C7F">s3:GetObject · s3:PutObject</text>
+
+  <rect x="612" y="178" width="248" height="46" rx="8" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="624" y="198" font-size="12" font-weight="700" fill="#1F6B3C">SSM: /nexa/* parameters</text>
+  <text x="624" y="214" font-size="10.5" fill="#7B7C7F">ssm:GetParameter*</text>
+
+  <rect x="612" y="260" width="248" height="46" rx="8" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="624" y="280" font-size="12" font-weight="700" fill="#1F6B3C">CloudWatch: nexa log group</text>
+  <text x="624" y="296" font-size="10.5" fill="#7B7C7F">logs:CreateLogStream · PutLogEvents</text>
+
+  <text x="20" y="300" font-size="11.5" fill="#3A4A6A">Trust policy = WHO may wear the role.</text>
+  <text x="20" y="318" font-size="11.5" fill="#3A4A6A">Permission policy = WHAT the wearer may do.</text>
+  <text x="20" y="336" font-size="11.5" fill="#3A4A6A">Default for everything not listed: DENY.</text>
+</svg>
+<p class="cap" style="margin:6px 4px 0;font-size:12px;color:#7B7C7F">NEXA's app role. The trust policy lets the EC2 service assume it; the permission policy grants exactly three things — read/write the one bucket, read the app's secrets, write its own logs — and <em>nothing else</em>. That "nothing else" is least privilege: the blast radius of a compromised app is bounded to precisely those three resources.</p>
+</div>
+
+<h3>12.4 — Least privilege, made concrete</h3>
+<p>"Least privilege" means granting the minimum that works, scoped to specific resources — never <code class="inl">"Action": "*"</code> on <code class="inl">"Resource": "*"</code>. NEXA's app policy is a good template:</p>
+<pre>{
+  <span class="s">"Version"</span>: <span class="y">"2012-10-17"</span>,
+  <span class="s">"Statement"</span>: [
+    { <span class="s">"Effect"</span>:<span class="y">"Allow"</span>, <span class="s">"Action"</span>:[<span class="y">"s3:GetObject"</span>,<span class="y">"s3:PutObject"</span>],
+      <span class="s">"Resource"</span>: <span class="y">"arn:aws:s3:::nexa-docs/*"</span> },          <span class="c">// only this bucket</span>
+    { <span class="s">"Effect"</span>:<span class="y">"Allow"</span>, <span class="s">"Action"</span>:[<span class="y">"ssm:GetParameter"</span>,<span class="y">"ssm:GetParameters"</span>],
+      <span class="s">"Resource"</span>: <span class="y">"arn:aws:ssm:*:*:parameter/nexa/*"</span> },      <span class="c">// only /nexa/* secrets</span>
+    { <span class="s">"Effect"</span>:<span class="y">"Allow"</span>, <span class="s">"Action"</span>:[<span class="y">"logs:CreateLogStream"</span>,<span class="y">"logs:PutLogEvents"</span>],
+      <span class="s">"Resource"</span>: <span class="y">"arn:aws:logs:*:*:log-group:/nexa/*"</span> }      <span class="c">// only its log group</span>
+  ]
+}</pre>
+<div class="rec"><span class="h">Read this as three sentences</span> "This identity may read &amp; write objects in <em>nexa-docs only</em>; read parameters under <em>/nexa/ only</em>; and write to <em>its own log group only</em>." Everything else — other buckets, other secrets, deleting things, touching RDS's control plane — is denied because it isn't listed. That scoping <em>is</em> the security.</div>
+
+<h3>12.5 — The IAM you'll actually set up for NEXA (the briefing's §6)</h3>
+<table>
+  <tr><th>Principal</th><th>Gets</th><th>Why</th></tr>
+  <tr><td><b>EC2 instance role</b> (the app)</td><td><code class="inl">s3:GetObject/PutObject</code> on the bucket; <code class="inl">ssm:GetParameter*</code> on <code class="inl">/nexa/*</code>; <code class="inl">logs:*</code> on its group</td><td>App reads/writes documents and pulls secrets <b>without static keys</b>.</td></tr>
+  <tr><td><b>GitHub Actions role</b> (deploy)</td><td>OIDC-federated role scoped to the deploy action (push image to ECR / update the service / SSM-run a pull)</td><td>Keyless CI/CD from the ProcDNA repo — no long-lived AWS creds in GitHub.</td></tr>
+  <tr><td><b>Your build access</b></td><td>Permission to create VPC/EC2/RDS/S3 in a dev sub-account, <em>or</em> the SDE pre-creates them and hands you endpoints + the instance role</td><td>So you can build without holding god-mode on the firm's production account.</td></tr>
+</table>
+
+<h3>12.6 — OIDC federation: how GitHub deploys with zero stored keys</h3>
+<p>This is the slickest IAM pattern in the plan and worth understanding because it's the modern default. Instead of storing an AWS access key in GitHub (which could leak), GitHub Actions and AWS establish <b>trust</b> directly: AWS is told "trust tokens issued by GitHub for the ProcDNA/nexa repo," and at deploy time GitHub presents a short-lived identity token that AWS exchanges for temporary credentials.</p>
+<div class="diagram">
+  <span class="tag">Keyless deploy via OIDC</span>
+  <div class="flow">
+    <div class="stage">GitHub Actions run (push to main)<span class="sub">requests a short-lived OIDC token from GitHub</span></div>
+    <div class="varrow">▼ presents token to AWS STS</div>
+    <div class="stage">AWS checks the trust policy<span class="sub">"is this token from ProcDNA/nexa, branch main?" → yes</span></div>
+    <div class="varrow">▼ issues temporary credentials (minutes)</div>
+    <div class="stage">Actions deploys<span class="sub">updates the ECS service / triggers an EC2 pull — then the creds expire</span></div>
+  </div>
+  <p class="cap">No AWS secret ever lives in GitHub. The credentials exist for the length of one deploy and evaporate. This is the "OIDC federation preferred over stored AWS keys" line in your plan, unpacked.</p>
+</div>
+
+<div class="rec warn"><span class="h">IAM newcomer pitfalls</span> (1) <b>Confusing the two policies</b> — "why can't EC2 assume the role?" is a <em>trust</em>-policy problem; "why does the app get AccessDenied on S3?" is a <em>permission</em>-policy problem. (2) <b>Over-granting "to make it work"</b> — resist <code class="inl">s3:*</code> on <code class="inl">*</code>; start minimal and add the specific action the error names. (3) <b>Putting an access key in .env "just for now"</b> — that "now" becomes forever and bakes into snapshots. Use the instance role from day one.</div>
+
+<!-- ============ 13. SECRETS ============ -->
+<h2 class="s" id="secrets"><span class="n">13</span>Secrets &amp; KMS — where the passwords live</h2>
+<p class="lead">NEXA has a fistful of secrets that are <em>not</em> AWS credentials: the database password, the Azure client secret, <code class="inl">NEXTAUTH_SECRET</code>, the HMAC mail/approval secrets. On Vercel these were env vars in a dashboard. On AWS they go into a managed, encrypted secret store — and the app pulls them at boot using its instance role. <b>KMS</b> is the encryption engine underneath.</p>
+
+<h3>13.1 — Parameter Store vs Secrets Manager (Decision #7)</h3>
+<table>
+  <tr><th></th><th>SSM Parameter Store</th><th>Secrets Manager</th></tr>
+  <tr><td>What it is</td><td>A key/value store; values can be KMS-encrypted ("SecureString").</td><td>A purpose-built secret store with built-in rotation.</td></tr>
+  <tr><td>Cost</td><td>Standard params are free</td><td>Per-secret monthly charge</td></tr>
+  <tr><td>Auto-rotation</td><td>No (you rotate manually)</td><td>Yes (can auto-rotate, e.g. RDS passwords)</td></tr>
+  <tr><td>Use for NEXA when…</td><td>You want the simple, free option and will rotate by hand</td><td>You want automatic DB-password rotation and richer secret lifecycle</td></tr>
+</table>
+<div class="rec"><span class="h">Recommendation</span> For NEXA's handful of secrets, <b>SSM Parameter Store (SecureString)</b> is the pragmatic default — free, simple, KMS-encrypted, and the instance role already grants <code class="inl">ssm:GetParameter*</code> on <code class="inl">/nexa/*</code>. Reach for Secrets Manager specifically if the firm wants automatic rotation of the RDS password. Either way the principle is identical: <b>secrets are pulled at runtime by the role, never written into the AMI, the repo, or a plaintext <code class="inl">.env</code> that snapshots would preserve.</b></div>
+
+<h3>13.2 — KMS in one paragraph</h3>
+<p><b>KMS</b> (Key Management Service) holds the encryption keys that protect everything "encrypted at rest" in this whole course — RDS storage, S3 objects, SSM SecureStrings. You rarely touch it directly; you just choose "encrypt with KMS" on each service and AWS handles the cryptography. The value is that access to the <em>keys</em> is itself IAM-controlled and audited, so "encrypted at rest" isn't a checkbox lie — decrypting genuinely requires permission KMS can log.</p>
+
+<div class="diagram">
+  <span class="tag">How a NEXA secret flows at boot</span>
+  <div class="flow">
+    <div class="stage">EC2 boots<span class="sub">wearing the instance role</span></div>
+    <div class="varrow">▼ ssm:GetParameter /nexa/DATABASE_URL</div>
+    <div class="stage">SSM returns the SecureString<span class="sub">KMS decrypts it because the role is allowed</span></div>
+    <div class="varrow">▼ written to the process environment, not to disk</div>
+    <div class="stage">Next.js starts with its config<span class="sub">no plaintext secret ever stored in the image</span></div>
+  </div>
+  <p class="cap">All current NEXA secrets are rotated during the move (the ideal moment), then placed under <code class="inl">/nexa/*</code>. The app fetches them at startup via the role — closing the loop with §12.</p>
+</div>
+
+<!-- ============ 14. CLOUDWATCH ============ -->
+<h2 class="s" id="observe"><span class="n">14</span>CloudWatch — logs, metrics, and "is it alive?"</h2>
+<p class="lead"><b>CloudWatch</b> is AWS's observability service: it collects logs, metrics, and alarms. This matters more than newcomers expect, because <b>Vercel's logging disappears</b> the moment you leave it — without CloudWatch you'd be flying blind on the new infrastructure.</p>
+
+<h3>14.1 — The three things you'll use</h3>
+<table>
+  <tr><th>Feature</th><th>What it gives NEXA</th></tr>
+  <tr><td><b>Logs</b></td><td>The app's <code class="inl">stdout</code> shipped off the box into a <code class="inl">/nexa/*</code> log group, searchable and retained — so a crash at 2am is still there in the morning. (The instance role grants the log permissions; §12.)</td></tr>
+  <tr><td><b>Metrics</b></td><td>CPU, memory, RDS connections, ALB request counts/latency/5xx. This is how you'll know if the <code class="inl">t3</code> instance is running out of burst credits or the DB pool (audit A1!) is saturated.</td></tr>
+  <tr><td><b>Alarms</b></td><td>"Tell me if 5xx errors spike, or the ALB sees no healthy targets, or RDS CPU pegs." Optional at first, valuable once NEXA holds real data.</td></tr>
+</table>
+
+<h3>14.2 — The health check closes the loop</h3>
+<p>Recall §8: the ALB polls a <code class="inl">/healthz</code> route to decide if the app is alive. That route plus CloudWatch logs is your minimum viable operations setup — the ALB pulls a sick instance out of rotation automatically, and CloudWatch tells you <em>why</em> it was sick. Add a <code class="inl">/healthz</code> endpoint to NEXA as part of the migration (the plan calls for it); it's a few lines and it's what makes the whole self-healing story work.</p>
+<div class="rec ok"><span class="h">What "production-ready ops" means for an app this size</span> You do <em>not</em> need a heavyweight observability stack. For NEXA, "good enough and genuinely solid" is: app logs → CloudWatch, a <code class="inl">/healthz</code> route the ALB checks, RDS automated backups verified, and one or two alarms (5xx spike, no-healthy-targets). That's a proportionate, defensible operations posture for an internal tool — resist the urge to over-build it.</div>
+
+<!-- ============ 15. REFERENCE ARCHITECTURE ============ -->
+<h2 class="s" id="reference"><span class="n">15</span>The NEXA reference architecture — everything at once</h2>
+<p class="lead">Now assemble every service into one labelled picture. If you understand this single diagram and can trace a request through it, you understand the course. Each number ties to a section so you can drill back in.</p>
+
+<div class="svgwrap">
+<svg viewBox="0 0 920 620" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">
+  <!-- users -->
+  <rect x="360" y="14" width="200" height="40" rx="10" fill="#EDEFF7" stroke="#C2C9E6"/>
+  <text x="460" y="33" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0A1F44">Browsers — US + India</text>
+  <text x="460" y="47" text-anchor="middle" font-size="10.5" fill="#7B7C7F">~55 internal staff · low concurrency</text>
+
+  <!-- DNS / cert floating -->
+  <rect x="600" y="14" width="150" height="40" rx="8" fill="#FFF3E8" stroke="#EC7211"/>
+  <text x="675" y="31" text-anchor="middle" font-size="11" font-weight="700" fill="#C25A0A">Route 53 + ACM ⑨</text>
+  <text x="675" y="46" text-anchor="middle" font-size="10" fill="#7B7C7F">nexa.procdna.com + TLS</text>
+
+  <!-- Azure / Graph floating -->
+  <rect x="20" y="14" width="150" height="40" rx="8" fill="#FFF7EC" stroke="#EAD3A6"/>
+  <text x="95" y="31" text-anchor="middle" font-size="11" font-weight="700" fill="#B45309">Azure AD · MS Graph</text>
+  <text x="95" y="46" text-anchor="middle" font-size="10" fill="#7B7C7F">SSO + approval email</text>
+
+  <line x1="460" y1="54" x2="460" y2="86" stroke="#005CD9" stroke-width="2"/>
+  <polygon points="460,86 455,76 465,76" fill="#005CD9"/>
+
+  <!-- account -->
+  <rect x="16" y="86" width="888" height="470" rx="14" fill="#FBFCFE" stroke="#005CD9" stroke-width="1.4"/>
+  <text x="30" y="106" font-size="11.5" font-weight="800" fill="#005CD9">ACCOUNT · AUXO ②</text>
+
+  <!-- region -->
+  <rect x="32" y="116" width="856" height="424" rx="12" fill="#fff" stroke="#7C3AED" stroke-width="1.3"/>
+  <text x="46" y="135" font-size="11" font-weight="800" fill="#7C3AED">REGION ③</text>
+
+  <!-- floating region-level services: S3, SSM, CloudWatch -->
+  <rect x="640" y="124" width="236" height="40" rx="8" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="654" y="141" font-size="11.5" font-weight="700" fill="#1F6B3C">S3 · nexa-docs (private) ⑪</text>
+  <text x="654" y="156" font-size="10" fill="#7B7C7F">Block Public Access · presigned URLs · SSE</text>
+
+  <rect x="640" y="170" width="236" height="36" rx="8" fill="#FFF3E8" stroke="#EC7211"/>
+  <text x="654" y="192" font-size="11" font-weight="700" fill="#C25A0A">SSM/Secrets ⑬ · KMS · CloudWatch ⑭</text>
+
+  <!-- VPC -->
+  <rect x="48" y="170" width="560" height="356" rx="11" fill="#F6F8FC" stroke="#0A1F44" stroke-width="1.3"/>
+  <text x="62" y="189" font-size="11" font-weight="800" fill="#0A1F44">VPC · 10.0.0.0/16 ④</text>
+
+  <!-- IGW -->
+  <rect x="250" y="176" width="150" height="26" rx="6" fill="#FFF3E8" stroke="#EC7211"/>
+  <text x="325" y="194" text-anchor="middle" font-size="10.5" font-weight="700" fill="#C25A0A">Internet Gateway ⑤</text>
+  <line x1="460" y1="86" x2="460" y2="176" stroke="#005CD9" stroke-width="0"/>
+  <line x1="325" y1="120" x2="325" y2="176" stroke="#005CD9" stroke-width="2" stroke-dasharray="3 3"/>
+
+  <!-- AZ a -->
+  <rect x="62" y="212" width="262" height="300" rx="9" fill="#EFFBFE" stroke="#0891B2" stroke-dasharray="5 4"/>
+  <text x="74" y="230" font-size="10.5" font-weight="800" fill="#0891B2">AZ · a</text>
+  <!-- AZ b -->
+  <rect x="332" y="212" width="262" height="300" rx="9" fill="#EFFBFE" stroke="#0891B2" stroke-dasharray="5 4"/>
+  <text x="344" y="230" font-size="10.5" font-weight="800" fill="#0891B2">AZ · b</text>
+
+  <!-- public subnet a -->
+  <rect x="74" y="242" width="238" height="150" rx="8" fill="#F2F7FF" stroke="#005CD9"/>
+  <text x="86" y="259" font-size="10" font-weight="800" fill="#005CD9">PUBLIC 10.0.1.0/24</text>
+  <rect x="90" y="268" width="206" height="40" rx="7" fill="#fff" stroke="#C9D6EC"/>
+  <text x="193" y="285" text-anchor="middle" font-size="11.5" font-weight="700" fill="#001E96">ALB ⑧</text>
+  <text x="193" y="299" text-anchor="middle" font-size="9.5" fill="#7B7C7F">TLS · health check /healthz</text>
+  <rect x="90" y="320" width="206" height="56" rx="7" fill="#fff" stroke="#C9D6EC"/>
+  <text x="193" y="340" text-anchor="middle" font-size="11.5" font-weight="700" fill="#001E96">EC2 · Next.js ⑦</text>
+  <text x="193" y="355" text-anchor="middle" font-size="9.5" fill="#7B7C7F">FE + API · systemd/PM2</text>
+  <text x="193" y="368" text-anchor="middle" font-size="9.5" fill="#7B7C7F">IAM instance role ⑫ (no keys)</text>
+
+  <!-- public subnet b (alb node) -->
+  <rect x="344" y="242" width="238" height="60" rx="8" fill="#F2F7FF" stroke="#005CD9"/>
+  <text x="356" y="259" font-size="10" font-weight="800" fill="#005CD9">PUBLIC 10.0.2.0/24</text>
+  <rect x="360" y="266" width="206" height="28" rx="6" fill="#fff" stroke="#C9D6EC"/>
+  <text x="463" y="285" text-anchor="middle" font-size="10.5" font-weight="700" fill="#001E96">ALB node (2nd AZ)</text>
+
+  <!-- private subnet a -->
+  <rect x="74" y="408" width="238" height="92" rx="8" fill="#FFF8EF" stroke="#B45309"/>
+  <text x="86" y="425" font-size="10" font-weight="800" fill="#B45309">PRIVATE 10.0.11.0/24</text>
+  <rect x="90" y="434" width="206" height="52" rx="7" fill="#EAF6EF" stroke="#1F6B3C"/>
+  <text x="193" y="454" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1F6B3C">RDS · PostgreSQL ⑩</text>
+  <text x="193" y="469" text-anchor="middle" font-size="9.5" fill="#7B7C7F">private · encrypted · 5432 from App SG</text>
+
+  <!-- private subnet b -->
+  <rect x="344" y="408" width="238" height="92" rx="8" fill="#FFF8EF" stroke="#B45309"/>
+  <text x="356" y="425" font-size="10" font-weight="800" fill="#B45309">PRIVATE 10.0.12.0/24</text>
+  <rect x="360" y="434" width="206" height="52" rx="7" fill="#EAF6EF" stroke="#1F6B3C" stroke-dasharray="4 3"/>
+  <text x="463" y="460" text-anchor="middle" font-size="11" font-weight="700" fill="#1F6B3C">RDS standby slot</text>
+
+  <!-- flows -->
+  <line x1="193" y1="308" x2="193" y2="320" stroke="#005CD9" stroke-width="2"/>
+  <polygon points="193,320 188,312 198,312" fill="#005CD9"/>
+  <line x1="193" y1="376" x2="193" y2="434" stroke="#1F6B3C" stroke-width="2"/>
+  <polygon points="193,434 188,425 198,425" fill="#1F6B3C"/>
+  <text x="205" y="405" font-size="9.5" fill="#1F6B3C">5432/SSL</text>
+  <!-- app to S3 -->
+  <line x1="296" y1="345" x2="640" y2="150" stroke="#1F6B3C" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <polygon points="640,150 630,150 634,158" fill="#1F6B3C"/>
+  <text x="470" y="250" font-size="9.5" fill="#1F6B3C" transform="rotate(-22 470 250)">presigned URLs ⑪</text>
+  <!-- app to secrets -->
+  <line x1="296" y1="360" x2="640" y2="188" stroke="#EC7211" stroke-width="1.4" stroke-dasharray="3 3"/>
+  <!-- app to azure -->
+  <line x1="90" y1="345" x2="95" y2="54" stroke="#B45309" stroke-width="1.4" stroke-dasharray="3 3"/>
+
+  <text x="48" y="528" font-size="10.5" fill="#7B7C7F">Solid = primary request path · dashed = supporting calls. Circled numbers → course sections.</text>
+</svg>
+<p class="cap" style="margin:6px 4px 0;font-size:12px;color:#7B7C7F">The complete NEXA-on-AWS picture. Trace it: a browser hits <b>nexa.procdna.com</b> (Route 53/ACM ⑨), enters via the IGW ⑤ to the <b>ALB</b> ⑧ which terminates TLS and forwards to <b>EC2</b> ⑦; the app queries <b>RDS</b> ⑩ over SSL on a private path, mints <b>S3</b> ⑪ presigned URLs for documents, pulls secrets from <b>SSM</b> ⑬, and logs to <b>CloudWatch</b> ⑭ — all authorised by its <b>IAM</b> role ⑫, all inside one <b>VPC</b> ④ in one <b>Region</b> ③ of the AUXO <b>account</b> ②.</p>
+</div>
+
+<h3>15.1 — One request, traced end to end</h3>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">name → address</span>Browser resolves <code class="inl">nexa.procdna.com</code> via Route 53 to the ALB. (§9)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">edge</span>ALB accepts HTTPS, terminates TLS with the ACM cert, checks the target is healthy, forwards HTTP to EC2 with <code class="inl">X-Forwarded-Proto: https</code>. (§8)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">auth gate</span>NEXA's <code class="inl">proxy.ts</code> verifies the session JWT. No token → Azure AD SSO → provisioned-and-active check → JWT minted. (app)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">RBAC</span>The role in the token becomes a Prisma <code class="inl">where</code> filter (SEL sees own; Director/ED down-hierarchy; Partner/Admin all). (app — and the bridge to §16)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">data</span>Prisma → RDS over SSL on the private path (App SG → DB SG, port 5432). Documents come back as 1-hour S3 presigned URLs, never raw bytes. (§10–11)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">response &amp; logs</span>Rendered HTML or JSON returns through the ALB; the app writes a line to CloudWatch. (§14)</div></div>
+</div>
+
+<!-- ============ 16. PROJECT HIERARCHY ============ -->
+<h2 class="s" id="projecthier"><span class="n">16</span>Structuring a project like this — the hierarchies that matter</h2>
+<p class="lead">You asked to focus on hierarchy in a project like NEXA. There isn't one hierarchy — there are <b>four</b>, stacked on top of each other, and a well-run project keeps them aligned. This section names each, shows how NEXA expresses it, and — importantly — shows how they connect, because the magic is in the alignment.</p>
+
+<div class="diagram">
+  <span class="tag">The four hierarchies of a project like NEXA</span>
+  <table style="margin:0">
+    <tr><th>#</th><th>Hierarchy</th><th>Answers</th><th>NEXA's version</th></tr>
+    <tr><td>A</td><td><b>Infrastructure containment</b></td><td>Where does each piece physically live?</td><td>Account → Region → AZ → VPC → Subnet → Resource (§2)</td></tr>
+    <tr><td>B</td><td><b>Application layering</b></td><td>How is the code organised into tiers?</td><td>Edge → App (FE+API) → Services (lib/) → Data</td></tr>
+    <tr><td>C</td><td><b>Permission / trust</b></td><td>Who/what is allowed to do what?</td><td>IAM roles (machines) + app RBAC (humans)</td></tr>
+    <tr><td>D</td><td><b>People &amp; environments</b></td><td>Who owns which layer, and dev→prod?</td><td>You / SDE / IT split · dev → staging → prod</td></tr>
+  </table>
+</div>
+
+<h3>16.1 — Hierarchy A → B: infrastructure layers map onto code layers</h3>
+<p>The cleanest projects make the <em>network</em> tiers and the <em>code</em> tiers line up one-to-one. NEXA does this naturally, which is why it's a good teaching example:</p>
+<div class="diagram">
+  <div class="flow">
+    <div class="stage" style="background:#F2F7FF;border-color:#005CD9">EDGE LAYER<span class="sub">ALB + ACM + Route 53 · TLS, routing, health, WAF</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="background:#F2F7FF;border-color:#005CD9">APP LAYER (public subnet, EC2)<span class="sub">Next.js: Server Components + API routes — the FE and "backend" in one process</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="background:#FFF8EF;border-color:#B45309">SERVICE LAYER (lib/)<span class="sub">auth · prisma · s3 · mail · pricing math — the app's internal modules</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="background:#EAF6EF;border-color:#1F6B3C">DATA LAYER (private subnet + region-level)<span class="sub">RDS (relational) · S3 (documents) — state lives only here</span></div>
+  </div>
+  <p class="cap">Each infrastructure tier hosts exactly one code tier, and dependencies flow strictly downward — edge calls app, app calls services, services call data; never the reverse. That "state lives only in the data layer" property is what makes the app layer <b>stateless</b>, which in turn is what makes it horizontally scalable and easy to containerise later (§17). The hierarchy isn't bureaucracy — it's <em>what buys you the scaling story.</em></p>
+</div>
+
+<h3>16.2 — Hierarchy C: two permission systems, one for machines, one for humans</h3>
+<p>A subtlety newcomers miss: a real project has <b>two</b> permission hierarchies running in parallel, and they're deliberately separate.</p>
+<div class="twocol">
+  <div class="rec aws"><span class="h">Machine permissions = IAM (§12)</span> Governs what <em>code/servers</em> may do to <em>AWS resources</em>. "The EC2 app may read the bucket and the secrets, nothing else." Enforced by AWS, outside the app.</div>
+  <div class="rec"><span class="h">Human permissions = app RBAC</span> Governs what <em>users</em> may see/do inside <em>NEXA</em>. The SEL → Director → ED → Partner → Admin ladder, enforced by <code class="inl">resolveOwnerFilter()</code> in the code.</div>
+</div>
+<p>These are independent and that's correct: tightening one never weakens the other. A compromised <em>user</em> account is bounded by RBAC; a compromised <em>server</em> is bounded by IAM. Defence in depth comes from keeping them separate. Here is NEXA's <em>human</em> hierarchy, since it's the one your domain cares about:</p>
+
+<div class="ladder">
+  <div class="rung"><div class="lv a">ADMIN</div><div class="body2"><b>Finance team — sees everything.</b><div class="d">Rate-card upload, user create, export, client edit/delete. The only role that can do the sensitive admin actions.</div></div></div>
+  <div class="rung"><div class="lv b">PARTNER</div><div class="body2"><b>Sees all opportunities.</b><div class="d">Full pipeline visibility for senior oversight.</div></div></div>
+  <div class="rung"><div class="lv c">ED</div><div class="body2"><b>Sees down the hierarchy.</b><div class="d">Everything owned by the people below them in the management tree.</div></div></div>
+  <div class="rung"><div class="lv d">DIRECTOR</div><div class="body2"><b>Sees down the hierarchy.</b><div class="d">Their reports' opportunities, scoped by <code class="inl">managerId</code>.</div></div></div>
+  <div class="rung"><div class="lv e">SEL</div><div class="body2"><b>Sees only their own.</b><div class="d">The base case — an individual contributor sees the opportunities they own.</div></div></div>
+</div>
+<p>The crucial design point: this hierarchy is <b>data-driven</b>, not hard-coded. A user's <code class="inl">role</code> + <code class="inl">managerId</code> turns into a Prisma <code class="inl">where</code> filter at query time (<code class="inl">resolveOwnerFilter</code>). That's why §15's request trace has an "RBAC" step — every read is scoped by the requester's rung. (And the audit's warning: the read side is well-built, but the <em>write</em> side needs the same guard mirrored onto it — the IDOR release-blocker.)</p>
+
+<h3>16.3 — Hierarchy D: who owns which layer (responsibility boundaries)</h3>
+<p>The last hierarchy is human. On a migration like this, three parties own different layers, and naming the boundary prevents the "I thought you had that" gaps:</p>
+<table>
+  <tr><th>Layer</th><th>Owner</th><th>Why it lands there</th></tr>
+  <tr><td>Org / account / landing zone / firm DNS</td><td><b>IT / cloud team</b></td><td>Account creation, the AUXO guardrails, the <code class="inl">procdna.com</code> zone, branch protection on the org repo — all cross-cutting firm assets.</td></tr>
+  <tr><td>VPC / network / IAM standards / Region call</td><td><b>Senior SDE</b> (with you)</td><td>The architecture decisions (Decisions #1–7) that should match firm standards. You propose; they validate and allocate.</td></tr>
+  <tr><td>EC2 / RDS / S3 / app deploy / the code</td><td><b>You</b></td><td>The app-specific build: stand up the resources (or receive endpoints), rewrite the storage layer, fix the release-blockers, run the cut-over.</td></tr>
+</table>
+<div class="rec"><span class="h">Why your two briefing docs are structured the way they are</span> This is exactly why the plan separates "Decisions I need from you" (the SDE's layer) from the build steps (your layer). Good project hierarchy = each decision is made by whoever owns that layer, and the document routes each question to the right owner. That's not paperwork; it's how a one-person migration of a firm-critical app stays unblocked.</p></div>
+
+<h3>16.4 — Environment hierarchy: dev → staging → prod</h3>
+<p>The final structural axis. The same architecture is stamped out at increasing levels of "realness," ideally in separate accounts so a dev mistake can't touch production financial data:</p>
+<div class="diagram">
+  <div class="flow">
+    <div class="stage" style="min-width:300px">DEV<span class="sub">your sub-account · fake data · break things freely · smallest instances</span></div>
+    <div class="varrow">▼ promote the same artifact</div>
+    <div class="stage" style="min-width:300px">STAGING<span class="sub">prod-like · real SSO app registration test · final dress rehearsal of the cut-over</span></div>
+    <div class="varrow">▼ promote the same artifact</div>
+    <div class="stage" style="min-width:300px">PRODUCTION<span class="sub">real users · real financials · Multi-AZ option · the four release-blockers fixed</span></div>
+  </div>
+  <p class="cap">For NEXA's size, a full three-tier setup may be more than you need on day one — dev + prod is a defensible minimum. The principle that <em>does</em> matter regardless: <b>the same build artifact</b> moves up the chain (build once in CI, promote the identical thing), so "works in dev" actually means something in prod. That's the bridge to §17.</p>
+</div>
+
+<!-- ============ 17. CI/CD ============ -->
+<h2 class="s" id="deploy"><span class="n">17</span>CI/CD &amp; the path from EC2 to containers</h2>
+<p class="lead">The last operational layer: how code gets <em>from the ProcDNA repo onto the running infrastructure</em>, and how NEXA can graduate from a single EC2 box to containers when it's ready. This ties the GitHub work (your plan's §1) to the AWS work.</p>
+
+<h3>17.1 — The deploy pipeline</h3>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">push</span>Merge to <code class="inl">main</code> in the <b>ProcDNA org repo</b> (branch-protected, review required) triggers GitHub Actions.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">build</span>Actions builds the Next.js artifact <em>in CI</em> — keeping the memory-hungry <code class="inl">next build</code> off the small instance (§7.4).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">authenticate</span>Actions assumes its AWS role via <b>OIDC</b> — short-lived creds, no stored keys (§12.6).</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">deploy</span>EC2 path: ship the artifact and restart the systemd service. ECS path: push a new image to ECR and update the service for a rolling deploy.</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">verify</span>The ALB health check (<code class="inl">/healthz</code>) confirms the new version is serving before old targets drain (ECS) — zero-downtime by construction.</div></div>
+</div>
+
+<h3>17.2 — EC2 now, ECS Fargate later (Decision #4)</h3>
+<p>The plan recommends starting on EC2 and graduating to ECS Fargate once stable. Understanding <em>why</em> closes the loop on the whole course:</p>
+<table>
+  <tr><th></th><th>EC2 (start here)</th><th>ECS Fargate (the upgrade)</th></tr>
+  <tr><td>What you manage</td><td>The OS — you patch it, you supervise the process</td><td>Nothing below the container — AWS runs it serverlessly</td></tr>
+  <tr><td>Deploys</td><td>Ship artifact + restart (brief blip possible)</td><td>Rolling / blue-green, zero-downtime built in</td></tr>
+  <tr><td>Scaling</td><td>Bigger box, or wire up more boxes by hand</td><td>Change the task count — horizontal by design</td></tr>
+  <tr><td>Learning cost</td><td>Lowest — easiest mental model for SSO/cookies</td><td>Docker, task defs, ECR up front</td></tr>
+  <tr><td>Best when</td><td>Getting live fast, fewest new concepts</td><td>App is stable; you want no patching + clean deploys</td></tr>
+</table>
+<div class="rec ok"><span class="h">Why the graduation is low-friction for NEXA</span> Recall §16.1: the app is <b>stateless</b> — all state lives in RDS and S3. A stateless app is trivial to containerise, because a container can be killed and replaced at any moment with no lost data. So "EC2 first, Fargate later" isn't a rewrite; it's wrapping the same app in a Dockerfile and pointing the same ALB at tasks instead of an instance. The architecture you build in this course is already shaped for the upgrade — which is exactly the payoff of getting the layering (§16) right from the start.</div>
+<div class="rec aws"><span class="h">A note to take to the SDE</span> Decisions #3 (Elastic IP vs ALB) and #4 (EC2 vs ECS) interact. If there's any chance you'll want ECS later, choose the <b>ALB now</b> — ECS effectively requires one, so starting with the ALB means the only future change is swapping the target from "an instance" to "tasks." Match whatever the firm already supports; an org that standardises on containers may want you on ECS from day one.</div>
+
+<!-- ============ 18. LEARNING PATH ============ -->
+<h2 class="s" id="path"><span class="n">18</span>A learning path — what to actually do, in order</h2>
+<p class="lead">Reading is not the same as building. The fastest way to make all of this stick is to stand the pieces up yourself, smallest blast radius first, in a throwaway dev account. Here is an order that builds confidence layer by layer — each step uses what the last one created.</p>
+
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">place — build the empty room</span>Create a VPC (10.0.0.0/16) with two public and two private subnets across two AZs, an IGW, and route tables. Goal: you can point at the §4 diagram and say "I made that." No compute yet. (§4–5)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">trust — write the firewalls</span>Create the App SG and DB SG, with the DB SG referencing the App SG (not an IP). You're practising the SG-references-SG pattern before anything depends on it. (§6)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">data first — it has no dependencies</span>Stand up RDS in the private subnet group, encrypted, not public. Confirm you can reach it <em>only</em> from inside the VPC. Create the S3 bucket with Block Public Access on. (§10–11)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">identity — the role before the server</span>Create the EC2 instance role with the least-privilege policy (bucket + /nexa/* secrets + logs). You'll attach it when you launch the box. (§12)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">compute — launch the app box</span>Launch one EC2 in the public subnet, wearing the role, in the App SG. Install Node + Nginx, run the app under systemd. Confirm it can reach RDS and S3 with no keys on disk. (§7)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">edge — the public face</span>Put an ALB in front, attach an ACM cert, point a (test) DNS name at it. Add <code class="inl">/healthz</code>. Confirm HTTPS works and the health check is green. (§8–9)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">close the loop — secrets, logs, SSO</span>Move config into SSM, confirm logs land in CloudWatch, register the test redirect URI in Azure AD and verify SSO end-to-end. Now you've reproduced the whole §15 diagram. (§13–14)</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">automate — then tear down</span>Wire GitHub Actions + OIDC to deploy. Then <b>delete the whole dev stack</b> and rebuild it from memory once — the rebuild is where it truly clicks. (§17)</div></div>
+</div>
+
+<div class="rec"><span class="h">The one habit that matters most</span> When something doesn't work, first ask: <b>is this a place problem or a trust problem?</b> (§2.3). A timeout/refused-connection is almost always network (routing or security group). An "AccessDenied / not authorized" is almost always IAM. Naming which of the two ladders you're on cuts debugging time in half, because it tells you <em>which console screen to open.</em></div>
+
+<!-- ============ 19. GLOSSARY ============ -->
+<h2 class="s" id="glossary"><span class="n">19</span>Glossary — every term, one line each</h2>
+<dl class="glos">
+  <dt>Organization</dt><dd>The top container grouping all of a firm's AWS accounts under one bill and one set of guardrails (SCPs).</dd>
+  <dt>Account</dt><dd>The hard isolation boundary of AWS. Resources, permissions, and bills are scoped to it. NEXA targets the AUXO account.</dd>
+  <dt>Region</dt><dd>A geographic cluster of data centres (e.g. eu-central-1). Chosen for latency and data-residency law. Most resources can't move Regions.</dd>
+  <dt>Availability Zone (AZ)</dt><dd>An isolated data centre within a Region. Spread across ≥2 for fault tolerance.</dd>
+  <dt>VPC</dt><dd>Your private virtual network inside a Region, defined by a CIDR block like 10.0.0.0/16.</dd>
+  <dt>Subnet</dt><dd>A slice of the VPC's addresses pinned to one AZ; public (routes to the IGW) or private (doesn't).</dd>
+  <dt>CIDR</dt><dd>The notation for an address range; the number after the slash is how many bits are fixed (/16 = big, /24 = small).</dd>
+  <dt>Internet Gateway (IGW)</dt><dd>The VPC's two-way door to the internet. A subnet routing 0.0.0.0/0 to it is "public."</dd>
+  <dt>NAT Gateway</dt><dd>A one-way valve letting private resources make outbound calls without being reachable. NEXA doesn't need one.</dd>
+  <dt>Route table</dt><dd>The per-subnet list of "for this destination, send traffic there." Presence of an IGW route = public.</dd>
+  <dt>Security Group (SG)</dt><dd>A stateful firewall on a resource. Can reference other SGs as the source — the idiomatic way. NEXA: App SG, DB SG.</dd>
+  <dt>NACL</dt><dd>A stateless subnet-level firewall. Coarser than an SG; usually left at default.</dd>
+  <dt>EC2</dt><dd>A rented virtual machine in a subnet. Runs NEXA's Next.js process. t3/t4g are cheap burstable types.</dd>
+  <dt>AMI</dt><dd>The disk image an EC2 instance boots from (the OS template).</dd>
+  <dt>EBS</dt><dd>The virtual disk attached to an EC2 instance (gp3 is the standard SSD type).</dd>
+  <dt>Elastic IP</dt><dd>A fixed public IP you can keep across instance restarts; the cheap alternative to an ALB for a stable address.</dd>
+  <dt>ALB</dt><dd>Application Load Balancer — accepts HTTPS, terminates TLS, health-checks targets, spans AZs. NEXA's stable front door.</dd>
+  <dt>Listener / Target group / Health check</dt><dd>An ALB's three parts: the port it accepts on, the pool it forwards to, and the URL it polls (/healthz).</dd>
+  <dt>Route 53</dt><dd>AWS's DNS. A hosted zone holds a domain's records; an ALIAS record maps a name to the ALB.</dd>
+  <dt>ACM</dt><dd>Certificate Manager — issues and auto-renews the TLS cert for the ALB. Must be in the ALB's Region.</dd>
+  <dt>RDS</dt><dd>Managed relational database (PostgreSQL for NEXA). AWS handles backups, patching, optional failover.</dd>
+  <dt>DB subnet group</dt><dd>The set of subnets (≥2 AZs) RDS may live in — required even for a single-AZ database.</dd>
+  <dt>Multi-AZ</dt><dd>An RDS option adding a synchronous standby in another AZ for automatic failover (~doubles DB cost).</dd>
+  <dt>S3</dt><dd>Object (file) storage in named buckets, living above the VPC. Holds NEXA's SOW/PO documents.</dd>
+  <dt>Bucket / Key / Object</dt><dd>S3's container / the object's full name / the file itself.</dd>
+  <dt>Block Public Access</dt><dd>The S3 setting that keeps a bucket private. For NEXA, this must stay ON — the highest-impact safety switch.</dd>
+  <dt>Presigned URL</dt><dd>A temporary, signed link to one S3 object, valid for a set time (NEXA: 1 hour). Lets a private bucket serve files safely.</dd>
+  <dt>VPC endpoint</dt><dd>A private path from your VPC to a service like S3, avoiding the public internet (and NAT costs).</dd>
+  <dt>IAM</dt><dd>Identity and Access Management — decides if an identity may perform an action on a resource. Default is deny.</dd>
+  <dt>Principal</dt><dd>The "who" making a request — a user or (better) a role.</dd>
+  <dt>Policy</dt><dd>A JSON document granting (or denying) specific actions on specific resources.</dd>
+  <dt>Role</dt><dd>An identity something assumes temporarily, with auto-rotating credentials — no stored password. Use everywhere a machine acts.</dd>
+  <dt>Instance role</dt><dd>The role an EC2 box wears so its code reaches AWS services with no keys on disk. NEXA's core security win.</dd>
+  <dt>Trust policy vs permission policy</dt><dd>A role's two policies: who may wear it, vs what the wearer may do. Conflating them is the #1 IAM confusion.</dd>
+  <dt>Least privilege</dt><dd>Granting the minimum that works, scoped to specific resources — never *:* .</dd>
+  <dt>OIDC federation</dt><dd>Letting GitHub Actions assume an AWS role via short-lived tokens, so no AWS key is stored in CI.</dd>
+  <dt>SSM Parameter Store / Secrets Manager</dt><dd>Encrypted stores for non-AWS secrets (DB password, Azure secret). Pulled at runtime by the role.</dd>
+  <dt>KMS</dt><dd>Key Management Service — holds the keys behind every "encrypted at rest" (RDS, S3, SSM). Access is itself IAM-controlled.</dd>
+  <dt>CloudWatch</dt><dd>Logs, metrics, and alarms. Replaces Vercel's logging, which vanishes on migration.</dd>
+  <dt>ECS / Fargate / ECR</dt><dd>Container orchestration / the serverless way to run containers / the registry images live in. NEXA's optional upgrade from EC2.</dd>
+  <dt>WAF</dt><dd>Web Application Firewall — attaches to an ALB for rate-limiting and IP rules on the secret-bearing endpoints.</dd>
+</dl>
+
+<div class="rec aws" style="margin-top:30px"><span class="h">Where to go from here</span> You now have the map. The next move isn't more reading — it's the §18 path in a throwaway dev account, with your two briefing docs open beside it as the spec. Build the §15 diagram once with your own hands, tear it down, build it again from memory. The second build is when AWS stops being a list of services and becomes a single system you can reason about — the same way NEXA did.</div>
+
+</div><!-- /.body -->
+
+<div class="foot">
+  <b>AWS, explained through NEXA</b> — a companion to the NEXA AWS Migration &amp; Architecture Plan and the Architecture Briefing.
+  Every service is mapped onto the real app so the concepts have somewhere to live. Sizing, Region, and policy figures are starting points to confirm with the senior SDE against the firm's AWS standards; the four release-blockers from the plan (login2, emergency endpoint, write-side IDOR, audit logging) remain the gating items for handling real client financial data, independent of any infrastructure choice here.
+  <br><br>Print to PDF: this page is laid out to export cleanly via your browser's “Print → Save as PDF”.
+</div>
+
+</main>
+</div>
+</body>
+</html>

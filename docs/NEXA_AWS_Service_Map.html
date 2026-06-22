@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The AWS Service Map — what NEXA needs, and what's nearby</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6; --chip:#EEF2F9;
+    --aws:#EC7211; --awsDeep:#C25A0A; --awsbg:#FFF3E8; --squid:#232F3E;
+    --far:#6B7280; --farbg:#EFF1F5;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:286px 1fr;max-width:1320px;margin:0 auto;}
+
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 16px 60px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 15px/1 'Segoe UI';letter-spacing:.18em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand b{color:var(--aws)}
+  nav .sub{font-size:11px;color:var(--muted);margin:7px 0 16px;}
+  nav a{display:block;font-size:12.4px;color:var(--ink2);padding:3px 0;line-height:1.4}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:6px;}
+  nav a .n{color:var(--aws);font:800 11px/1 'Courier New',monospace;margin-right:6px;}
+  nav .part{font:700 10px/1 'Courier New',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:16px 0 4px;padding-top:10px;border-top:1px dashed var(--line)}
+  nav .legend2{margin-top:14px;font-size:11px;color:var(--ink2);line-height:1.7}
+  nav .legend2 b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+  main{padding:0 0 140px;min-width:0;}
+
+  .hero{background:linear-gradient(125deg,#232F3E 0%,#0A1F44 45%,#001E96 100%);color:#EAF0FB;padding:46px 52px 38px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(236,114,17,.36),transparent 60%);}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.24em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:33px;margin:14px 0 8px;letter-spacing:-.015em;color:#fff;max-width:24ch;line-height:1.12}
+  .hero h1 b{color:var(--aws)}
+  .hero p{max-width:74ch;color:#CBD8F2;margin:.45em 0;font-size:15.5px}
+  .hero .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+
+  .body{padding:8px 52px 0}
+
+  h2.s{font-size:24px;margin:54px 0 6px;padding-top:16px;border-top:2px solid var(--ink);scroll-margin-top:10px;letter-spacing:-.01em}
+  h2.s .n{font:800 15px/1 'Courier New',monospace;color:var(--aws);margin-right:12px;}
+  h3{font-size:18px;margin:30px 0 6px;color:var(--accentDeep);scroll-margin-top:10px}
+  h4{font-size:13px;margin:20px 0 4px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:82ch} ul,ol{max-width:82ch} li{margin:4px 0}
+  .lead{font-size:16.5px;color:var(--ink2);max-width:80ch}
+
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:9px;padding:14px 16px;overflow:auto;font:12.5px/1.6 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0} pre .o{color:#FFB066} pre .s{color:#A8C7FF}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:18px 0;}
+  .rec b{color:var(--accentDeep)}
+  .rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)}
+  .rec.aws{border-left-color:var(--aws)} .rec.aws b{color:var(--awsDeep)}
+  .rec .h{display:block;font-weight:800;margin-bottom:3px;font-size:13.5px}
+
+  /* tier badges */
+  .tier{display:inline-block;font:800 9px/1 'Segoe UI';letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:5px;vertical-align:middle;white-space:nowrap}
+  .tier.core{background:var(--awsbg);color:var(--awsDeep);border:1px solid #F3CBA0}
+  .tier.adj{background:#E6EFFB;color:var(--accent);border:1px solid #B9D3F2}
+  .tier.far{background:var(--farbg);color:var(--far);border:1px solid #D9DEE7}
+
+  /* service cards */
+  .svccard{border:1px solid var(--line);border-radius:11px;padding:13px 16px;margin:11px 0;background:#fff;border-left:4px solid var(--line)}
+  .svccard.core{border-left-color:var(--aws)}
+  .svccard.adj{border-left-color:var(--accent)}
+  .svccard.far{border-left-color:#9CA3AF}
+  .svccard .hd{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+  .svccard h5{margin:0;font-size:15.5px;color:var(--accentDeep)}
+  .svccard h5 .ab{font:600 11px/1 'Courier New',monospace;color:var(--muted);margin-left:8px;letter-spacing:.02em}
+  .svccard .what{font-size:13.7px;color:var(--ink);margin:6px 0 0}
+  .svccard .reach{font-size:12.6px;color:var(--ink2);margin-top:6px}
+  .svccard .reach b{color:var(--accentDeep)}
+  .svccard .nexa{font-size:12.3px;margin-top:8px;background:var(--awsbg);border:1px solid #F6DCC2;border-radius:7px;padding:6px 10px;color:#8a4408}
+  .svccard .nexa b{color:var(--awsDeep)}
+
+  .svc{display:inline-block;font:700 11px/1 'Segoe UI';color:#fff;background:var(--squid);border-radius:5px;padding:3px 7px 3px 6px;white-space:nowrap}
+  .svc::before{content:"";display:inline-block;width:7px;height:7px;border-radius:1.5px;background:var(--aws);margin-right:6px}
+
+  /* category map */
+  .catmap{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+  .catcard{border:1px solid var(--line);border-radius:11px;padding:14px 15px;background:#fff;}
+  .catcard .ct{font-weight:800;color:var(--accentDeep);font-size:14px;display:flex;align-items:center;gap:8px}
+  .catcard .ct .dot{width:10px;height:10px;border-radius:3px;background:var(--aws)}
+  .catcard .cl{font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.5}
+  .catcard .cl b{color:var(--ink)}
+
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;margin:18px 0;overflow:auto;}
+  .diagram .cap{font-size:12px;color:var(--muted);margin:10px 2px 0;max-width:none}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:0 0 10px;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .stage{background:#EDEFF7;border:1.5px solid #C2C9E6;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;color:var(--accentDeep);text-align:center;min-width:250px;}
+  .stage .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+  .varrow{text-align:center;color:var(--accent);font-size:20px;line-height:1;margin:3px 0;}
+  .branch{font-size:11.5px;color:var(--ink2);background:#FAFBFE;border:1px dashed var(--line);border-radius:6px;padding:4px 10px;margin:5px 0;text-align:center}
+
+  /* decision tree */
+  .tree2{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+  .qrow{border:1px solid var(--line);border-radius:10px;background:#fff;padding:0;overflow:hidden}
+  .qrow .q{background:#F2F7FF;padding:9px 14px;font-weight:700;color:var(--accentDeep);font-size:13.5px;border-bottom:1px solid var(--line)}
+  .qrow .opts{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .qrow .opt{padding:9px 14px;font-size:12.8px}
+  .qrow .opt:first-child{border-right:1px solid var(--line)}
+  .qrow .opt .a{font-weight:700;color:var(--ink)}
+  .qrow .opt .r{color:var(--ink2)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:1040px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body,.foot{padding-left:20px;padding-right:20px}.catmap{grid-template-columns:1fr}.twocol{grid-template-columns:1fr}.qrow .opts{grid-template-columns:1fr}.qrow .opt:first-child{border-right:none;border-bottom:1px solid var(--line)}}
+  svg{max-width:100%;height:auto;display:block}
+  .svgwrap{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin:18px 0;overflow:auto}
+  .foot{margin:64px 52px 0;padding:18px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">AWS · <b>SERVICE MAP</b></div>
+  <div class="sub">The catalog — what you'll use &amp; what's nearby</div>
+
+  <a href="#orient" class="top">Start here · the tiers</a>
+  <a href="#landscape" class="top">The service landscape</a>
+
+  <div class="part">By the job it does</div>
+  <a href="#compute"><span class="n">1</span>Compute</a>
+  <a href="#network"><span class="n">2</span>Networking &amp; delivery</a>
+  <a href="#storage"><span class="n">3</span>Storage</a>
+  <a href="#db"><span class="n">4</span>Databases</a>
+  <a href="#security"><span class="n">5</span>Security &amp; identity</a>
+  <a href="#mgmt"><span class="n">6</span>Management &amp; monitoring</a>
+  <a href="#devtools"><span class="n">7</span>Developer tools &amp; CI/CD</a>
+  <a href="#integration"><span class="n">8</span>Integration &amp; messaging</a>
+  <a href="#analytics"><span class="n">9</span>Analytics, AI &amp; the rest</a>
+
+  <div class="part">Putting it to use</div>
+  <a href="#shopping"><span class="n">10</span>NEXA's shopping list</a>
+  <a href="#survival"><span class="n">11</span>Survival rules</a>
+  <a href="#glossary"><span class="n">12</span>Quick glossary</a>
+
+  <div class="legend2">
+    <div><b style="background:var(--aws)"></b>Core — NEXA needs it</div>
+    <div><b style="background:var(--accent)"></b>Adjacent — you'll meet it soon</div>
+    <div><b style="background:#9CA3AF"></b>Further — know the name</div>
+  </div>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA · companion to “AWS, explained through NEXA”</div>
+  <h1>The AWS <b>service map</b></h1>
+  <p>The first doc taught the core of AWS <em>through</em> NEXA. This one zooms out to the <strong>catalog</strong>: the services you'll actually provision for NEXA, plus the ones sitting one step away that you'll keep bumping into — organised by the <strong>job each does</strong>, so the 200-service menu becomes a short, navigable list.</p>
+  <p>Every service is tagged so you always know how much to care: <strong>Core</strong> (NEXA needs it), <strong>Adjacent</strong> (you'll meet it soon), or <strong>Further</strong> (just know the name exists).</p>
+  <div class="meta">
+    <span class="chip">~50 services, triaged</span>
+    <span class="chip">Decision trees for the hard calls</span>
+    <span class="chip">A consolidated NEXA shopping list</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ORIENTATION -->
+<section id="orient">
+<h3 style="margin-top:26px">How to read this — the three tiers</h3>
+<p class="lead">AWS has well over 200 services. The number is paralysing only if you treat them as equals — they aren't. For a project like NEXA, a dozen do the real work, a dozen more are worth recognising, and the long tail you only need to be able to <em>name</em> so you know where to look later. This doc sorts every service into exactly those three buckets.</p>
+
+<div class="twocol">
+  <div>
+    <div class="svccard core"><div class="hd"><h5>Core</h5><span class="tier core">NEXA needs it</span></div>
+      <div class="what">You will create, configure, or directly depend on this to ship NEXA. There are about a dozen. Master these.</div>
+    </div>
+    <div class="svccard adj"><div class="hd"><h5>Adjacent</h5><span class="tier adj">meet it soon</span></div>
+      <div class="what">Not required for NEXA's first deploy, but one decision away — the natural upgrade, alternative, or "phase 2" service. Recognise these and know when they'd come up.</div>
+    </div>
+  </div>
+  <div>
+    <div class="svccard far"><div class="hd"><h5>Further afield</h5><span class="tier far">know the name</span></div>
+      <div class="what">Real, important services for <em>other</em> shapes of problem (big data, global scale, ML, IoT). You don't need them for NEXA; you only need to recognise the name so that when a problem calls for one, you know the category to search.</div>
+    </div>
+    <div class="rec aws" style="margin-top:11px"><span class="h">The pairing with doc 1</span> Where a <span class="tier core">Core</span> service already got a deep dive in <em>“AWS, explained through NEXA,”</em> this doc gives the short version and points you back. Think of doc 1 as the <em>tutorial</em> and this as the <em>map</em>.</div>
+  </div>
+</div>
+</section>
+
+<!-- LANDSCAPE -->
+<h2 class="s" id="landscape"><span class="n">0</span>The service landscape — nine jobs, not 200 services</h2>
+<p class="lead">The trick to not drowning: AWS services cluster into a handful of <b>jobs</b>. Almost everything you'll touch answers one of nine questions. Learn the nine buckets and any new service name slots into a bucket you already understand.</p>
+
+<div class="catmap">
+  <div class="catcard"><div class="ct"><span class="dot"></span>1 · Compute</div><div class="cl"><b>"Where does my code run?"</b> EC2, containers (ECS/Fargate), functions (Lambda), and the PaaS wrappers.</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>2 · Networking</div><div class="cl"><b>"How do packets get there?"</b> VPC, subnets, load balancers, DNS, CDN, the firewalls.</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>3 · Storage</div><div class="cl"><b>"Where do files/disks live?"</b> S3 (objects), EBS (disks), EFS (shared filesystems).</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>4 · Databases</div><div class="cl"><b>"Where does structured data live?"</b> RDS/Aurora (SQL), DynamoDB (key-value), ElastiCache (cache), Redshift (warehouse).</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>5 · Security &amp; identity</div><div class="cl"><b>"Who's allowed, and is it encrypted?"</b> IAM, KMS, Secrets, ACM, WAF, the threat-detection family.</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>6 · Management</div><div class="cl"><b>"Is it healthy, and what did it cost?"</b> CloudWatch, CloudTrail, Organizations, the cost tools, infra-as-code.</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>7 · Developer tools</div><div class="cl"><b>"How does code ship?"</b> ECR, the Code* pipeline family (or, for NEXA, GitHub Actions).</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>8 · Integration</div><div class="cl"><b>"How do parts talk async?"</b> SQS (queues), SNS/EventBridge (events), Step Functions, SES (email).</div></div>
+  <div class="catcard"><div class="ct"><span class="dot"></span>9 · Analytics / AI</div><div class="cl"><b>"Make sense of data / add intelligence."</b> Athena, Glue, Kinesis, QuickSight, Bedrock/SageMaker.</div></div>
+</div>
+
+<div class="rec"><span class="h">NEXA touches just four jobs to go live</span> Compute (1), Networking (2), Storage (3), Databases (4) — plus the cross-cutting Security (5) and a little Management (6). Jobs 7–9 are either already solved (you chose GitHub Actions for CI/CD) or simply not part of this app. That's the whole point of triage: a finance-data internal tool is a <em>small, well-understood shape</em>, and most of AWS's surface area is for other shapes.</div>
+</section>
+
+<!-- ============ 1. COMPUTE ============ -->
+<h2 class="s" id="compute"><span class="n">1</span>Compute — where your code runs</h2>
+<p class="lead">This is the category with the most options and the most agonising over them, so start with the decision rather than the list. The question is always: <em>how much of the machine do you want to manage?</em> AWS gives you a spectrum from "here's a bare VM, you run everything" to "just give me a function, I'll handle the rest."</p>
+
+<div class="diagram">
+  <span class="tag">The compute spectrum — more control ← → less to manage</span>
+  <div class="flow">
+    <div class="stage" style="min-width:560px;background:#FFF3E8;border-color:#EC7211">EC2 &nbsp;·&nbsp; you own the OS<span class="sub">a raw VM — patch it, supervise the process, scale it by hand · maximum control</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="min-width:560px">ECS / Fargate &nbsp;·&nbsp; you own the container<span class="sub">ship a Docker image; AWS runs it · no OS to patch · rolling deploys</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="min-width:560px">App Runner / Beanstalk &nbsp;·&nbsp; you own the code + a config<span class="sub">hand over a repo/image; the platform wires up load balancing, scaling, TLS</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage" style="min-width:560px;background:#E6EFFB;border-color:#005CD9">Lambda &nbsp;·&nbsp; you own only a function<span class="sub">no server at all; runs on a request/event, scales to zero · least to manage</span></div>
+  </div>
+  <p class="cap">NEXA sits near the top by choice: a long-lived Next.js server is simplest to reason about on EC2 (and the SSO/cookie behaviour is easiest to get right there), with ECS/Fargate as the planned next rung down. Lambda is the wrong shape for a persistent SSR app — noted below.</p>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon EC2 <span class="ab">Elastic Compute Cloud</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">A rented virtual machine — CPU, RAM, disk — that you fully control. The default place to run anything that needs a persistent process.</div>
+  <div class="reach"><b>Reach for it when:</b> you want maximum control or the simplest mental model, or you're running a long-lived server (like an SSR web app) and don't yet want containers.</div>
+  <div class="nexa"><b>NEXA:</b> runs the Next.js process here (<code class="inl">t3.large</code>/<code class="inl">t4g.large</code>), under systemd/PM2, in a public subnet. Deep dive: doc 1 §7.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon ECS + Fargate <span class="ab">Elastic Container Service</span></h5><span class="tier core">NEXA's planned upgrade</span></div>
+  <div class="what">ECS orchestrates containers; Fargate is the "serverless" mode where AWS runs them with no VM for you to patch. You ship a Docker image and define how many copies (tasks) to run.</div>
+  <div class="reach"><b>Reach for it when:</b> you want zero OS patching, clean rolling/blue-green deploys, and easy horizontal scale — and your app is stateless.</div>
+  <div class="nexa"><b>NEXA:</b> the recommended graduation from EC2 once stable. Because NEXA is stateless (state is in RDS/S3), containerising is low-friction. Deep dive: doc 1 §17.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon ECR <span class="ab">Elastic Container Registry</span></h5><span class="tier core">with ECS</span></div>
+  <div class="what">A private registry that stores your Docker images — the place ECS/Fargate pulls from.</div>
+  <div class="reach"><b>Reach for it when:</b> you containerise. CI builds the image and pushes it here; the service pulls the new tag to deploy.</div>
+  <div class="nexa"><b>NEXA:</b> needed only on the ECS path — GitHub Actions pushes the image here, then updates the service.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS Lambda <span class="ab">functions as a service</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Runs a single function in response to an event (an HTTP call, a file landing in S3, a schedule). No server; scales to zero; you pay per invocation.</div>
+  <div class="reach"><b>Reach for it when:</b> you have small, event-driven, bursty jobs — a nightly cleanup, a "resize this upload," a webhook handler — <em>not</em> a persistent web server.</div>
+  <div class="nexa"><b>NEXA:</b> not for the app itself (a long-lived SSR server fights Lambda's model and cold starts). But a fine future home for a side task like the Azure-AD user sync on a schedule.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS App Runner</h5><span class="tier adj">alternative</span></div>
+  <div class="what">A high-level "give me your container or repo and a port, I'll run it on the internet with autoscaling + TLS" service. Fargate with the knobs hidden.</div>
+  <div class="reach"><b>Reach for it when:</b> you want container simplicity without learning ECS task definitions, and you don't need fine VPC control.</div>
+  <div class="nexa"><b>NEXA:</b> a plausible shortcut, but NEXA needs tight VPC placement (private RDS, SG references), which is exactly what App Runner abstracts away — so EC2→ECS gives more control here.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS Elastic Beanstalk</h5><span class="tier adj">alternative</span></div>
+  <div class="what">An older PaaS that provisions EC2 + load balancer + scaling from your code and a config file. Hides detail you'll often want to see.</div>
+  <div class="reach"><b>Reach for it when:</b> a firm already standardises on it, or you want a managed EC2 setup without hand-wiring.</div>
+  <div class="nexa"><b>NEXA:</b> would work, but it obscures the very pieces this migration is meant to teach you. Skip unless the firm uses it.</div>
+</div>
+
+<div class="twocol">
+  <div class="svccard far"><div class="hd"><h5>Amazon EKS</h5><span class="tier far">know the name</span></div>
+    <div class="what">Managed Kubernetes. The heavyweight container orchestrator for large, multi-team platforms.</div>
+    <div class="reach"><b>NEXA:</b> overkill. ECS is the right weight for one small app; EKS is for fleets of services.</div>
+  </div>
+  <div class="svccard far"><div class="hd"><h5>Lightsail · Batch · Outposts</h5><span class="tier far">know the name</span></div>
+    <div class="what">Lightsail = simplified VPS for tiny projects; Batch = run large batch compute jobs; Outposts = AWS hardware in your own data centre.</div>
+    <div class="reach"><b>NEXA:</b> none apply — listed so the names aren't mysterious.</div>
+  </div>
+</div>
+
+<div class="rec"><span class="h">The compute decision in one question</span> <b>"Is it a long-lived server, a container, or a short event-driven job?"</b> Long-lived server → EC2 (then ECS). Container-native team → ECS/Fargate from the start. Bursty event jobs → Lambda. NEXA is a long-lived server, which is why the whole first doc lives on EC2.</div>
+
+<!-- ============ 2. NETWORKING ============ -->
+<h2 class="s" id="network"><span class="n">2</span>Networking &amp; content delivery — how packets get there</h2>
+<p class="lead">This category builds the private network your resources live in and the doors that let the right traffic in. Doc 1 covered the core of it deeply (VPC, subnets, routing, security groups, ALB, Route 53); here's the catalog view plus the adjacent pieces — CDN, API gateway, private connectivity — you'll meet as soon as you go past one app.</p>
+
+<div class="svccard core"><div class="hd"><h5>Amazon VPC <span class="ab">+ subnets, route tables, IGW, NAT</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Your private virtual network in a Region. Inside it you carve public/private subnets, set route tables, and attach gateways (IGW for two-way internet, NAT for outbound-only).</div>
+  <div class="reach"><b>Reach for it when:</b> always — it's the floor everything else plugs into.</div>
+  <div class="nexa"><b>NEXA:</b> 10.0.0.0/16, public subnets for the app/ALB, private subnets for RDS, no NAT needed. Deep dive: doc 1 §4–5.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Security Groups &amp; NACLs</h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">The network firewalls. Security groups (stateful, attach to a resource, can reference other groups) are your main tool; NACLs (stateless, per-subnet) are a coarse backstop usually left at default.</div>
+  <div class="reach"><b>Reach for it when:</b> every resource — define what may reach it.</div>
+  <div class="nexa"><b>NEXA:</b> App SG (443/80 in) and DB SG (5432 only from the App SG). Deep dive: doc 1 §6.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Elastic Load Balancing <span class="ab">ALB / NLB / GWLB</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Distributes incoming traffic across targets and health-checks them. <b>ALB</b> (layer 7, HTTP/S) is the web default; <b>NLB</b> (layer 4, raw TCP/UDP, extreme throughput) and <b>GWLB</b> (for inline appliances) are the specialised siblings.</div>
+  <div class="reach"><b>Reach for it when:</b> you need a stable front door, TLS termination, health checks, or HA across AZs.</div>
+  <div class="nexa"><b>NEXA:</b> an <b>ALB</b> — the stable HTTPS front door that protects SSO. (NLB/GWLB don't apply.) Deep dive: doc 1 §8.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon Route 53</h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">AWS's DNS. Maps <code class="inl">nexa.procdna.com</code> to the ALB; also does health-based and latency-based routing if you ever need it.</div>
+  <div class="reach"><b>Reach for it when:</b> you need a name pointing at AWS resources (or AWS to host the zone).</div>
+  <div class="nexa"><b>NEXA:</b> the stable subdomain — the SSO long-pole. Deep dive: doc 1 §9.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon CloudFront <span class="ab">CDN</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A global content-delivery network: caches your content at edge locations worldwide so users hit a nearby copy. Also a natural place to attach WAF and serve a cert.</div>
+  <div class="reach"><b>Reach for it when:</b> you have a geographically spread audience and cacheable assets, or want edge DDoS protection.</div>
+  <div class="nexa"><b>NEXA:</b> not needed at 55 internal users — but it's the honest answer to "US + India latency" if it ever mattered: put CloudFront in front, and users hit a near edge. A clean phase-2 lever, not a day-1 need.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon API Gateway</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A managed front door specifically for APIs — throttling, auth, request validation — usually fronting Lambda functions.</div>
+  <div class="reach"><b>Reach for it when:</b> you're building a serverless (Lambda-backed) API and want managed throttling/keys without running a server.</div>
+  <div class="nexa"><b>NEXA:</b> not applicable — NEXA's API routes live <em>inside</em> the Next.js app behind the ALB, so the ALB already plays the "API front door" role.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>VPC Endpoints &amp; PrivateLink</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A private path from your VPC to an AWS service (like S3) or another VPC's service, without traversing the public internet — and without a NAT gateway.</div>
+  <div class="reach"><b>Reach for it when:</b> a <em>private</em>-subnet resource needs to reach S3/other services, or security policy forbids public-internet egress.</div>
+  <div class="nexa"><b>NEXA:</b> not needed while the app is in a public subnet. The moment security review moves the app to a private subnet, an <b>S3 Gateway Endpoint</b> is the cheaper, safer answer than a NAT gateway. Worth knowing now.</div>
+</div>
+
+<div class="twocol">
+  <div class="svccard far"><div class="hd"><h5>Transit Gateway · VPC Peering</h5><span class="tier far">know the name</span></div>
+    <div class="what">Ways to connect many VPCs together (peering = 1:1; transit gateway = hub-and-spoke for many).</div>
+    <div class="reach"><b>NEXA:</b> only relevant once the firm runs many VPCs that must talk.</div>
+  </div>
+  <div class="svccard far"><div class="hd"><h5>Direct Connect · Site-to-Site VPN · Global Accelerator</h5><span class="tier far">know the name</span></div>
+    <div class="what">Private leased line to AWS / encrypted tunnel from on-prem / anycast network acceleration.</div>
+    <div class="reach"><b>NEXA:</b> enterprise-network plumbing — not part of this app.</div>
+  </div>
+</div>
+
+<!-- ============ 3. STORAGE ============ -->
+<h2 class="s" id="storage"><span class="n">3</span>Storage — where files and disks live</h2>
+<p class="lead">Three storage shapes, and the mistake is using the wrong one. <b>Objects</b> (whole files, accessed by name) → S3. <b>Block</b> (a virtual disk attached to one server) → EBS. <b>Shared filesystem</b> (many servers mount the same folder) → EFS. Get the shape right and the service is obvious.</p>
+
+<div class="diagram">
+  <span class="tag">Three storage shapes</span>
+  <div class="flow">
+    <div class="stage" style="min-width:520px;background:#FFF3E8;border-color:#EC7211">OBJECT — S3<span class="sub">whole files by key · infinite · accessed over HTTPS · NOT a filesystem</span></div>
+    <div class="branch">use for: documents, uploads, backups, static assets — NEXA's SOW/PO files</div>
+    <div class="stage" style="min-width:520px;background:#FFF3E8;border-color:#EC7211">BLOCK — EBS<span class="sub">a virtual hard disk attached to ONE EC2 instance · the OS + app live here</span></div>
+    <div class="branch">use for: the boot/data disk of a server — NEXA's EC2 root volume</div>
+    <div class="stage" style="min-width:520px">SHARED FILE — EFS<span class="sub">a network filesystem MANY instances can mount at once</span></div>
+    <div class="branch">use for: shared state across many servers — NEXA doesn't need this</div>
+  </div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon S3 <span class="ab">Simple Storage Service</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Object storage — files in named buckets, durable, effectively infinite, reached over HTTPS (not mounted). The default home for anything that's a "file."</div>
+  <div class="reach"><b>Reach for it when:</b> documents, user uploads, backups, exports, static web assets, data-lake files.</div>
+  <div class="nexa"><b>NEXA:</b> the SOW/PO documents — private bucket, Block Public Access on, served via 1-hour presigned URLs. Deep dive: doc 1 §11.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon EBS <span class="ab">Elastic Block Store</span></h5><span class="tier core">comes with EC2</span></div>
+  <div class="what">The virtual disk attached to an EC2 instance. <code class="inl">gp3</code> is the standard general-purpose SSD. Lives in one AZ; snapshot it to S3 for backup.</div>
+  <div class="reach"><b>Reach for it when:</b> any EC2 instance — it needs a root volume. You rarely think about it beyond picking size/type.</div>
+  <div class="nexa"><b>NEXA:</b> a small <code class="inl">gp3</code> root volume (~20–30 GB) for OS + app + build. Documents go to S3, so it stays small. Mentioned in doc 1 §7.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>S3 storage classes &amp; Glacier</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">S3 isn't one price — it's tiers. Standard (hot), Infrequent Access (cooler/cheaper), Glacier (archive, retrieval in minutes-to-hours). Lifecycle rules move objects between them automatically.</div>
+  <div class="reach"><b>Reach for it when:</b> you have data that ages — keep recent docs hot, auto-archive old ones to cut cost.</div>
+  <div class="nexa"><b>NEXA:</b> not needed now, but a tidy future optimisation — lifecycle old SOW/PO docs to a cheaper class after N months. Pair with the versioning that's already on.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon EFS <span class="ab">Elastic File System</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A managed network filesystem (NFS) that many instances/containers can mount simultaneously — shared, POSIX, grows automatically.</div>
+  <div class="reach"><b>Reach for it when:</b> multiple compute nodes genuinely need to read/write the <em>same</em> files (legacy apps, shared upload dirs).</div>
+  <div class="nexa"><b>NEXA:</b> deliberately not used — files go to S3, which is the cloud-native choice and keeps the app stateless. Know EFS exists so you don't reinvent it.</div>
+</div>
+
+<div class="svccard far"><div class="hd"><h5>FSx · Storage Gateway · AWS Backup</h5><span class="tier far">know the name</span></div>
+  <div class="what">FSx = managed Windows/Lustre filesystems; Storage Gateway = bridge on-prem storage to AWS; AWS Backup = centralised backup policy across services.</div>
+  <div class="reach"><b>NEXA:</b> AWS Backup could one day centralise RDS+EBS snapshots under one policy; the others are for enterprise/on-prem scenarios.</div>
+</div>
+
+<!-- ============ 4. DATABASES ============ -->
+<h2 class="s" id="db"><span class="n">4</span>Databases — where structured data lives</h2>
+<p class="lead">The richest category to get lost in, because AWS has a database for every data <em>shape</em>. But the choice is almost always made by the shape of your data, not by preference. NEXA is relational, so RDS — but knowing the alternatives tells you when you'd <em>add</em> one.</p>
+
+<div class="tree2">
+  <div class="qrow"><div class="q">Is the data relational (tables, joins, transactions, strong consistency)?</div>
+    <div class="opts"><div class="opt"><span class="a">Yes →</span> <span class="r"><span class="svc">RDS</span> (or <span class="svc">Aurora</span> for scale). This is NEXA.</span></div>
+    <div class="opt"><span class="a">No →</span> <span class="r">keep going ↓</span></div></div>
+  </div>
+  <div class="qrow"><div class="q">Is it simple key-value / document lookups at huge scale, no joins?</div>
+    <div class="opts"><div class="opt"><span class="a">Yes →</span> <span class="r"><span class="svc">DynamoDB</span> — serverless NoSQL, single-digit-ms.</span></div>
+    <div class="opt"><span class="a">No →</span> <span class="r">keep going ↓</span></div></div>
+  </div>
+  <div class="qrow"><div class="q">Do you just need to cache hot data / sessions to take load off the DB?</div>
+    <div class="opts"><div class="opt"><span class="a">Yes →</span> <span class="r"><span class="svc">ElastiCache</span> (Redis/Memcached).</span></div>
+    <div class="opt"><span class="a">No →</span> <span class="r">keep going ↓</span></div></div>
+  </div>
+  <div class="qrow"><div class="q">Is it analytics over huge historical datasets (reporting, BI)?</div>
+    <div class="opts"><div class="opt"><span class="a">Yes →</span> <span class="r"><span class="svc">Redshift</span> (warehouse) or query S3 with <span class="svc">Athena</span>.</span></div>
+    <div class="opt"><span class="a">No →</span> <span class="r">it's probably one of the specialised stores (graph, time-series, ledger) — rare.</span></div></div>
+  </div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Amazon RDS <span class="ab">Relational Database Service</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Managed relational databases — PostgreSQL, MySQL, MariaDB, SQL Server, Oracle. AWS handles backups, patching, and optional failover; you get an endpoint.</div>
+  <div class="reach"><b>Reach for it when:</b> you have relational data and want a managed SQL engine without running it yourself. The default for most apps.</div>
+  <div class="nexa"><b>NEXA:</b> PostgreSQL 16 in private subnets, encrypted, SSL-only, 5432 from the App SG. Holds everything except documents. Deep dive: doc 1 §10.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon Aurora</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">AWS's own PostgreSQL/MySQL-compatible engine — same SQL, but a re-architected storage layer that's faster, auto-scaling, and more resilient. A drop-in upgrade from RDS Postgres.</div>
+  <div class="reach"><b>Reach for it when:</b> you outgrow standard RDS on performance/scale, or want Aurora Serverless v2 to scale the DB with load.</div>
+  <div class="nexa"><b>NEXA:</b> overkill at this scale, but the natural "the DB is the bottleneck" upgrade path — and it's Postgres-compatible, so the migration would be minimal if it ever came to that.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>RDS Proxy</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A managed connection pooler that sits between your app and RDS, sharing and reusing DB connections.</div>
+  <div class="reach"><b>Reach for it when:</b> many short-lived clients (e.g. Lambda) would otherwise exhaust the DB's connections.</div>
+  <div class="nexa"><b>NEXA:</b> not needed — one long-lived EC2 process pools in-app (recall the <code class="inl">max=1</code> fix, doc 1 §10.4). Relevant only if NEXA ever moved to many small compute units.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon DynamoDB</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Serverless NoSQL key-value/document store — single-digit-millisecond reads at any scale, no servers, no connection limits. A completely different data model from SQL (no joins).</div>
+  <div class="reach"><b>Reach for it when:</b> massive-scale, simple-access-pattern data — sessions, event logs, hot lookups — where you don't need relational joins.</div>
+  <div class="nexa"><b>NEXA:</b> wrong fit for the core (it's deeply relational — opportunities join pricing joins approvals). Could one day back a specific high-write side-feature, but not the main data.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon ElastiCache <span class="ab">Redis / Memcached</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">An in-memory cache. Stores hot data (query results, sessions) in RAM so repeated reads skip the database entirely.</div>
+  <div class="reach"><b>Reach for it when:</b> a few expensive queries dominate load, or you want a fast shared session/store across many app instances.</div>
+  <div class="nexa"><b>NEXA:</b> not needed at this scale, but the first thing you'd add if the dashboard's pipeline aggregations got slow under more users — cache the computed numbers instead of recomputing per request.</div>
+</div>
+
+<div class="svccard far"><div class="hd"><h5>Redshift · DocumentDB · Neptune · Timestream · Keyspaces · QLDB</h5><span class="tier far">know the name</span></div>
+  <div class="what">The specialised stores: Redshift = data warehouse (BI/analytics); DocumentDB = managed MongoDB-compatible; Neptune = graph; Timestream = time-series; Keyspaces = Cassandra; QLDB = ledger.</div>
+  <div class="reach"><b>NEXA:</b> none apply. If the firm ever wants heavy reporting <em>across</em> NEXA's data, Redshift (or Athena-over-S3) is the category — but that's a separate analytics project, not this app.</div>
+</div>
+
+<div class="rec"><span class="h">The database rule of thumb</span> <b>One relational database (RDS) handles the vast majority of normal apps.</b> You add a second store only to solve a <em>specific</em> pain: a cache (ElastiCache) for read load, a warehouse (Redshift) for analytics, DynamoDB for a genuinely huge simple-access feature. Resist collecting databases — each one is operational surface area. NEXA correctly uses exactly one.</div>
+
+<!-- ============ 5. SECURITY ============ -->
+<h2 class="s" id="security"><span class="n">5</span>Security &amp; identity — who's allowed, and is it encrypted</h2>
+<p class="lead">For a finance-data app this is the category that earns sign-off, so it has the most Core entries. Split it in your head into three sub-jobs: <b>identity</b> (who can do what), <b>encryption</b> (keys &amp; secrets), and <b>protection/detection</b> (firewalls &amp; threat-spotting).</p>
+
+<h3>5.1 — Identity: who can do what</h3>
+<div class="svccard core"><div class="hd"><h5>AWS IAM <span class="ab">Identity &amp; Access Management</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">The permission system for <em>AWS itself</em> — principals, policies, roles. Decides if an identity may perform an action on a resource. Default deny.</div>
+  <div class="reach"><b>Reach for it when:</b> always — every machine and human acting on AWS needs an identity and a scoped policy.</div>
+  <div class="nexa"><b>NEXA:</b> the EC2 instance role (S3 + secrets + logs, least privilege) and the GitHub Actions OIDC deploy role. Deep dive: doc 1 §12.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>IAM Identity Center <span class="ab">formerly AWS SSO</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Central human sign-in across many AWS <em>accounts</em> — often wired to the corporate IdP (Azure AD) so people log into the AWS console with their work identity.</div>
+  <div class="reach"><b>Reach for it when:</b> a team needs console/CLI access across several accounts without juggling per-account IAM users.</div>
+  <div class="nexa"><b>NEXA:</b> this is how <em>you and the SDE</em> would get into the AUXO console — a firm/IT concern, distinct from how NEXA's own users log in (that's Azure AD inside the app). Don't confuse the two.</div>
+</div>
+
+<div class="svccard far"><div class="hd"><h5>Amazon Cognito</h5><span class="tier far">know the name</span></div>
+  <div class="what">Managed user sign-up/sign-in for <em>your application's end users</em> (user pools, social/enterprise federation).</div>
+  <div class="reach"><b>Reach for it when:</b> you need an app login system and don't already have one.</div>
+  <div class="nexa"><b>NEXA:</b> not needed — NEXA already delegates user login to Azure AD via NextAuth. Cognito would be the AWS-native alternative if it didn't.</div>
+</div>
+
+<h3>5.2 — Encryption: keys &amp; secrets</h3>
+<div class="svccard core"><div class="hd"><h5>AWS KMS <span class="ab">Key Management Service</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Holds the encryption keys behind every "encrypted at rest" in AWS — RDS storage, S3 objects, SSM SecureStrings. Access to keys is itself IAM-controlled and audited.</div>
+  <div class="reach"><b>Reach for it when:</b> you enable encryption anywhere (which, for finance data, is everywhere).</div>
+  <div class="nexa"><b>NEXA:</b> the keys for RDS, S3, and secret encryption. Mostly you just choose "encrypt with KMS" and move on. Deep dive: doc 1 §13.2.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>SSM Parameter Store &amp; Secrets Manager</h5><span class="tier core">NEXA needs one</span></div>
+  <div class="what">Encrypted stores for non-AWS secrets (DB password, Azure client secret, HMAC keys). Parameter Store is free &amp; simple; Secrets Manager adds automatic rotation for a per-secret fee.</div>
+  <div class="reach"><b>Reach for it when:</b> you have any secret — never put it in a plaintext <code class="inl">.env</code> that bakes into images/snapshots.</div>
+  <div class="nexa"><b>NEXA:</b> Parameter Store (SecureString) is the pragmatic default; pull at boot via the instance role. Deep dive: doc 1 §13.1.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>AWS Certificate Manager <span class="ab">ACM</span></h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Issues and <em>auto-renews</em> free TLS certificates for your domains, attached to the ALB/CloudFront. No more expiry-day fire drills.</div>
+  <div class="reach"><b>Reach for it when:</b> anything serving HTTPS through an ALB or CloudFront.</div>
+  <div class="nexa"><b>NEXA:</b> the cert for <code class="inl">nexa.procdna.com</code> on the ALB listener. Must be in the ALB's Region. Deep dive: doc 1 §9.2.</div>
+</div>
+
+<h3>5.3 — Protection &amp; detection: firewalls and threat-spotting</h3>
+<div class="svccard adj"><div class="hd"><h5>AWS WAF <span class="ab">Web Application Firewall</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Rule-based filtering at the edge — rate-limiting, IP allow/deny, common-attack signatures — attached to an ALB or CloudFront.</div>
+  <div class="reach"><b>Reach for it when:</b> you want to throttle brute-force attempts or lock sensitive endpoints to an IP range.</div>
+  <div class="nexa"><b>NEXA:</b> the plan calls for it on the secret-bearing endpoints (the emergency/login routes). The ALB is its attach point — a strong reason to run the ALB. Mentioned in doc 1 §8.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS CloudTrail</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Records <em>every API call made to AWS</em> in your account — who did what, when, from where. The audit log of the cloud itself (distinct from your app's own activity log).</div>
+  <div class="reach"><b>Reach for it when:</b> always-on, ideally account-wide. It's how you answer "who changed that security group?"</div>
+  <div class="nexa"><b>NEXA:</b> the firm likely enables this account-wide. It complements NEXA's in-app <code class="inl">ActivityLog</code> — CloudTrail audits the <em>infrastructure</em>, the app audits the <em>business actions</em>.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>GuardDuty · Shield</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">GuardDuty = managed threat detection (watches logs for malicious behaviour); Shield = DDoS protection (Standard is automatic &amp; free; Advanced is paid).</div>
+  <div class="reach"><b>Reach for it when:</b> GuardDuty as a low-effort always-on safety net; Shield Advanced only under real DDoS risk.</div>
+  <div class="nexa"><b>NEXA:</b> GuardDuty is a sensible firm-wide default; Shield Standard already covers you for free. Neither is a build task for you.</div>
+</div>
+
+<div class="svccard far"><div class="hd"><h5>Security Hub · Inspector · Macie · Config</h5><span class="tier far">know the name</span></div>
+  <div class="what">Security Hub = aggregates findings; Inspector = scans for vulnerabilities; Macie = finds sensitive data in S3; Config = tracks resource configuration &amp; compliance over time.</div>
+  <div class="reach"><b>NEXA:</b> firm/governance-tier tooling. Macie is conceptually interesting (it could flag if a confidential doc landed in the wrong bucket), but none are yours to set up.</div>
+</div>
+
+<!-- ============ 6. MANAGEMENT ============ -->
+<h2 class="s" id="mgmt"><span class="n">6</span>Management &amp; monitoring — is it healthy, what did it cost</h2>
+<p class="lead">The category that keeps you sane after launch: observability, governance, cost, and infrastructure-as-code. You need a little of this for NEXA and should recognise the rest as the firm's domain.</p>
+
+<div class="svccard core"><div class="hd"><h5>Amazon CloudWatch</h5><span class="tier core">NEXA needs it</span></div>
+  <div class="what">Logs, metrics, and alarms. Collects your app's stdout, tracks CPU/memory/RDS-connections/ALB-latency, and alerts when something crosses a line.</div>
+  <div class="reach"><b>Reach for it when:</b> always — it's your eyes on the new infra (Vercel's logging vanishes on migration).</div>
+  <div class="nexa"><b>NEXA:</b> app logs → a <code class="inl">/nexa/*</code> log group; a couple of alarms (5xx spike, no healthy targets). Deep dive: doc 1 §14.</div>
+</div>
+
+<div class="svccard core"><div class="hd"><h5>Cost Explorer &amp; Budgets</h5><span class="tier core">turn it on early</span></div>
+  <div class="what">Cost Explorer visualises spend by service/tag; Budgets emails you when spend crosses a threshold you set.</div>
+  <div class="reach"><b>Reach for it when:</b> day one — set a budget alarm before you forget a running resource.</div>
+  <div class="nexa"><b>NEXA:</b> set a small monthly budget alert so a left-on dev instance or a surprise NAT/data-transfer charge can't quietly grow. The single best habit for a newcomer.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>CloudFormation &amp; AWS CDK <span class="ab">infrastructure as code</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Define your whole stack (VPC, EC2, RDS, IAM…) as code — CloudFormation in YAML/JSON, CDK in real languages (TypeScript!) — so it's repeatable, reviewable, and tear-down/rebuildable.</div>
+  <div class="reach"><b>Reach for it when:</b> you've clicked it together once and now want it reproducible across dev/staging/prod.</div>
+  <div class="nexa"><b>NEXA:</b> build it in the console first to learn (doc 1 §18), then capture it as <b>CDK</b> (TypeScript suits your stack) so the dev→prod environments in doc 1 §16.4 are identical by construction. The right "phase 2" discipline. <span class="tier far" style="margin-left:4px">Terraform</span> is the popular non-AWS alternative the firm may prefer.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS Organizations</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Manages many AWS accounts under one umbrella — consolidated billing and Service Control Policies (guardrails that apply account-wide).</div>
+  <div class="reach"><b>Reach for it when:</b> a firm runs more than one account (almost all do).</div>
+  <div class="nexa"><b>NEXA:</b> the AUXO account lives inside the firm's Organization — context for "where does a <code class="inl">nexa-dev</code> sub-account come from." A firm/IT concern, but know the word. Mentioned in doc 1 §2.1.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS Systems Manager <span class="ab">SSM</span></h5><span class="tier adj">you already use part of it</span></div>
+  <div class="what">A grab-bag of ops tools: Parameter Store (you're using it for secrets), Session Manager (shell into an instance with <em>no</em> SSH key or open port), Patch Manager, Run Command.</div>
+  <div class="reach"><b>Reach for it when:</b> you want keyless, audited access to an instance, or to run a command/patch across fleet.</div>
+  <div class="nexa"><b>NEXA:</b> <b>Session Manager</b> is a quiet win — connect to the EC2 box through the console with no SSH key and no port 22 open, which closes an attack surface. Parameter Store you already plan to use.</div>
+</div>
+
+<div class="svccard far"><div class="hd"><h5>Control Tower · Trusted Advisor · Health Dashboard</h5><span class="tier far">know the name</span></div>
+  <div class="what">Control Tower = automated multi-account landing zone; Trusted Advisor = best-practice/cost/security checks; Health Dashboard = AWS telling you about outages affecting you.</div>
+  <div class="reach"><b>NEXA:</b> Trusted Advisor is worth a glance for free cost/security tips; the others are firm-scale governance.</div>
+</div>
+
+<!-- ============ 7. DEV TOOLS ============ -->
+<h2 class="s" id="devtools"><span class="n">7</span>Developer tools &amp; CI/CD — how code ships</h2>
+<p class="lead">How code travels from the repo to running infrastructure. NEXA already made the key choice — <b>GitHub Actions</b> — so most of AWS's own Code* family is "know it exists." The one AWS piece you'll genuinely use on the container path is ECR.</p>
+
+<div class="svccard core"><div class="hd"><h5>Amazon ECR <span class="ab">Elastic Container Registry</span></h5><span class="tier core">on the ECS path</span></div>
+  <div class="what">Private Docker-image registry (covered under Compute too — it bridges both jobs). CI pushes images here; ECS/Fargate pulls them.</div>
+  <div class="reach"><b>Reach for it when:</b> you containerise — it's where the images live.</div>
+  <div class="nexa"><b>NEXA:</b> only on the ECS upgrade. GitHub Actions builds the image, pushes to ECR, updates the service. Mentioned in doc 1 §17.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>The AWS Code* family <span class="ab">CodePipeline · CodeBuild · CodeDeploy</span></h5><span class="tier adj">alternative to GitHub Actions</span></div>
+  <div class="what">AWS's native CI/CD: CodePipeline orchestrates, CodeBuild builds, CodeDeploy rolls out. The AWS-resident equivalent of what GitHub Actions does for you.</div>
+  <div class="reach"><b>Reach for it when:</b> a firm wants its pipeline inside AWS rather than in GitHub, or needs deep CodeDeploy/ECS integration.</div>
+  <div class="nexa"><b>NEXA:</b> not needed — you chose GitHub Actions + OIDC, which is simpler and keeps CI next to the code. Recognise these names if the SDE proposes them instead.</div>
+</div>
+
+<div class="rec aws"><span class="h">Why GitHub Actions + OIDC beats stored keys (recap)</span> The modern pattern, already baked into NEXA's plan: GitHub and AWS trust each other directly via OIDC, so a deploy gets <em>short-lived</em> credentials and no AWS access key ever sits in GitHub. This is the keyless federation from doc 1 §12.6 — the same idea whether your CI is GitHub Actions or the Code* family.</div>
+
+<!-- ============ 8. INTEGRATION ============ -->
+<h2 class="s" id="integration"><span class="n">8</span>Integration &amp; messaging — how parts talk asynchronously</h2>
+<p class="lead">These services let pieces of a system communicate <em>without waiting on each other</em> — queues, events, workflows, email. NEXA is a single app today, so these are mostly Adjacent — but they're exactly the tools you'd reach for to make it more resilient, and one (SES) directly shadows a feature NEXA already has.</p>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon SQS <span class="ab">Simple Queue Service</span></h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A managed message queue. One part drops a job on the queue; another picks it up later. Decouples a slow task from the request that triggered it.</div>
+  <div class="reach"><b>Reach for it when:</b> a request kicks off slow work (generate a big export, send a batch of emails) that shouldn't block the user.</div>
+  <div class="nexa"><b>NEXA:</b> the clean fix for the synchronous Excel export/parse that briefly blocks the Node thread (doc 1 §7.3) — enqueue the job, process it off the request path. A real, concrete future use.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon SNS &amp; EventBridge</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">Publish/subscribe messaging. SNS = fan-out notifications to many subscribers; EventBridge = a smarter event bus that routes events by rules (and connects SaaS/AWS events).</div>
+  <div class="reach"><b>Reach for it when:</b> one event should trigger several reactions, or you want services to react to each other without direct coupling.</div>
+  <div class="nexa"><b>NEXA:</b> not needed now. If the approval workflow ever grew (e.g. "on approval, notify Slack <em>and</em> update a dashboard <em>and</em> email finance"), EventBridge is how you'd fan that out cleanly.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>AWS Step Functions</h5><span class="tier adj">meet it soon</span></div>
+  <div class="what">A visual state-machine orchestrator — chains multiple steps (Lambdas, waits, branches) into a reliable, resumable workflow.</div>
+  <div class="reach"><b>Reach for it when:</b> a multi-step process needs reliability, retries, and visibility (think a long approval pipeline with timeouts).</div>
+  <div class="nexa"><b>NEXA:</b> interesting parallel — NEXA's approval state machine is coded in-app today. At much larger scale, Step Functions is what you'd externalise it into. Not needed now; a nice mental bookmark.</div>
+</div>
+
+<div class="svccard adj"><div class="hd"><h5>Amazon SES <span class="ab">Simple Email Service</span></h5><span class="tier adj">shadows a NEXA feature</span></div>
+  <div class="what">Bulk/transactional email sending at low cost — the AWS-native way to send application email.</div>
+  <div class="reach"><b>Reach for it when:</b> your app sends email and you don't already have a provider.</div>
+  <div class="nexa"><b>NEXA:</b> notable because NEXA <em>already</em> sends approval email via <b>Microsoft Graph</b> (so it stays inside the corporate mail identity, and Safe Links work). SES is the AWS alternative you'd consider only if you ever wanted to move email off Microsoft — which the SSO/Safe-Links constraint argues against. Good to know the option, good to know why you're <em>not</em> taking it.</div>
+</div>
+
+<!-- ============ 9. ANALYTICS / AI / REST ============ -->
+<h2 class="s" id="analytics"><span class="n">9</span>Analytics, AI &amp; the rest — named so you're not surprised</h2>
+<p class="lead">A whole-internet's worth of AWS lives out here. None of it is part of NEXA, but you'll see these names constantly, so here's the one-line orientation — enough to know the category when a future problem points at one.</p>
+
+<table>
+  <tr><th>Service</th><th>One-line job</th><th>When its category comes up</th></tr>
+  <tr><td><span class="svc">Athena</span></td><td>Run SQL directly over files in S3, no database to load.</td><td>Ad-hoc querying of logs/exports sitting in S3.</td></tr>
+  <tr><td><span class="svc">Glue</span></td><td>Managed ETL — discover, clean, and move data between stores.</td><td>Building data pipelines that feed a warehouse.</td></tr>
+  <tr><td><span class="svc">Kinesis / MSK</span></td><td>Ingest high-volume streaming data in real time.</td><td>Clickstreams, telemetry, event firehoses.</td></tr>
+  <tr><td><span class="svc">Redshift</span></td><td>Petabyte-scale data warehouse for BI/analytics.</td><td>Heavy reporting across large historical data.</td></tr>
+  <tr><td><span class="svc">QuickSight</span></td><td>Managed BI dashboards/visualisation.</td><td>Business dashboards over a warehouse.</td></tr>
+  <tr><td><span class="svc">EMR</span></td><td>Managed Spark/Hadoop big-data processing.</td><td>Large-scale batch data crunching.</td></tr>
+  <tr><td><span class="svc">SageMaker</span></td><td>Build, train, and host your own ML models.</td><td>Custom machine-learning projects.</td></tr>
+  <tr><td><span class="svc">Bedrock</span></td><td>Call hosted foundation (LLM) models via API.</td><td>Adding generative-AI features to an app.</td></tr>
+  <tr><td><span class="svc">Textract / Comprehend / Rekognition</span></td><td>Pre-built AI: extract text from docs / parse language / analyse images.</td><td>"Read the PDF," "classify this text," "what's in this image."</td></tr>
+  <tr><td><span class="svc">IoT Core</span> · <span class="svc">MediaConvert</span> · <span class="svc">Ground Station</span></td><td>Device fleets / video transcoding / satellites.</td><td>Specialised domains — listed so the names aren't mysterious.</td></tr>
+</table>
+
+<div class="rec aws"><span class="h">One honest forward-look for NEXA</span> The only out-here service with a plausible NEXA future is <span class="svc">Textract</span> (read fields out of uploaded SOW/PO PDFs) or <span class="svc">Bedrock</span> (summarise an opportunity, draft justification text). Both are genuinely "phase 3+" ideas, not migration work — but they're the realistic bridge from "NEXA on AWS" to "NEXA using AWS's higher-level services." Everything else in this section is for different applications entirely.</div>
+
+<!-- ============ 10. SHOPPING LIST ============ -->
+<h2 class="s" id="shopping"><span class="n">10</span>NEXA's shopping list — exactly what to provision</h2>
+<p class="lead">Everything above, distilled to the manifest: the services NEXA actually needs to go live, in a sensible build order, each with its one-step-away upgrade so you know where the road goes next. This is the page to keep open while building.</p>
+
+<table>
+  <tr><th>#</th><th>Service</th><th>Job in NEXA</th><th>Tier</th><th>The adjacent upgrade</th></tr>
+  <tr><td>1</td><td><span class="svc">VPC</span> + subnets, route tables, IGW</td><td>The private network everything sits in</td><td><span class="tier core">core</span></td><td>VPC endpoints if the app goes private</td></tr>
+  <tr><td>2</td><td>Security Groups</td><td>App SG &amp; DB SG firewalls</td><td><span class="tier core">core</span></td><td>WAF on the ALB for edge rules</td></tr>
+  <tr><td>3</td><td><span class="svc">RDS</span> PostgreSQL</td><td>All relational data</td><td><span class="tier core">core</span></td><td>Aurora / Multi-AZ at scale</td></tr>
+  <tr><td>4</td><td><span class="svc">S3</span></td><td>SOW/PO documents (private + presigned)</td><td><span class="tier core">core</span></td><td>Lifecycle to cheaper classes over time</td></tr>
+  <tr><td>5</td><td><span class="svc">IAM</span> roles</td><td>EC2 instance role + GitHub OIDC role</td><td><span class="tier core">core</span></td><td>IAM Identity Center for human console access</td></tr>
+  <tr><td>6</td><td><span class="svc">KMS</span></td><td>Keys behind RDS/S3/secret encryption</td><td><span class="tier core">core</span></td><td>Customer-managed keys for tighter control</td></tr>
+  <tr><td>7</td><td><span class="svc">SSM Parameter Store</span></td><td>App secrets, pulled at boot by the role</td><td><span class="tier core">core</span></td><td>Secrets Manager for auto-rotation</td></tr>
+  <tr><td>8</td><td><span class="svc">EC2</span> + EBS</td><td>Runs the Next.js process</td><td><span class="tier core">core</span></td><td>ECS/Fargate + ECR for containers</td></tr>
+  <tr><td>9</td><td><span class="svc">ALB</span></td><td>Stable HTTPS front door, health checks</td><td><span class="tier core">core</span></td><td>+ CloudFront if global latency matters</td></tr>
+  <tr><td>10</td><td><span class="svc">ACM</span></td><td>Auto-renewing TLS cert on the ALB</td><td><span class="tier core">core</span></td><td>—</td></tr>
+  <tr><td>11</td><td><span class="svc">Route 53</span> (or firm DNS)</td><td>nexa.procdna.com → ALB</td><td><span class="tier core">core</span></td><td>Latency/failover routing policies</td></tr>
+  <tr><td>12</td><td><span class="svc">CloudWatch</span></td><td>Logs, metrics, alarms</td><td><span class="tier core">core</span></td><td>+ CloudTrail (infra audit), GuardDuty</td></tr>
+  <tr><td>13</td><td><span class="svc">Budgets</span></td><td>Spend alarm so nothing grows silently</td><td><span class="tier core">core</span></td><td>Cost Explorer + tag-based cost reports</td></tr>
+  <tr><td>+</td><td>GitHub Actions (+ OIDC)</td><td>CI/CD — build &amp; deploy</td><td><span class="tier core">chosen</span></td><td>ECR on the container path</td></tr>
+</table>
+
+<div class="rec ok"><span class="h">Read this list two ways</span> Top-to-bottom is a reasonable <b>build order</b> (network → firewalls → data → identity → compute → edge → ops), matching the hands-on path in doc 1 §18. The right-hand column is your <b>roadmap</b>: every "adjacent upgrade" is a deliberate later decision, not something to do now. Thirteen core services plus your existing CI — that's the whole footprint of NEXA on AWS. Genuinely not that many.</div>
+
+<!-- ============ 11. SURVIVAL RULES ============ -->
+<h2 class="s" id="survival"><span class="n">11</span>Survival rules — staying oriented across all of it</h2>
+<p class="lead">A handful of cross-cutting reflexes that apply to <em>every</em> service above and save newcomers the most pain. Internalise these and the breadth stops being scary.</p>
+
+<h3>11.1 — "Is this global or Regional?" — ask it every time</h3>
+<p>The single most disorienting thing for newcomers is a resource "vanishing" because you're looking in the wrong Region. Keep this short list in your head:</p>
+<div class="twocol">
+  <div class="rec"><span class="h">Global (Region selector doesn't matter)</span> IAM · Route 53 · CloudFront · WAF (for CloudFront) · Organizations · Budgets. Create them once; they're everywhere.</div>
+  <div class="rec warn"><span class="h">Regional (must match your Region)</span> VPC · EC2 · RDS · S3 buckets (named globally, but data is Regional) · ALB · ACM (for an ALB) · SSM · CloudWatch · KMS keys. <b>If you can't find something, check the Region selector first.</b></div>
+</div>
+
+<h3>11.2 — Tag everything, from the first resource</h3>
+<p>A <b>tag</b> is a key/value label (e.g. <code class="inl">Project=NEXA</code>, <code class="inl">Env=dev</code>). It's tedious-seeming and enormously worth it: tags are how Cost Explorer tells you "NEXA cost $X this month," how you find every NEXA resource to tear down a dev stack, and how access policies can be scoped. Agree a tag convention with the SDE on day one and apply it to <em>every</em> resource.</p>
+
+<h3>11.3 — The cost reflexes that prevent bill surprises</h3>
+<table>
+  <tr><th>Reflex</th><th>Why</th></tr>
+  <tr><td><b>Things bill while idle.</b> An EC2 instance, RDS, a NAT gateway, an ALB all cost money just sitting there — not only when used.</td><td>The classic newcomer surprise is a forgotten dev instance running all month. A <b>Budget alarm</b> (service #13) is the cheap insurance.</td></tr>
+  <tr><td><b>Data transfer <em>out</em> costs; cross-AZ/cross-Region costs.</b></td><td>Moving bytes out of AWS, or between AZs/Regions, has a price. Keep NEXA's pieces in one Region (doc 1 §3) partly for this.</td></tr>
+  <tr><td><b>NAT gateways and idle ALBs are quiet line items.</b></td><td>Both bill hourly + per-GB. NEXA avoids NAT by design; the ALB is a deliberate, known cost.</td></tr>
+  <tr><td><b>Free tier expires.</b></td><td>The 12-month free tier lulls you; set the budget alarm so the cliff doesn't surprise you.</td></tr>
+</table>
+
+<h3>11.4 — The two-question debugging reflex (from doc 1, worth repeating)</h3>
+<div class="rec"><span class="h">When anything won't work, ask in order:</span>
+<ol style="margin:6px 0 0">
+  <li><b>Is it a <span style="color:var(--accentDeep)">place</span> problem?</b> Timeout / connection refused / "can't reach" → routing or a security group. Check subnets, route tables, SGs.</li>
+  <li><b>Is it a <span style="color:var(--awsDeep)">trust</span> problem?</b> "AccessDenied" / "not authorized to perform…" → IAM. Check the role's permission policy (and, for assume-role failures, its trust policy).</li>
+</ol>
+Naming which of the two it is tells you <em>which console to open</em> — and that's most of the battle. Almost every AWS error a newcomer hits is one of these two sentences.</div>
+
+<h3>11.5 — Don't collect services</h3>
+<div class="rec aws"><span class="h">The discipline that matters most</span> Every service you add is operational surface area — another thing to secure, patch, pay for, and reason about. NEXA's whole footprint is ~13 services <em>on purpose</em>. Resist adding a cache, a queue, a second database, or a fancier compute model until a <em>specific</em> pain demands it. The mark of someone who actually understands AWS isn't how many services they use — it's how few they need to.</div>
+
+<!-- ============ 12. GLOSSARY ============ -->
+<h2 class="s" id="glossary"><span class="n">12</span>Quick acronym decoder</h2>
+<p class="lead">AWS speaks in acronyms. This is the fast lookup for the ones in this doc (the full conceptual glossary is in doc 1 §19).</p>
+
+<table>
+  <tr><th>Acronym</th><th>Expands to</th><th>In one line</th></tr>
+  <tr><td><b>EC2</b></td><td>Elastic Compute Cloud</td><td>A rented virtual machine</td></tr>
+  <tr><td><b>ECS / EKS</b></td><td>Elastic Container Service / …Kubernetes Service</td><td>Run containers (AWS-way / Kubernetes-way)</td></tr>
+  <tr><td><b>ECR</b></td><td>Elastic Container Registry</td><td>Private Docker-image store</td></tr>
+  <tr><td><b>VPC</b></td><td>Virtual Private Cloud</td><td>Your private network in a Region</td></tr>
+  <tr><td><b>IGW / NAT</b></td><td>Internet Gateway / Network Address Translation</td><td>Two-way internet door / outbound-only valve</td></tr>
+  <tr><td><b>SG / NACL</b></td><td>Security Group / Network ACL</td><td>Resource firewall / subnet firewall</td></tr>
+  <tr><td><b>ALB / NLB / ELB</b></td><td>Application / Network / Elastic Load Balancer</td><td>Layer-7 / layer-4 / the family</td></tr>
+  <tr><td><b>S3</b></td><td>Simple Storage Service</td><td>Object (file) storage</td></tr>
+  <tr><td><b>EBS / EFS</b></td><td>Elastic Block Store / Elastic File System</td><td>A disk for one server / a shared filesystem</td></tr>
+  <tr><td><b>RDS</b></td><td>Relational Database Service</td><td>Managed SQL database</td></tr>
+  <tr><td><b>IAM</b></td><td>Identity and Access Management</td><td>Who-can-do-what on AWS</td></tr>
+  <tr><td><b>KMS</b></td><td>Key Management Service</td><td>Encryption keys</td></tr>
+  <tr><td><b>SSM</b></td><td>Systems Manager</td><td>Ops toolbox (incl. Parameter Store, Session Manager)</td></tr>
+  <tr><td><b>ACM</b></td><td>AWS Certificate Manager</td><td>Auto-renewing TLS certs</td></tr>
+  <tr><td><b>WAF</b></td><td>Web Application Firewall</td><td>Edge filtering / rate-limiting</td></tr>
+  <tr><td><b>SQS / SNS / SES</b></td><td>Simple Queue / Notification / Email Service</td><td>Queue / pub-sub / email</td></tr>
+  <tr><td><b>CDN</b></td><td>Content Delivery Network (CloudFront)</td><td>Cache content near users</td></tr>
+  <tr><td><b>OIDC</b></td><td>OpenID Connect</td><td>Token-based trust (keyless CI deploys)</td></tr>
+  <tr><td><b>IaC</b></td><td>Infrastructure as Code (CloudFormation / CDK)</td><td>Define infra as reviewable code</td></tr>
+  <tr><td><b>AZ</b></td><td>Availability Zone</td><td>An isolated data centre in a Region</td></tr>
+</table>
+
+<div class="rec aws" style="margin-top:30px"><span class="h">You now have both halves</span> Doc 1 taught the core services <em>deeply, through NEXA</em>. This doc gave you the <em>whole menu, triaged</em> — so when a future feature or a conversation with the SDE name-drops a service, you know its job, its tier, and whether NEXA should care. The two together are your map and your tutorial. Next stop is the hands-on build path in doc 1 §18, with this shopping list (§10) beside it.</div>
+
+</div><!-- /.body -->
+
+<div class="foot">
+  <b>The AWS Service Map</b> — companion to “AWS, explained through NEXA.” Services are triaged for <em>this</em> application (a finance-data internal tool); a different app would re-tier them. Tiers and recommendations are starting points to confirm with the senior SDE against the firm's AWS standards. Service availability, names, and pricing models evolve — verify specifics against current AWS documentation when you build.
+  <br><br>Print to PDF: this page is laid out to export cleanly via your browser's “Print → Save as PDF.”
+</div>
+
+</main>
+</div>
+</body>
+</html>
