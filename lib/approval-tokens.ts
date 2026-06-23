@@ -14,7 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { createHmac } from 'crypto'
 
-const TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+const TTL_MS = 14 * 24 * 60 * 60 * 1000 // 14 days - 2 weeks
 
 function secret(): string {
   return process.env.NEXTAUTH_SECRET ?? ''

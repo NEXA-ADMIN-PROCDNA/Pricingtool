@@ -152,7 +152,7 @@ export function TabEfforts({
                     W{i + 1}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[120px]">Total Employee Cost</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[100px]">Total Hours</th>
                 <th className="px-2 py-3 w-8" />
               </tr>
             </thead>
@@ -329,9 +329,9 @@ export function TabEfforts({
                         </td>
                       )
                     })}
-                    {/* Total Cost */}
+                    {/* Total Hours */}
                     <td className="px-4 py-2.5 text-right font-semibold text-slate-800 whitespace-nowrap">
-                      {sr.isActive && rowCost > 0 ? fmtMoneyExact(rowCost) : <span className="text-slate-300 font-normal">$0</span>}
+                      {totalHrs > 0 ? totalHrs.toLocaleString() : <span className="text-slate-300 font-normal">0</span>}
                     </td>
                     {/* Delete */}
                     <td className="px-2 py-2.5">
@@ -371,7 +371,13 @@ export function TabEfforts({
                       </td>
                     )
                   })}
-                  <td className="px-4 py-3 text-right font-bold text-indigo-700">{fmtMoneyExact(versionMetrics.totalCost)}</td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-700">
+                    {staffRows.filter(r => r.isActive).reduce((s, sr) => {
+                      const hm: Record<string, number> = {}
+                      sr.weeklyHours.forEach(wh => { hm[wh.weekStartDate] = wh.hours })
+                      return s + weeks.reduce((ws, w) => ws + (hm[weekKey(w)] ?? 0), 0)
+                    }, 0).toLocaleString()}
+                  </td>
                   <td />
                 </tr>
               )}

@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       role:     adminUser.role,
       location: adminUser.location,
       iat:      now,
-      exp:      now + 8 * 60 * 60,
+      exp:      now + 1 * 60 * 60,
     },
   })
 

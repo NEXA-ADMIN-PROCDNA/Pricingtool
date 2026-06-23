@@ -145,7 +145,7 @@ export async function POST(
           financialSnapshots: { orderBy: { month: 'asc' } },
         },
       })
-    }, { timeout: 30_000 })
+    }, { timeout: 50_000 })
 
     return NextResponse.json(newVersion, { status: 201 })
   } catch (err) {
