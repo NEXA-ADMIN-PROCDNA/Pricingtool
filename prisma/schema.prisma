@@ -317,6 +317,7 @@ model StaffingResource {
   rateCard               RateCard?      @relation(fields: [rateCardId], references: [id])
 
   resourceDesignation    String                     // exact position name from rate card
+  potMem                 String?        @map("pot_mem")    // potential team member (full name, free text)
   location               Location       @default(INDIA)
   domain                 String?                            // copied from rate card
   isBillable             Boolean        @default(true)

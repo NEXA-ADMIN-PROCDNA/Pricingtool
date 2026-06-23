@@ -18,6 +18,7 @@ export type StaffRow = {
   id: string
   rateCardId: string | null
   resourceDesignation: string
+  potMem: string | null          // potential team member
   location: string
   domain: string | null
   utilization: number | null

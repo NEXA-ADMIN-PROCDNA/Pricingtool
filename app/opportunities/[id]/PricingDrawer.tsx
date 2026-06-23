@@ -60,6 +60,7 @@ export function PricingDrawer({
     id: sr.id,
     rateCardId: sr.rateCardId ?? null,
     resourceDesignation: sr.resourceDesignation,
+    potMem: sr.potMem ?? null,
     location: sr.location,
     domain: sr.domain ?? null,
     utilization: sr.utilization != null ? Number(sr.utilization) : null,
@@ -151,6 +152,7 @@ export function PricingDrawer({
       id,
       rateCardId: rc.id,
       resourceDesignation: rc.jobRole,
+      potMem: null,
       location: rc.location,
       costRatePerHour: rc.costRatePerHour,
       systemBillRatePerHour: rc.billRatePerHour,
@@ -351,6 +353,7 @@ export function PricingDrawer({
             effectiveBillRate: row.effectiveBillRate,
             isActive:          row.isActive,
             isBillable:        row.isBillable,
+            potMem:            row.potMem,
             weekEntries:       row.weeklyHours,
           }),
         }))
@@ -390,6 +393,7 @@ export function PricingDrawer({
             effectiveBillRate: row.effectiveBillRate,
             isActive:          row.isActive,
             isBillable:        row.isBillable,
+            potMem:            row.potMem,
             weekEntries:       row.weeklyHours,
           }),
         })

@@ -138,6 +138,7 @@ export function TabEfforts({
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-20 bg-slate-50 z-20 min-w-[170px] whitespace-nowrap border-r border-slate-200">
                   Role
                 </th>
+                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 whitespace-nowrap min-w-[140px]">Potential Team Member</th>
                 <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 sticky left-[250px] bg-slate-50 z-20 min-w-[70px] whitespace-nowrap border-r border-slate-200">
                   Location
                 </th>
@@ -197,6 +198,20 @@ export function TabEfforts({
                     {/* Role */}
                     <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap sticky left-20 bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
                       {fmtRole(sr.resourceDesignation)}
+                    </td>
+                    {/* Potential Team Member */}
+                    <td className="px-2 py-2 min-w-[140px]">
+                      {readOnly ? (
+                        <span className="text-xs text-slate-700">{sr.potMem || <span className="text-slate-300">—</span>}</span>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Name…"
+                          value={sr.potMem ?? ''}
+                          onChange={e => setStaffRows(prev => prev.map(r => r.id === sr.id ? { ...r, potMem: e.target.value || null } : r))}
+                          className="w-full text-xs rounded-lg border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 bg-transparent placeholder-slate-300"
+                        />
+                      )}
                     </td>
                     {/* Location */}
                     <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap sticky left-[250px] bg-white z-10 border-r border-slate-200 group-hover:bg-slate-50">
@@ -358,7 +373,7 @@ export function TabEfforts({
                   <td className="sticky left-10 bg-slate-50 z-10 border-r border-slate-200 w-10" />
                   <td className="px-4 py-3 text-slate-800 sticky left-20 bg-slate-50 z-10 border-r border-slate-200">Total</td>
                   <td className="sticky left-[250px] bg-slate-50 z-10 border-r border-slate-200" />
-                  <td /><td /><td /><td /><td /><td />
+                  <td /><td /><td /><td /><td /><td /><td />
                   {weeks.map((w, i) => {
                     const wt = staffRows.filter(r => r.isActive).reduce((s, sr) => {
                       const hm: Record<string, number> = {}
@@ -385,7 +400,7 @@ export function TabEfforts({
               {/* Add resource row */}
               {!readOnly && <tr className="border-t border-dashed border-slate-200 bg-white">
                 {showAddRow ? (
-                  <td colSpan={9 + weeks.length + 2} className="px-4 py-3 sticky left-0 bg-white z-10">
+                  <td colSpan={10 + weeks.length + 2} className="px-4 py-3 sticky left-0 bg-white z-10">
                     <div className="flex flex-wrap items-center gap-2">
                       {/* LoB */}
                       <select
@@ -444,7 +459,7 @@ export function TabEfforts({
                     </div>
                   </td>
                 ) : (
-                  <td colSpan={9 + weeks.length + 2} className="px-4 py-2.5">
+                  <td colSpan={10 + weeks.length + 2} className="px-4 py-2.5">
                     <button
                       onClick={() => setShowAddRow(true)}
                       className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"

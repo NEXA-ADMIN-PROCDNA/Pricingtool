@@ -21,7 +21,7 @@ export async function PATCH(
 
   try {
     const { srId } = await params
-    const { utilization, weekEntries, effectiveBillRate, isActive, isBillable } = await req.json()
+    const { utilization, weekEntries, effectiveBillRate, isActive, isBillable, potMem } = await req.json()
 
     // Resource update first — atomic by itself.
     await prisma.staffingResource.update({
@@ -31,6 +31,7 @@ export async function PATCH(
         ...(effectiveBillRate !== undefined && { effectiveBillRate }),
         ...(isActive          !== undefined && { isActive }),
         ...(isBillable        !== undefined && { isBillable }),
+        ...(potMem            !== undefined && { potMem: potMem ?? null }),
       },
     })
 
