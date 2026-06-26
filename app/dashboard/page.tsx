@@ -5,8 +5,8 @@
 // NOTE (per AGENTS.md): do NOT add 'use server' here — it breaks page rendering.
 import { Suspense } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { getServerSession } from 'next-auth'
+import { PROCDNA_LOGO_DATA_URL } from '../login/_logo'
 import { authOptions } from '@/lib/auth'
 import { MainLayout } from '@/components/layout/MainLayout'
 import { getOpportunities } from '@/lib/db/opportunities'
@@ -42,23 +42,20 @@ const ROLE_BANNER: Record<string, { label: string; restriction: string }> = {
 function NexaWordmark() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <Image
-        src="/procdna-logo.png"
-        alt="ProcDNA"
-        width={51}
-        height={51}
-        style={{ borderRadius: 6, objectFit: 'contain', flexShrink: 0 }}
-      />
-      <span style={{
-        fontFamily: "'Playfair Display', 'Georgia', serif",
-        fontWeight: 500,
-        fontSize: 20,
-        letterSpacing: '0.04em',
-        color: C.inkMuted,
-        lineHeight: 1,
+      <div style={{
+        height: 51, borderRadius: 10,
+        background: '#fff',
+        display: 'grid', placeItems: 'center',
+        padding: '8px 12px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+        flexShrink: 0,
       }}>
-        ProcDNA
-      </span>
+        <img
+          src={PROCDNA_LOGO_DATA_URL}
+          alt="ProcDNA"
+          style={{ height: 35, width: 'auto', objectFit: 'contain', display: 'block' }}
+        />
+      </div>
       <span style={{
         fontFamily: "'Playfair Display', 'Georgia', serif",
         fontWeight: 800,
@@ -85,7 +82,6 @@ export default async function DashboardPage({
   const sessionUser = session?.user as { id?: string; role?: string; name?: string } | undefined
   const userId      = sessionUser?.id   ?? ''
   const role        = sessionUser?.role ?? ''
-  const currentUserName = sessionUser?.name ?? ''
   const auth    = userId && role ? { userId, role } : undefined
 
   // Fetch the full role-scoped set (status filtering happens client-side in the
@@ -220,7 +216,7 @@ export default async function DashboardPage({
           KPI cards stay in sync with every active filter. */}
       <div className="flex flex-1 flex-col overflow-hidden min-h-0">
         <Suspense fallback={<div className="flex-1 animate-pulse rounded-xl" style={{ background: C.bgSoft }} />}>
-          <OpportunityTable rows={rows} roleLabel={banner.label} currentUserName={currentUserName} />
+          <OpportunityTable rows={rows} roleLabel={banner.label} currentUserId={userId} />
         </Suspense>
       </div>
     </MainLayout>

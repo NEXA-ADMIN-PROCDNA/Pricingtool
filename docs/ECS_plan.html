@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NEXA on ECS — Containers, Fargate, CI/CD &amp; the Shared-Infra Plan</title>
+<style>
+  :root{
+    --ink:#0A1F44; --ink2:#3A4A6A; --muted:#7B7C7F; --line:#E2E7F0; --bg:#F4F6FB;
+    --accent:#005CD9; --accentDeep:#001E96; --card:#fff;
+    --ok:#1F6B3C; --okbg:#E9F7EF; --warn:#B45309; --warnbg:#FEF3E2;
+    --bad:#B91C1C; --badbg:#FDECEC; --code:#0E1B33; --codeink:#E7ECF6;
+    --chip:#EEF2F9;
+    --aws:#EC7211; --awsDeep:#C25A0A; --awsbg:#FFF3E8; --squid:#232F3E;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.65 'Segoe UI',system-ui,-apple-system,sans-serif;}
+  a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{display:grid;grid-template-columns:286px 1fr;max-width:1320px;margin:0 auto;}
+
+  nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:24px 16px 60px;border-right:1px solid var(--line);background:#fff;}
+  nav .brand{font:800 15px/1 'Segoe UI';letter-spacing:.18em;color:var(--accentDeep);text-transform:uppercase}
+  nav .brand b{color:var(--aws)}
+  nav .sub{font-size:11px;color:var(--muted);margin:7px 0 16px;}
+  nav a{display:block;font-size:12.4px;color:var(--ink2);padding:3px 0;line-height:1.4}
+  nav a.top{font-weight:700;color:var(--ink);margin-top:13px;}
+  nav a .n{color:var(--accent);font:700 11px/1 'Courier New',monospace;margin-right:6px;}
+  nav .part{font:700 10px/1 'Courier New',monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:18px 0 4px;padding-top:10px;border-top:1px dashed var(--line)}
+
+  main{padding:0 0 140px;min-width:0;}
+
+  .hero{background:linear-gradient(125deg,#0A1F44 0%,#001E96 55%,#003a8f 100%);color:#EAF0FB;padding:46px 52px 38px;position:relative;overflow:hidden}
+  .hero::after{content:"";position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(236,114,17,.32),transparent 60%);}
+  .hero .eyebrow{font:600 11px/1 'Courier New',monospace;letter-spacing:.24em;text-transform:uppercase;color:#9FB6E6;}
+  .hero h1{font-size:33px;margin:14px 0 8px;letter-spacing:-.015em;color:#fff;max-width:26ch;line-height:1.12}
+  .hero h1 b{color:var(--aws)}
+  .hero p{max-width:74ch;color:#CBD8F2;margin:.45em 0;font-size:15.5px}
+  .hero .meta{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1}
+  .hero .chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:5px 12px;font-size:12px;color:#EAF0FB}
+
+  .body{padding:8px 52px 0}
+
+  h2.s{font-size:24px;margin:54px 0 6px;padding-top:16px;border-top:2px solid var(--ink);scroll-margin-top:10px;letter-spacing:-.01em}
+  h2.s .n{font:800 15px/1 'Courier New',monospace;color:var(--aws);margin-right:12px;}
+  h3{font-size:18px;margin:30px 0 6px;color:var(--accentDeep);scroll-margin-top:10px}
+  h4{font-size:13px;margin:20px 0 4px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);}
+  p{max-width:82ch} ul,ol{max-width:82ch} li{margin:4px 0}
+  .lead{font-size:16.5px;color:var(--ink2);max-width:80ch}
+
+  code.inl{background:var(--chip);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font:12.5px/1 'Cascadia Code','Consolas',monospace;color:#9a2a86;}
+  pre{background:var(--code);color:var(--codeink);border-radius:9px;padding:14px 16px;overflow:auto;font:12.5px/1.6 'Cascadia Code','Consolas',monospace;}
+  pre .c{color:#7C89A8} pre .k{color:#9DE8B4} pre .y{color:#FFD9A0} pre .o{color:#FFB066} pre .s{color:#A8C7FF}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px;}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top;}
+  th{background:#EEF2F9;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);}
+  tr:nth-child(even) td{background:#FAFBFE;}
+
+  .rec{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:18px 0;}
+  .rec b{color:var(--accentDeep)}
+  .rec.ok{border-left-color:var(--ok)} .rec.warn{border-left-color:var(--warn)} .rec.bad{border-left-color:var(--bad)}
+  .rec.aws{border-left-color:var(--aws)} .rec.aws b{color:var(--awsDeep)}
+  .rec .h{display:block;font-weight:800;margin-bottom:3px;font-size:13.5px}
+
+  .pill{display:inline-block;font:700 10px/1 'Segoe UI';letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid;vertical-align:middle}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:#B6E2C7}
+  .pill.warn{color:var(--warn);background:var(--warnbg);border-color:#EAD3A6}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:#F3C4C4}
+  .pill.info{color:var(--accent);background:#E6EFFB;border-color:#B9D3F2}
+  .pill.aws{color:var(--awsDeep);background:var(--awsbg);border-color:#F3CBA0}
+
+  .svc{display:inline-block;font:700 11px/1 'Segoe UI';color:#fff;background:var(--squid);border-radius:5px;padding:3px 7px 3px 6px;letter-spacing:.01em;white-space:nowrap}
+  .svc::before{content:"";display:inline-block;width:7px;height:7px;border-radius:1.5px;background:var(--aws);margin-right:6px;transform:translateY(0)}
+
+  .diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;margin:18px 0;overflow:auto;}
+  .diagram .cap{font-size:12px;color:var(--muted);margin:10px 2px 0;max-width:none}
+  .layer{display:flex;gap:12px;align-items:stretch;justify-content:center;flex-wrap:wrap;margin:6px 0}
+  .box{background:#F7F9FD;border:1.5px solid #C9D6EC;border-radius:9px;padding:10px 14px;min-width:148px;text-align:center;}
+  .box .t{font-weight:700;font-size:13px;color:var(--accentDeep);}
+  .box .d{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .box.ext{background:#FFF7EC;border-color:#EAD3A6}
+  .box.db{background:#EAF6EF;border-color:#B6E2C7}
+  .box.cli{background:#EDEFF7;border-color:#C2C9E6}
+  .box.aws{background:var(--awsbg);border-color:#F3CBA0}
+  .box.aws .t{color:var(--awsDeep)}
+  .varrow{text-align:center;color:var(--accent);font-size:20px;line-height:1;margin:3px 0;}
+  .tag{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;text-align:center;margin:12px 0 6px;}
+  .flow{display:flex;flex-direction:column;align-items:center;gap:0;}
+  .stage{background:#EDEFF7;border:1.5px solid #C2C9E6;border-radius:8px;padding:8px 16px;font-weight:700;font-size:13px;color:var(--accentDeep);text-align:center;min-width:250px;}
+  .stage .sub{display:block;font-weight:400;font-size:11px;color:var(--muted);}
+  .branch{font-size:11.5px;color:var(--ink2);background:#FAFBFE;border:1px dashed var(--line);border-radius:6px;padding:4px 10px;margin:5px 0;text-align:center}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .threecol{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+  .steps{counter-reset:step;display:flex;flex-direction:column;gap:0;margin:14px 0}
+  .step{position:relative;display:flex;gap:15px;padding:0 0 18px 0;}
+  .step:not(:last-child)::before{content:"";position:absolute;left:16px;top:33px;bottom:-2px;width:2px;background:#C9D6EC;}
+  .step .num{counter-increment:step;flex:0 0 34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:800 14px/1 'Segoe UI';z-index:1;}
+  .step .c2{background:#F7F9FD;border:1px solid #C9D6EC;border-radius:9px;padding:11px 15px;flex:1;}
+  .step .c2 b{color:var(--accentDeep)}
+  .step .c2 .k{font:700 9.5px/1 'Courier New',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+
+  .nest{font:13px/1.5 'Cascadia Code','Consolas',monospace;margin:6px 0}
+  .nest .n{border:1.5px solid;border-radius:9px;padding:9px 12px;margin:7px 0;position:relative}
+  .nest .n .lbl{font-weight:800;font-size:12.5px;letter-spacing:.02em}
+  .nest .n .meta{font:600 9.5px/1 'Courier New',monospace;letter-spacing:.08em;text-transform:uppercase;float:right;color:var(--muted)}
+  .nest .org{border-color:#1F6B3C;background:#F2FAF5}
+  .nest .acct{border-color:#005CD9;background:#F2F7FF}
+  .nest .vpc{border-color:#0A1F44;background:#F6F8FC}
+  .nest .subnet{border-color:#B45309;background:#FFF8EF}
+  .nest .res{border-color:#C9D6EC;background:#fff}
+  .nest .clu{border-color:#C25A0A;background:#FFF3E8}
+  .nest .desc{font-family:'Segoe UI',sans-serif;font-size:11.5px;color:var(--ink2);margin-top:3px;font-weight:400}
+
+  .ladder{display:flex;flex-direction:column;gap:6px;margin:14px 0}
+  .rung{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 14px}
+  .rung .lv{flex:0 0 110px;font:800 11px/1 'Courier New',monospace;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--accent);border-radius:6px;padding:6px 8px;text-align:center}
+  .rung .lv.a{background:var(--accentDeep)} .rung .lv.b{background:#2563EB} .rung .lv.c{background:#3B82F6} .rung .lv.d{background:#60A5FA;color:#0A1F44} .rung .lv.e{background:#93C5FD;color:#0A1F44}
+  .rung .body2{flex:1} .rung .body2 b{color:var(--accentDeep)} .rung .body2 .d{font-size:12px;color:var(--ink2)}
+
+  .kbd{font:600 12px/1 'Cascadia Code',monospace;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 6px;}
+  .tocgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+  .tocgrid a{display:block;border:1px solid var(--line);border-radius:9px;padding:11px 14px;background:#fff;color:var(--ink)}
+  .tocgrid a:hover{border-color:var(--accent);text-decoration:none;box-shadow:0 2px 10px rgba(0,40,150,.06)}
+  .tocgrid a .n{font:800 12px/1 'Courier New',monospace;color:var(--aws)}
+  .tocgrid a .t{font-weight:700;display:block;margin:3px 0 2px}
+  .tocgrid a .d{font-size:12px;color:var(--muted)}
+
+  .glos dt{font-weight:700;color:var(--accentDeep);margin-top:12px}
+  .glos dd{margin:2px 0 0;color:var(--ink2);max-width:82ch}
+
+  .foot{margin:64px 52px 0;padding:18px 0 40px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+
+  @media(max-width:1040px){.wrap{grid-template-columns:1fr}nav{display:none}.hero,.body,.foot{padding-left:20px;padding-right:20px}.twocol,.threecol,.tocgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <div class="brand">ECS · <b>NEXA</b></div>
+  <div class="sub">Containerised NEXA on the Auxo dev cluster</div>
+
+  <a href="#start" class="top">Start here</a>
+
+  <div class="part">Part I · The pivot</div>
+  <a href="#whatchanged"><span class="n">1</span>What changed: EC2 → ECS</a>
+  <a href="#tenant"><span class="n">2</span>Tenant, not owner</a>
+
+  <div class="part">Part II · Docker</div>
+  <a href="#docker"><span class="n">3</span>Docker: image vs container</a>
+  <a href="#dockerfile"><span class="n">4</span>The NEXA Dockerfile</a>
+  <a href="#immutable"><span class="n">5</span>Immutable &amp; stateless</a>
+
+  <div class="part">Part III · ECS hierarchy</div>
+  <a href="#trio"><span class="n">6</span>ECR · Fargate · ECS</a>
+  <a href="#ecshier"><span class="n">7</span>Cluster → Service → Task</a>
+  <a href="#place"><span class="n">8</span>Where it sits (VPC, subnets)</a>
+
+  <div class="part">Part IV · Network &amp; identity</div>
+  <a href="#sg"><span class="n">9</span>Security groups &amp; traffic</a>
+  <a href="#ssm"><span class="n">10</span>SSM: secrets &amp; debugging</a>
+  <a href="#iam"><span class="n">11</span>IAM, roles &amp; PassRole</a>
+
+  <div class="part">Part V · CI/CD</div>
+  <a href="#cicd"><span class="n">12</span>The pipeline (you own CD)</a>
+  <a href="#workflow"><span class="n">13</span>The GitHub Actions file</a>
+  <a href="#urls"><span class="n">14</span>Redirect URIs &amp; env vars</a>
+
+  <div class="part">Reference</div>
+  <a href="#ask"><span class="n">15</span>What to ask — IT vs Akshay</a>
+  <a href="#carryover"><span class="n">16</span>Dev → prod &amp; what's moot</a>
+  <a href="#glossary"><span class="n">17</span>Glossary</a>
+</nav>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">ProcDNA · Internal · companion to the NEXA AWS course &amp; migration runbook</div>
+  <h1>NEXA on <b>ECS</b> — containers, Fargate &amp; a CI/CD you own</h1>
+  <p>The plan moved. Instead of a single EC2 box you build and manage, NEXA now runs as a <strong>containerised service in the existing Auxo <em>dev</em> ECS cluster</strong>, against a <strong>separate schema in the shared RDS cluster</strong>, for a ~1-month first-version test before production on separate infra.</p>
+  <p>This doc explains the whole new shape: what Docker is, how the <strong>ECR / Fargate / ECS</strong> trio divides the work, where your service sits in someone else's VPC, how security groups and SSM apply, the IAM you need (incl. <code class="inl">iam:PassRole</code>), and the GitHub Actions <strong>CI/CD pipeline you'll run yourself</strong>.</p>
+  <div class="meta">
+    <span class="chip">For: the sole dev shipping NEXA to ECS</span>
+    <span class="chip">Assumes: you get iam:PassRole &amp; run CD</span>
+    <span class="chip">17 sections · diagrams · gotchas</span>
+  </div>
+</div>
+
+<div class="body">
+
+<!-- ============ START ============ -->
+<section id="start">
+<h3 style="margin-top:26px">How to read this</h3>
+<p class="lead">The earlier docs (<i>NEXA AWS Course</i>, <i>Migration Runbook</i>, <i>microk8s comparison</i>) all assumed you'd run NEXA on <b>one EC2 box you own</b>. Himanshu's approval changed that: you're deploying into a <b>cluster ProcDNA already runs</b>. That's a smaller job in some ways (no VPC/NAT/EC2/RDS to build) and a different job in others (you must containerise, and deploys work by shipping images, not by SSH-ing a box). This doc is the ECS-specific replacement for those assumptions.</p>
+
+<div class="rec aws"><span class="h">NEXA in one breath</span> A single <b>Next.js 16</b> app (UI + API in one process), ~55 internal users, tracking BD opportunities through pricing → approval → SOW/PO. Login is <b>Azure AD SSO</b>; data in <b>PostgreSQL</b>; documents in <b>object storage</b>; mail via <b>Microsoft Graph</b>. Sensitive commercial data (rates, margins). Today on Vercel + Supabase; moving to <b>ECS + RDS + S3</b>.</div>
+
+<div class="rec"><span class="h">The decision this doc bakes in</span> Per the plan: <b>you run your own CD</b>. The assumption throughout is that the <b>IT Team</b> grants you scoped IAM including <code class="inl">iam:PassRole</code>, and you wire a GitHub Actions pipeline that builds the image, pushes it to ECR, and tells ECS to deploy. If instead they choose to run deploys for you, only Part V changes — everything else holds.</div>
+</section>
+
+<!-- ============ 1. WHAT CHANGED ============ -->
+<h2 class="s" id="whatchanged"><span class="n">1</span>What changed: from one EC2 box to an ECS service</h2>
+<p class="lead">The app code is unchanged. What changed is everything <em>around</em> it — how it's packaged, where it runs, who owns the plumbing, and how it gets deployed.</p>
+
+<div class="diagram">
+  <span class="tag">The pivot, side by side</span>
+  <table style="margin:0">
+    <tr><th>Concern</th><th>Old plan — EC2 (you own)</th><th>New plan — ECS (shared)</th></tr>
+    <tr><td>Compute</td><td>One EC2 box you manage</td><td>A <b>container</b> in <em>their</em> ECS cluster</td></tr>
+    <tr><td>Packaging</td><td><code class="inl">next start</code> via systemd on the box</td><td>A <b>Docker image</b> — you write a Dockerfile</td></tr>
+    <tr><td>Image storage</td><td>none</td><td><span class="svc">Amazon ECR</span></td></tr>
+    <tr><td>VPC / NAT / ALB / subnets</td><td>You + IT build them</td><td><b>Already exist</b> — you plug in</td></tr>
+    <tr><td>Database</td><td>You provision a new RDS instance</td><td><b>A schema</b> in the shared RDS cluster</td></tr>
+    <tr><td>First-time setup</td><td>SSM Session Manager → bootstrap the box</td><td><b>None</b> — no box to bootstrap</td></tr>
+    <tr><td>Deploy mechanism</td><td>SSM <code class="inl">send-command</code> → <code class="inl">git pull</code> + restart</td><td>Build image → push ECR → <code class="inl">ecs update-service</code></td></tr>
+    <tr><td>Server patching</td><td>You</td><td><b>AWS</b> (if Fargate)</td></tr>
+    <tr><td>Secrets</td><td><code class="inl">.env</code> on the box</td><td>Task def → <span class="svc">SSM Parameter Store</span></td></tr>
+  </table>
+  <p class="cap">The single biggest mental change: you stop shipping <em>commands to a server</em> and start shipping <em>images to a registry</em>. The SSM + git-pull deploy model from the EC2 runbook does not apply here.</p>
+</div>
+
+<div class="rec ok"><span class="h">The good news</span> A large slice of the migration's hardest infra work — designing a VPC, NAT, ALB, security groups, provisioning RDS — is now <b>ProcDNA's job, not yours</b>. Your real work shrinks to four things: <b>(1)</b> write a Dockerfile, <b>(2)</b> wire image-based CI/CD, <b>(3)</b> the Supabase→S3 storage rewrite (still the big engineering task), and <b>(4)</b> DB schema + env/secret config.</div>
+
+<!-- ============ 2. TENANT ============ -->
+<h2 class="s" id="tenant"><span class="n">2</span>You are now a tenant, not an owner</h2>
+<p class="lead">On the EC2 plan you were the landlord — you owned the building and every utility in it. On ECS you're a tenant in a building ProcDNA runs. That reframes who you talk to and what you can touch.</p>
+
+<div class="twocol">
+  <div class="rec"><span class="h">What ProcDNA owns (you consume)</span> The VPC and its subnets, the NAT gateway, the ECS cluster and its Fargate capacity, the shared RDS cluster, the ALB, and the IAM boundaries. You don't create or break these — you're given a slot inside them.</div>
+  <div class="rec ok"><span class="h">What you own (your service)</span> Your Docker image, your task definition (image + CPU/RAM + env + roles), your service's desired count, your DB schema's contents, your S3 bucket's objects, and — under the assumed plan — your CI/CD pipeline.</div>
+</div>
+
+<div class="rec warn"><span class="h">The tenant risk to respect</span> The <b>RDS schema</b> sits in a shared cluster, so <b>be a good neighbour</b>: your DB user is <b>scoped to your schema only</b> (you can't read or break other projects' data), and keep the Prisma <b>connection count modest</b> — see §7 and §11.</div>
+
+<h3>Who owns what — locked-in role split <span class="pill info" style="vertical-align:middle">MoM 2026-06-23</span></h3>
+<p>The teams are siloed and async (≈4 h per round-trip), so misrouting a request is expensive. This is the agreed division — route each ask to the right owner:</p>
+<table>
+  <tr><th>Owner</th><th>Role</th><th>Creates / handles</th></tr>
+  <tr><td><b>IT Team</b></td><td>Access &amp; networking authority</td><td>The <b>distinct ALB</b> · <b>all IAM</b> (the <b>one combined role</b> + your CD user + <code class="inl">iam:PassRole</code>) · <b>DNS</b> · loads <b>SSM Parameter Store</b> secrets</td></tr>
+  <tr><td><b>Himanshu Gaur</b></td><td>SDE Head</td><td>The <b>ACM certificate</b> (+ may also add SSM secrets / handle DNS alongside IT)</td></tr>
+  <tr><td><b>Akshay</b></td><td>SDE2 (IAM power = only <code class="inl">iam:CreateRole</code>)</td><td><b>ECR repo · RDS schema · S3 bucket</b></td></tr>
+  <tr><td><b>Shreeraj (you)</b></td><td>App owner</td><td>Dockerfile · <b>CI/CD pipeline</b> (GitHub Actions → ECR → <code class="inl">ecs update-service</code>), once granted <code class="inl">iam:PassRole</code> · apply schema · register Entra URI + Safe Links</td></tr>
+</table>
+<div class="rec"><span class="h">Two consequences of this split</span> <b>(1) Don't ask Akshay for ALB / IAM grants / ACM / DNS / SSM</b> — those are IT's (or Himanshu's). Akshay only makes the ECR repo, RDS schema, and S3 bucket. <b>(2) <code class="inl">iam:CreateRole</code> ≠ resource power</b> — it only makes IAM roles. Creating an ALB needs <code class="inl">elasticloadbalancing:*</code>, RDS needs <code class="inl">rds:*</code>, etc. Never infer "can build X" from "has CreateRole."</div>
+<div class="rec ok"><span class="h">No security-group cross-reference required</span> Earlier drafts had you relaying an ALB-SG ↔ task-SG reference between teams. <b>That is not needed.</b> IT configures the ALB and its networking; you don't pass security-group IDs between IT and Akshay. One less coordination seam.</div>
+
+<!-- ============ 3. DOCKER ============ -->
+<h2 class="s" id="docker"><span class="n">3</span>Docker: a frozen box, not a box you set up</h2>
+<p class="lead">Hold onto your EC2 instinct — "a remote Linux where I run commands" — because Docker is the opposite philosophy, and the contrast is the fastest way to get it.</p>
+
+<p>On EC2 you take an empty machine and <b>mutate it by hand</b>: install Node, <code class="inl">git clone</code>, <code class="inl">npm ci</code>, build, start. The box accumulates state; if it breaks you SSH in and fix it. It's a <b>pet</b>. Docker flips this: you write the entire setup down as a recipe, <b>bake it into a frozen, self-contained package</b>, then run that package. You never hand-tweak a running one — you rebuild and replace. Containers are <b>cattle</b>: disposable, identical, interchangeable.</p>
+
+<h3>The three words you must keep straight</h3>
+<table>
+  <tr><th>Word</th><th>What it is</th><th>EC2 analogy</th></tr>
+  <tr><td><b>Dockerfile</b></td><td>A text recipe of every setup step</td><td>The install script you'd run by hand</td></tr>
+  <tr><td><b>Image</b></td><td>The recipe <em>executed and frozen</em> — Node + deps + your code + the build, sealed into one artifact</td><td>A box set up perfectly, then snapshotted</td></tr>
+  <tr><td><b>Container</b></td><td>A <em>running instance</em> of an image</td><td>The box actually booted and running</td></tr>
+</table>
+<p>One image → many identical containers. Build once, run anywhere, always identical. That reproducibility is the whole point: the thing CI built is byte-for-byte the thing that runs in production.</p>
+
+<!-- ============ 4. DOCKERFILE ============ -->
+<h2 class="s" id="dockerfile"><span class="n">4</span>The NEXA Dockerfile</h2>
+<p class="lead">Everything you used to do by hand on the EC2 box — install, generate, build — now happens <em>once</em>, at image-build time. Here's a production-shaped multi-stage Dockerfile for NEXA using Next.js standalone output (smaller, faster images).</p>
+
+<pre><span class="c"># ---- 1. deps: install node_modules from the lockfile ----</span>
+<span class="k">FROM</span> node:20-alpine <span class="k">AS</span> deps
+<span class="k">WORKDIR</span> /app
+<span class="k">COPY</span> package.json package-lock.json ./
+<span class="k">RUN</span> npm ci
+
+<span class="c"># ---- 2. build: generate Prisma client + next build ----</span>
+<span class="k">FROM</span> node:20-alpine <span class="k">AS</span> build
+<span class="k">WORKDIR</span> /app
+<span class="k">COPY</span> --from=deps /app/node_modules ./node_modules
+<span class="k">COPY</span> . .
+<span class="k">RUN</span> npx prisma generate
+<span class="k">RUN</span> npm run build          <span class="c"># needs output:'standalone' in next.config</span>
+
+<span class="c"># ---- 3. run: a tiny image with only what runtime needs ----</span>
+<span class="k">FROM</span> node:20-alpine <span class="k">AS</span> run
+<span class="k">WORKDIR</span> /app
+<span class="k">ENV</span> NODE_ENV=production PORT=3000
+<span class="k">COPY</span> --from=build /app/.next/standalone ./
+<span class="k">COPY</span> --from=build /app/.next/static ./.next/static
+<span class="k">COPY</span> --from=build /app/public ./public
+<span class="k">EXPOSE</span> 3000
+<span class="k">CMD</span> [<span class="s">"node"</span>, <span class="s">"server.js"</span>]</pre>
+
+<div class="rec warn"><span class="h">Two NEXA-specific gotchas</span>
+<b>(1)</b> Add <code class="inl">output: 'standalone'</code> to <code class="inl">next.config.ts</code> or the standalone copy steps won't have anything to copy. <b>(2)</b> <code class="inl">prisma generate</code> must run <em>inside</em> the build (it's already above) — the generated client is platform-specific and isn't committed, so it must be produced in the Alpine image, not copied from your Windows machine.</div>
+
+<div class="rec"><span class="h">What is <em>not</em> in the image</span> No secrets, no database, no uploaded files. The image holds only the app. <code class="inl">DATABASE_URL</code>, <code class="inl">NEXTAUTH_SECRET</code>, Azure creds, etc. are injected at <b>runtime</b> by the task definition (§10). Documents go to <b>S3</b>, data to <b>RDS</b> — never inside the container (§5).</div>
+
+<!-- ============ 5. IMMUTABLE ============ -->
+<h2 class="s" id="immutable"><span class="n">5</span>Immutable infrastructure &amp; the stateless rule</h2>
+<p class="lead">Two consequences of "containers are cattle" decide how NEXA must behave. Get these wrong and the app breaks in confusing ways on ECS.</p>
+
+<div class="twocol">
+  <div class="rec"><span class="h">Immutable, not mutated</span> You never <code class="inl">git pull</code> + restart a running container. To ship a change you build a <b>new image</b> and ECS swaps the old container for the new one. Bad deploy? Redeploy the previous image tag. This is why the deploy-key-on-the-box idea from the EC2 plan disappears entirely — <b>the code is baked into the image at build time</b>.</div>
+  <div class="rec warn"><span class="h">The filesystem is ephemeral</span> When a container stops, anything written to its local disk is <b>gone</b>. So: uploads <b>must</b> go to S3 (never local disk), the DB is external (RDS), and secrets come from env vars — not a file you edit. This makes the <b>Supabase→S3 rewrite non-negotiable</b>: any code path that writes a file locally will silently lose data on ECS.</div>
+</div>
+
+<div class="rec aws"><span class="h">Where NEXA's state lives on ECS</span> Structured data → <span class="svc">RDS</span> (shared cluster, your schema). Documents (SOW/PO) → <span class="svc">S3</span> (presigned URLs). Secrets/config → <span class="svc">SSM Parameter Store</span>. Logs → <span class="svc">CloudWatch</span>. The container itself holds <b>zero</b> durable state — that's what lets ECS kill and replace it freely.</div>
+
+<!-- ============ 6. TRIO ============ -->
+<h2 class="s" id="trio"><span class="n">6</span>ECR · Fargate · ECS — three jobs people merge into one</h2>
+<p class="lead">The single most common confusion is treating these as one thing. They're three distinct services with three distinct jobs. Keep them separate and ECS stops being mysterious.</p>
+
+<div class="threecol">
+  <div class="box aws"><div class="t">ECR — store</div><div class="d">The registry. A warehouse that <b>holds your images</b>. Like a "git remote" but for images. Does nothing else.</div></div>
+  <div class="box aws"><div class="t">Fargate — run</div><div class="d">Serverless compute. <b>Runs one container</b> when told, with the CPU/RAM you specced. No server for you to manage.</div></div>
+  <div class="box aws"><div class="t">ECS — orchestrate</div><div class="d">The brain. <b>Decides what runs, how many, watches health, swaps versions, wires the ALB.</b></div></div>
+</div>
+
+<h3>The division of labour</h3>
+<table>
+  <tr><th>Service</th><th>What it knows / does</th><th>What it does <em>not</em> do</th></tr>
+  <tr><td><span class="svc">ECR</span></td><td>Stores &amp; serves images</td><td>Nothing else — it's storage</td></tr>
+  <tr><td><span class="svc">Fargate</span></td><td>Runs <b>one</b> container exactly as instructed</td><td>Doesn't know "how many," health, deploys, or the ALB</td></tr>
+  <tr><td><span class="svc">Amazon ECS</span></td><td>Desired count, self-healing, rolling deploys, ALB registration, scaling</td><td>Doesn't store images; doesn't provide raw compute</td></tr>
+</table>
+
+<div class="rec"><span class="h">Restaurant analogy</span> <b>ECR</b> = the freezer of prepared meals (images). <b>Fargate</b> = an oven that heats one meal when handed it. <b>ECS</b> = the head chef: decides how many meals to keep ready, watches them, tosses a burnt one and reheats a replacement, swaps the menu on a new release, and tells the front desk (ALB) which tables are ready. The freezer doesn't pick the menu; the oven doesn't decide how many to cook. The chef runs the show.</div>
+
+<h3>What ECS actually does (the orchestration jobs)</h3>
+<ol>
+  <li><b>Maintains desired count</b> — "keep N NEXA tasks running," always.</li>
+  <li><b>Self-healing</b> — a task crashes or fails health checks → ECS kills it and starts a fresh one.</li>
+  <li><b>Rolling deployments</b> — new image → start new tasks, wait until healthy, drain &amp; stop old ones, roll back if the new ones never go healthy.</li>
+  <li><b>ALB integration</b> — registers/deregisters tasks in the target group so the ALB only sends traffic to healthy ones.</li>
+  <li><b>Reads the Task Definition</b> and instructs Fargate exactly how to run each task.</li>
+  <li><b>Scaling</b> — add/remove tasks under load (autoscaling policies).</li>
+</ol>
+
+<!-- ============ 7. ECS HIERARCHY ============ -->
+<h2 class="s" id="ecshier"><span class="n">7</span>The ECS hierarchy: Cluster → Service → Task Definition → Task</h2>
+<p class="lead">Inside ECS there's its own small ladder. Learn these four words and the AWS console stops being a wall of jargon.</p>
+
+<div class="ladder">
+  <div class="rung"><div class="lv a">Cluster</div><div class="body2"><b>A pool of compute</b> where containers run (Fargate capacity, or EC2 instances). <span class="d">Auxo's shared <em>dev</em> cluster — you get a slot in it, you don't create it.</span></div></div>
+  <div class="rung"><div class="lv b">Service</div><div class="body2"><b>The long-running controller</b> for your app. <span class="d">"Keep N tasks alive, wire them to the ALB, do rolling deploys." This is the thing you point CD at (<code class="inl">ecs update-service</code>).</span></div></div>
+  <div class="rung"><div class="lv c">Task Definition</div><div class="body2"><b>The blueprint.</b> <span class="d">Which image, how much CPU/RAM, container port, env vars, secrets, and which IAM roles. A new image = a new <em>revision</em> of this.</span></div></div>
+  <div class="rung"><div class="lv d">Task</div><div class="body2"><b>A running instance</b> of the task definition = your container(s) running. <span class="d">Fargate provides the compute for each task.</span></div></div>
+</div>
+
+<div class="rec"><span class="h">How they relate in one sentence</span> The <b>Service</b> keeps N <b>Tasks</b> running from a <b>Task Definition</b> revision (which names an <b>image</b> in ECR), on compute supplied by <b>Fargate</b>, inside a <b>Cluster</b>, fronted by the <b>ALB</b>.</p></div>
+
+<h3>NEXA's task definition — the fields that matter</h3>
+<table>
+  <tr><th>Field</th><th>NEXA value</th><th>Notes</th></tr>
+  <tr><td>image</td><td><code class="inl">&lt;ecr&gt;/nexa:&lt;git-sha&gt;</code></td><td>Tagged per commit so deploys are traceable &amp; rollback is trivial</td></tr>
+  <tr><td>cpu / memory</td><td>0.5 vCPU / 1 GB (start)</td><td>App is light; build happens in CI, not at runtime. Bump if needed.</td></tr>
+  <tr><td>containerPort</td><td>3000</td><td>Next.js default; the ALB target group points here</td></tr>
+  <tr><td>environment</td><td>non-secret config</td><td><code class="inl">NEXTAUTH_URL</code>, <code class="inl">MAIL_BASE_URL</code>, region, etc.</td></tr>
+  <tr><td>secrets</td><td>from Parameter Store</td><td><code class="inl">DATABASE_URL</code>, <code class="inl">NEXTAUTH_SECRET</code>, Azure creds — injected, never baked in (§10)</td></tr>
+  <tr><td>executionRoleArn</td><td><b>the one combined role</b></td><td>Lets the ECS agent pull from ECR, read secrets, write logs (§11)</td></tr>
+  <tr><td>taskRoleArn</td><td><b>the same combined role</b></td><td>Lets <em>your app</em> call AWS — e.g. S3 for documents. <span class="pill info">dev: both slots = one role</span> (§11)</td></tr>
+</table>
+
+<!-- ============ 8. PLACE ============ -->
+<h2 class="s" id="place"><span class="n">8</span>Where it sits — inside their VPC and subnets</h2>
+<p class="lead">Your tasks don't float in the cloud; they land at a specific spot in ProcDNA's network. Knowing the nesting tells you exactly how traffic reaches the app and how the app reaches out.</p>
+
+<div class="diagram">
+<div class="nest">
+  <div class="n acct"><span class="meta">AWS account</span><span class="lbl">Auxo AWS account</span>
+    <div class="desc">One bill, many projects. You get scoped IAM in here — not the keys to the kingdom.</div>
+    <div class="n vpc"><span class="meta">private VPC</span><span class="lbl">Auxo dev VPC</span>
+      <div class="desc">The private network ProcDNA already runs. You do not create or modify it.</div>
+      <div class="n subnet" style="border-style:dashed"><span class="meta">public subnet</span><span class="lbl">ALB lives here</span>
+        <div class="desc">The only public-facing door. Holds the load balancer + the NAT gateway's reach to the internet.</div>
+      </div>
+      <div class="n subnet"><span class="meta">private subnet</span><span class="lbl">Your tasks live here</span>
+        <div class="n clu"><span class="meta">ECS</span><span class="lbl">dev cluster → NEXA service → task (your container)</span>
+          <div class="desc">No public IP. Reached only by the ALB from in front; reaches out only via NAT.</div>
+        </div>
+        <div class="n res"><span class="meta">shared</span><span class="lbl">RDS cluster (your schema) · also private</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<p class="cap">Same "place vs trust" model as the AWS course: the task's <em>place</em> (private subnet) controls routing; its <em>security group</em> and <em>IAM role</em> control trust. The ALB is the only inbound door; everything else is outbound through NAT.</p>
+</div>
+
+<!-- ============ 9. SECURITY GROUPS ============ -->
+<h2 class="s" id="sg"><span class="n">9</span>Security groups &amp; how traffic actually flows</h2>
+<p class="lead">A security group is a stateful virtual firewall wrapped around a resource. On ECS/Fargate, each task gets its own network interface (ENI) with a security group — so the rules attach to your <em>task</em>, just as they attached to the EC2 box before.</p>
+
+<h3>The two directions, and the one rule that confuses everyone</h3>
+<div class="twocol">
+  <div class="rec"><span class="h">Inbound = who may <em>start</em> a connection to the task</span> Only the <b>ALB</b> should. The task's security group allows inbound on port 3000 <b>from the ALB's security group only</b> (SG-references-SG), not from the internet. Users never reach the task directly — they hit the ALB, which forwards.</div>
+  <div class="rec"><span class="h">Outbound = connections the task <em>starts</em></span> The task initiates outbound to Azure AD (login), Microsoft Graph (mail), S3, and RDS. These leave via the <b>NAT gateway</b>. "No open inbound ports" does <em>not</em> block this.</div>
+</div>
+
+<div class="rec aws"><span class="h">"Outbound" ≠ "send only" — the stateful trick</span> Inbound/outbound describe <b>who initiated</b> a connection, not which way data flows. Once the task <em>dials out</em> (e.g. <code class="inl">git</code>-less here, but Azure/Graph/S3 calls), the security group and NAT are <b>stateful</b>: they automatically allow the <b>reply</b> back in — with no inbound rule. That's why a sealed-inbound task can still log users in via Azure, send mail via Graph, and read/write S3. It only ever <em>receives</em> data as the answer to a call it placed.</div>
+
+<div class="diagram">
+  <span class="tag">Traffic map</span>
+  <div class="layer">
+    <div class="box ext"><div class="t">Users</div><div class="d">browser → https</div></div>
+    <div class="box aws"><div class="t">ALB :443</div><div class="d">only public door · ACM cert</div></div>
+    <div class="box"><div class="t">NEXA task :3000</div><div class="d">private subnet · SG allows ALB only</div></div>
+  </div>
+  <div class="varrow">▲ inbound (ALB → task) &nbsp;&nbsp;&nbsp; ▼ outbound (task → NAT → internet)</div>
+  <div class="layer">
+    <div class="box db"><div class="t">RDS (your schema)</div><div class="d">private · SG allows task only</div></div>
+    <div class="box ext"><div class="t">Azure AD / Graph</div><div class="d">outbound via NAT</div></div>
+    <div class="box aws"><div class="t">S3 (documents)</div><div class="d">outbound / VPC endpoint</div></div>
+  </div>
+  <p class="cap">Inbound is one door (the ALB). Everything the app reaches is an outbound call whose reply returns on the same connection.</p>
+</div>
+
+<h3>The three security groups, layer by layer — exact ports</h3>
+<p>There's one SG per layer. Read each as "<b>inbound</b> = who may start a connection <em>to me</em>; <b>outbound</b> = where I may start connections." Because SGs are stateful, replies to allowed connections come back automatically — you never write a rule for the return direction.</p>
+
+<table>
+  <tr><th>Security group</th><th>Inbound (port ← source)</th><th>Outbound (port → destination)</th></tr>
+  <tr>
+    <td><b>ALB SG</b><br><span style="font-size:11px;color:var(--muted)">on the load balancer (public subnet)</span></td>
+    <td><b>443</b> ← <code class="inl">0.0.0.0/0</code> (users, HTTPS)<br><b>80</b> ← <code class="inl">0.0.0.0/0</code> (optional, redirect→443)</td>
+    <td><b>3000</b> → Task SG (forward to tasks)</td>
+  </tr>
+  <tr>
+    <td><b>Task / Fargate SG</b><br><span style="font-size:11px;color:var(--muted)">on each task's ENI (private subnet)</span></td>
+    <td><b>3000</b> ← ALB SG <em>only</em><br><span style="font-size:11px;color:var(--muted)">(never from the internet)</span></td>
+    <td><b>443</b> → <code class="inl">0.0.0.0/0</code> (Azure AD, Graph, S3, ECR — via NAT)<br><b>5432</b> → RDS SG (Postgres)</td>
+  </tr>
+  <tr>
+    <td><b>RDS SG</b><br><span style="font-size:11px;color:var(--muted)">on the database (private subnet)</span></td>
+    <td><b>5432</b> ← Task SG <em>only</em></td>
+    <td>— (none needed)</td>
+  </tr>
+</table>
+
+<div class="rec"><span class="h">The ports in one glance</span>
+<b>443</b> HTTPS — users→ALB, and task→internet (SSO, mail, S3, ECR pulls). ·
+<b>80</b> HTTP — optional, only to redirect to 443. ·
+<b>3000</b> — the app's port; ALB→task only. ·
+<b>5432</b> — Postgres; task→RDS only. Each "only" is the security: the task is reachable <em>only</em> from the ALB, the DB <em>only</em> from the task. Nothing in a private subnet is reachable from the internet.</div>
+
+<div class="rec aws"><span class="h">Finer detail — why outbound is "to <code class="inl">0.0.0.0/0</code> on 443" and that's still safe</span> The task must reach Azure AD, Graph, S3, and ECR — all public HTTPS endpoints with IPs that change — so the simplest rule is "outbound 443 to anywhere." That sounds open, but it only lets the task <em>initiate</em> calls out; nothing can initiate <em>in</em> (no inbound rule allows it). Combined with the private subnet (no public IP) and NAT, the task can talk to the world but the world cannot reach the task. If you wanted to tighten it, S3/ECR can go via <b>VPC endpoints</b> (keeping that traffic inside AWS, off the public path), leaving only Azure/Graph as true internet egress.</div>
+
+<div class="rec ok"><span class="h">Tenant note — no SG cross-reference for you to arrange</span> The security groups belong to ProcDNA, and <b>IT configures the ALB + its networking</b>. Per the MoM, <b>no security-group cross-reference is required from you</b> — you do <em>not</em> relay an ALB-SG ↔ task-SG ID between IT and Akshay. The section above is the conceptual model (how inbound/outbound actually work); the wiring is IT's to set, not a coordination task on your plate.</div>
+
+<!-- ============ 10. SSM ============ -->
+<h2 class="s" id="ssm"><span class="n">10</span>SSM on ECS: secrets injection &amp; the debug shell</h2>
+<p class="lead">SSM (AWS Systems Manager) played the lead role in the EC2 deploy plan (<code class="inl">send-command</code> + <code class="inl">git pull</code>). On ECS that deploy role is gone — but two <em>other</em> SSM features matter.</p>
+
+<div class="twocol">
+  <div class="rec"><span class="h">Parameter Store — where secrets live</span> Instead of an <code class="inl">.env</code> on a box, NEXA's secrets sit in <span class="svc">SSM Parameter Store</span> (or Secrets Manager) as encrypted parameters. The <b>task definition references them</b> under <code class="inl">secrets:</code>, and the task <b>execution role</b> is allowed to read them. At launch, ECS fetches them and injects them as env vars into the container. Your code reads <code class="inl">process.env.DATABASE_URL</code> exactly as before — it just arrives from Parameter Store, not a file.</div>
+  <div class="rec"><span class="h">ECS Exec — the debug shell</span> Need a shell inside a running container (the ECS equivalent of "SSH into the box")? <code class="inl">aws ecs execute-command</code> opens one through the SSM channel — no inbound port, same outbound-broker model. But this is a <b>debug escape hatch, not the workflow</b>: you don't fix containers, you replace them. Use it to look, not to change.</div>
+</div>
+
+<pre><span class="c"># task definition (excerpt) — secrets injected from Parameter Store</span>
+<span class="y">"secrets"</span>: [
+  { <span class="y">"name"</span>: <span class="s">"DATABASE_URL"</span>,    <span class="y">"valueFrom"</span>: <span class="s">"arn:aws:ssm:...:parameter/nexa/dev/DATABASE_URL"</span> },
+  { <span class="y">"name"</span>: <span class="s">"NEXTAUTH_SECRET"</span>, <span class="y">"valueFrom"</span>: <span class="s">"arn:aws:ssm:...:parameter/nexa/dev/NEXTAUTH_SECRET"</span> }
+]</pre>
+
+<div class="rec aws"><span class="h">Why this is a security upgrade over Vercel</span> Secrets never sit in GitHub, never sit in the image, and never sit in a file on disk. They live encrypted in Parameter Store, are decrypted only at task launch, and access is gated by IAM. GitHub only ever holds the AWS deploy credentials — not the app's secrets.</div>
+
+<!-- ============ 11. IAM ============ -->
+<h2 class="s" id="iam"><span class="n">11</span>IAM: one combined role + the CD user, and where <code style="font-size:.8em">iam:PassRole</code> fits</h2>
+<p class="lead">ECS technically has <b>two</b> role slots in a task definition — an <em>execution</em> role and a <em>task</em> role — for two jobs at two moments. For the dev trial we <b>collapse them into one combined role</b> used in both slots: simpler to create, one ARN to track, one <code class="inl">PassRole</code> target. (We split them back for production — see below.)</p>
+
+<table>
+  <tr><th>Slot</th><th>Used by</th><th>What it needs</th></tr>
+  <tr><td><b>Execution role</b> slot</td><td>The ECS/Fargate <em>agent</em>, at <b>launch</b></td><td>Pull image from ECR · read secrets from Parameter Store · <code class="inl">kms:Decrypt</code> · write CloudWatch logs</td></tr>
+  <tr><td><b>Task role</b> slot</td><td>Your <em>app code</em>, at <b>runtime</b></td><td>The app's own AWS calls — chiefly <b>S3</b> (put/get/presign documents under <code class="inl">nexa/*</code>)</td></tr>
+</table>
+
+<div class="rec ok"><span class="h">Dev simplification — one role in both slots</span> Both <code class="inl">executionRoleArn</code> and <code class="inl">taskRoleArn</code> point at the <b>same</b> role, which carries <em>all</em> the permissions above. AWS allows this. <b>Trade-off:</b> the running app then also holds the secret-reading power, so a compromised app could read secrets directly — acceptable for a <b>dev trial with fake data</b>, not for prod. <b>Split into two roles for production</b> (it's on the prod-hardening list).</div>
+
+<h3>The combined role (created by IT — you only consume it)</h3>
+<pre><span class="c"># attached permissions on the ONE role</span>
+<span class="o">ssm:GetParameters</span>      <span class="c"># on arn:aws:ssm:&lt;region&gt;:&lt;acct&gt;:parameter/nexa/dev/*</span>
+<span class="o">kms:Decrypt</span>            <span class="c"># on the KMS key encrypting those params</span>
+<span class="o">AmazonECSTaskExecutionRolePolicy</span>   <span class="c"># AWS-managed: ECR pull + CloudWatch logs</span>
+<span class="o">s3:PutObject/GetObject/DeleteObject</span> <span class="c"># on arn:aws:s3:::&lt;bucket&gt;/nexa/*</span>
+<span class="o">s3:ListBucket</span>          <span class="c"># on arn:aws:s3:::&lt;bucket&gt;  (prefix nexa/*)</span>
+<span class="c"># trust policy: ecs-tasks.amazonaws.com  (lets ECS assume it)</span></pre>
+
+<div class="rec"><span class="h">What <code class="inl">iam:PassRole</code> means here</span> When your CD pipeline registers a task definition, it tells ECS: "run this task <em>as</em> this role." Handing a role to an AWS service is privileged, so AWS requires the caller to hold <code class="inl">iam:PassRole</code> on that role. <b>You don't create the role</b> (that's <code class="inl">iam:CreateRole</code>, IT's) — IT creates the one role and grants your CD user <code class="inl">PassRole</code> on its single ARN.</div>
+
+<h3>The IAM your CD user needs (the ask)</h3>
+<pre><span class="c">// scoped to NEXA — least privilege</span>
+ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability,
+ecr:PutImage, ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload
+ecs:RegisterTaskDefinition
+ecs:UpdateService, ecs:DescribeServices, ecs:DescribeTaskDefinition
+iam:PassRole   <span class="c">// on the ONE combined-role ARN</span></pre>
+
+<div class="rec warn"><span class="h">The one gotcha that blocks deploys</span> If <code class="inl">iam:PassRole</code> is missing or not scoped to the role ARN, <code class="inl">RegisterTaskDefinition</code>/<code class="inl">UpdateService</code> fails with <em>"not authorized to perform: iam:PassRole"</em> — even though every <code class="inl">ecs:*</code> is present. Confirm PassRole names the exact role ARN. Likewise, if the role's <b>trust policy</b> doesn't allow <code class="inl">ecs-tasks.amazonaws.com</code>, ECS can't assume it and the task never starts.</div>
+
+<!-- ============ 12. CICD ============ -->
+<h2 class="s" id="cicd"><span class="n">12</span>CI/CD — CI is GitHub-only; CD ships an image</h2>
+<p class="lead">Split the two halves cleanly. CI proves the code is sound and touches no AWS. CD — which you own — builds the image, pushes it to ECR, and tells ECS to deploy.</p>
+
+<div class="twocol">
+  <div class="rec ok"><span class="h">CI — runs on every push</span> On a GitHub-hosted runner, no AWS involved: <code class="inl">npm ci</code> → <code class="inl">prisma generate</code> → typecheck → <code class="inl">next build</code>. If the build breaks, the pipeline stops red and CD never runs. CI answers <i>"is this code sound?"</i></div>
+  <div class="rec"><span class="h">CD — runs on merge to main</span> Build the Docker image → push to <span class="svc">ECR</span> → register a new task-def revision → <code class="inl">ecs update-service</code>. ECS then does a rolling deploy on Fargate. CD answers <i>"make it live."</i></div>
+</div>
+
+<div class="diagram">
+  <span class="tag">The ECS deploy pipeline</span>
+  <div class="flow">
+    <div class="stage">push to <code>main</code><span class="sub">your commit reaches GitHub</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">GitHub Actions — CI<span class="sub">npm ci · prisma generate · typecheck · next build</span></div>
+    <div class="varrow">▼ green</div>
+    <div class="stage">docker build → push to ECR<span class="sub">image tagged with the git SHA</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">ecs update-service<span class="sub">register new task-def revision, force new deployment</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">ECS rolling deploy on Fargate<span class="sub">pull image · start new task · ALB health-check · drain old task</span></div>
+    <div class="varrow">▼</div>
+    <div class="stage">new version live<span class="sub">zero downtime · rollback if new task never goes healthy</span></div>
+  </div>
+  <p class="cap">No SSM <code>send-command</code>, no <code>git pull</code> on a box, no deploy key. The code is inside the image; the pipeline pushes an image and calls the ECS API. Fargate is invisible to the pipeline — it talks to ECR and ECS only.</p>
+</div>
+
+<div class="rec aws"><span class="h">Auth from GitHub → AWS</span> Per the plan, <b>long-lived AWS keys</b> stored as GitHub Actions secrets (you accepted the trade for a stable, dependency-free CD as the sole dev). Use a <b>dedicated, narrowly-scoped CD user</b> — the §11 permissions only — never your personal IAM user. Mitigate the static-key risk with tight scope, a protected GitHub <em>Environment</em> for the secrets, and quarterly rotation. (OIDC remains the cleaner long-term option if you ever want short-lived creds — it needs the admin to create one role.)</div>
+
+<!-- ============ 13. WORKFLOW ============ -->
+<h2 class="s" id="workflow"><span class="n">13</span>The GitHub Actions workflow</h2>
+<p class="lead">One file, two jobs. <code class="inl">ci</code> on a GitHub runner; <code class="inl">deploy</code> gated behind it.</p>
+
+<pre><span class="c"># .github/workflows/deploy.yml</span>
+<span class="y">name</span>: Deploy NEXA (dev)
+<span class="y">on</span>: { push: { branches: [main] } }
+
+<span class="y">jobs</span>:
+  <span class="o">ci</span>:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+      - run: npm run build        <span class="c"># gate: broken build never deploys</span>
+
+  <span class="o">deploy</span>:
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            eu-central-1
+      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Build &amp; push image
+        run: |
+          docker build -t $ECR_REPO:${{ github.sha }} .
+          docker push  $ECR_REPO:${{ github.sha }}
+      - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: taskdef.json       <span class="c"># template w/ the new image tag</span>
+          service: nexa-dev
+          cluster: auxo-dev
+          wait-for-service-stability: true     <span class="c"># block until the new task is healthy</span></pre>
+
+<div class="rec"><span class="h">What each half talks to</span> The <code class="inl">deploy</code> job talks to exactly two AWS services: <b>ECR</b> (push the image) and <b>ECS</b> (deploy). It never touches Fargate directly, never opens a connection to a task, never needs an inbound port on anything. <code class="inl">wait-for-service-stability</code> makes the Actions run go red if the rolling deploy doesn't stabilise — so a bad image surfaces immediately.</div>
+
+<!-- ============ 14. URLS ============ -->
+<h2 class="s" id="urls"><span class="n">14</span>Redirect URIs, Safe Links &amp; the env vars that must match</h2>
+<p class="lead">Everything keys off one value you must get from the <b>IT Team</b> (who own the ALB + DNS): the <b>dev base URL</b> your service answers on. Push for a stable subdomain (e.g. <code class="inl">https://nexa-dev.procdna.com</code>) rather than the raw ALB DNS name, so the ACM cert, Entra URIs, and Safe Links allowlist all stay put if the ALB is recreated.</p>
+
+<table>
+  <tr><th>Where</th><th>What to register</th><th>Why</th></tr>
+  <tr><td><b>Entra ID</b> → App Reg → Authentication → Redirect URIs</td><td><code class="inl">{DEV_BASE_URL}/api/auth/callback/azure-ad</code> <span class="pill info">add, keep old</span></td><td>NextAuth's Azure AD login callback. Must be <code class="inl">https</code>. Keep the Vercel URI during migration.</td></tr>
+  <tr><td><b>Defender Safe Links</b> → "Do not rewrite"</td><td><code class="inl">{DEV_BASE_URL}/*</code></td><td>Stops rewriting the approval-email one-click links (<code class="inl">/api/approvals/email-action</code>) &amp; footer link.</td></tr>
+</table>
+
+<div class="rec warn"><span class="h">The #1 migration login bug</span> <code class="inl">NEXTAUTH_URL</code> must <b>exactly equal</b> the registered redirect URI's base. If they disagree you get <code class="inl">redirect_uri mismatch</code> and login fails. And behind the ALB the container sees <code class="inl">http</code> on the forwarded request — so trust <code class="inl">X-Forwarded-Proto</code> for secure-cookie naming (audit A2), or the session cookie is written wrong.</div>
+
+<div class="rec"><span class="h">Not affected by redirect URIs</span> <b>Microsoft Graph mail</b> uses the app-only client-credentials flow — it has <b>no</b> redirect URI. And the email-action token links are plain app URLs (HMAC-signed), <b>not</b> OAuth redirects — they belong only in the Safe Links allowlist, never in Entra.</div>
+
+<h4>Env vars to set in the task definition</h4>
+<pre><span class="c"># non-secret → environment</span>
+NEXTAUTH_URL   = https://nexa-dev.procdna.com   <span class="c"># must match Entra redirect URI</span>
+MAIL_BASE_URL  = https://nexa-dev.procdna.com   <span class="c"># email links use this host</span>
+<span class="c"># secret → secrets (from Parameter Store)</span>
+DATABASE_URL, NEXTAUTH_SECRET, AZURE_AD_CLIENT_ID/SECRET/TENANT_ID,
+SUPABASE→S3 keys, MAIL_SENDER, EMAIL_ACTION_SECRET, CREDENTIALS_SECRET</pre>
+
+<!-- ============ 15. ASK ============ -->
+<h2 class="s" id="ask"><span class="n">15</span>What to ask — split by owner (IT vs Akshay)</h2>
+<p class="lead">The teams are siloed and slow (≈4 h per round-trip), so each request must go to the <b>right owner first time</b>. Route the two lanes separately; they run in parallel and the dependency is one-directional (IT outputs → you wire CI/CD), with <b>no SG cross-reference to relay</b>.</p>
+
+<h3>→ To the IT Team (all IAM + ALB + ACM/DNS + SSM)</h3>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">IAM · one role</span>Create <b>one combined ECS role</b> (used in both task-def slots): <code class="inl">ssm:GetParameters</code> on <code class="inl">nexa/dev/*</code> + <code class="inl">kms:Decrypt</code> + <code class="inl">AmazonECSTaskExecutionRolePolicy</code> + S3 read/write on <code class="inl">&lt;bucket&gt;/nexa/*</code>. Trust: <code class="inl">ecs-tasks.amazonaws.com</code>. <span class="pill info">dev simplification — split for prod</span> → §11</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">IAM · CD user</span>A <b>dedicated CD IAM user</b> with ECR push, <code class="inl">ecs:RegisterTaskDefinition</code>, <code class="inl">ecs:UpdateService</code>, <code class="inl">ecs:DescribeServices</code>, <code class="inl">ecs:DescribeTaskDefinition</code>, and <code class="inl">iam:PassRole</code> on the <b>one role ARN</b> — and share its access keys with me. → §11, §12</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">ALB</span>The <b>distinct ALB</b>: target group (port 3000, target type <b>IP</b>), HTTPS listener (443), <b>health-check path <code class="inl">/api/health</code></b>, ALB security group (443 in). Can be built now; the cert attaches to the 443 listener when ready. → §8, §9</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">ACM</span><b>ACM certificate</b> for the app hostname — <span class="pill info">Himanshu</span>. Attached to the 443 listener. → §14</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">DNS · hostname</span><b>DNS records</b> (validation CNAME/Cvalue + hostname→ALB) and the <b>hostname assignment</b>. <span class="pill warn">deferred — requested later</span> Gates SSO testing, so don't let it drift. → §14</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Secrets</span>Load the ~12 <b>SSM Parameter Store</b> values under <code class="inl">nexa/dev/*</code> (IT or Himanshu), or grant me write access. I provide app-level secrets; infra values (DB URL, S3, URLs) come from Akshay's resources. → §10</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Confirm</span>Tasks run in a <b>private subnet on the existing NAT</b> (reuse, not a new one) with <b>ECR pull</b> reachable. → §8, §9</div></div>
+</div>
+
+<h3>→ To Akshay (SDE2 — resources only)</h3>
+<div class="steps">
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Registry</span><b>The ECR repository</b> — and its full repo URI. → §6</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Database</span><b>The RDS schema</b>: connection string, a DB user <b>scoped to that schema only</b>, and the schema name (to align Prisma's <code class="inl">procdna_database</code>). → §2, §7</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Storage</span><b>The S3 bucket</b> (dedicated, or shared with a NEXA prefix) for SOW/PO documents. → §5</div></div>
+</div>
+
+<div class="rec warn"><span class="h">Don't misroute</span> Akshay has <b>only <code class="inl">iam:CreateRole</code></b> and makes <b>just</b> the ECR repo, RDS schema, and S3 bucket. <b>Do not ask Akshay</b> for the ALB, IAM grants, ACM/DNS, or SSM — those are <b>IT (or Himanshu)</b>. And don't infer resource power from <code class="inl">CreateRole</code> — each resource needs its own permission family.</div>
+
+<div class="rec ok"><span class="h">The ARNs IT needs from Akshay</span> IT can't scope the policies until it has the <b>S3 bucket ARN</b>, the <b>Parameter Store path</b>, and the <b>KMS key</b>. You're the hub: collect those from Akshay as he provisions, then forward to IT. That's the only relay — and it's just pasting a few ARNs, not syncing the teams.</div>
+
+<!-- ============ 16. CARRYOVER ============ -->
+<h2 class="s" id="carryover"><span class="n">16</span>Dev → prod, and what's now moot</h2>
+
+<div class="twocol">
+  <div class="rec ok"><span class="h">Carries over to production</span> The <b>Dockerfile</b>, the <b>CI/CD pipeline</b>, the <b>S3 storage rewrite</b>, the <b>secrets-in-Parameter-Store</b> pattern, and the <b>Entra/Safe-Links</b> setup. Production is "separate infra," but the containerised stack you build now is largely the same artifact pointed at different env vars and a prod URL — little of this month is throwaway.</div>
+  <div class="rec bad"><span class="h">Now moot / superseded</span> The <b>microk8s comparison</b> (decided: ECS). You provisioning <b>VPC / NAT / EC2 / ALB / RDS</b> (all theirs). The <b>SSM <code>send-command</code> + deploy-key + systemd</b> deploy model from the EC2 runbook. The EC2-specific sections of <code class="inl">plan.html</code> and the runbook.</div>
+</div>
+
+<div class="rec warn"><span class="h">Still true regardless of compute — the security blockers</span> The four release-blockers from the audit (shared-password <code class="inl">/login2</code>, the <code class="inl">/api/emergency</code> token, write-side IDOR, audit logging) can be deferred for a <b>dev test with fake data</b>, but <b>not</b> for the production move with real financial data. Keep them on the prod checklist.</div>
+
+<!-- ============ 17. GLOSSARY ============ -->
+<h2 class="s" id="glossary"><span class="n">17</span>Glossary</h2>
+<dl class="glos">
+  <dt>Image</dt><dd>A frozen, self-contained snapshot of your app + its runtime + dependencies, built from a Dockerfile. Immutable. Stored in ECR.</dd>
+  <dt>Container</dt><dd>A running instance of an image. Disposable; its local filesystem is ephemeral.</dd>
+  <dt>Dockerfile</dt><dd>The recipe that defines how an image is built.</dd>
+  <dt>ECR (Elastic Container Registry)</dt><dd>AWS's image registry — stores and serves your images. The "warehouse."</dd>
+  <dt>Fargate</dt><dd>Serverless compute that runs containers with no servers for you to manage. The "oven."</dd>
+  <dt>ECS (Elastic Container Service)</dt><dd>The orchestrator — decides what runs, how many, heals failures, does rolling deploys, wires the ALB. The "chef."</dd>
+  <dt>Cluster</dt><dd>A pool of compute (Fargate capacity / EC2 instances) where tasks run.</dd>
+  <dt>Service</dt><dd>The controller that keeps N tasks running, integrates with the ALB, and performs rolling deploys.</dd>
+  <dt>Task Definition</dt><dd>The blueprint: image, CPU/RAM, port, env vars, secrets, IAM roles. A new image = a new revision.</dd>
+  <dt>Task</dt><dd>A running instance of a task definition — your container(s) on Fargate.</dd>
+  <dt>Task execution role</dt><dd>Used by the ECS agent at launch — pulls the image, reads secrets, writes logs.</dd>
+  <dt>Task role</dt><dd>Used by your app code at runtime — its own AWS calls, chiefly S3.</dd>
+  <dt>iam:PassRole</dt><dd>The permission to hand an existing role to an AWS service (here, ECS) when launching. Required by the CD user to deploy.</dd>
+  <dt>Parameter Store</dt><dd>SSM's encrypted key-value store for config &amp; secrets, referenced by the task definition.</dd>
+  <dt>ECS Exec</dt><dd>Opens a shell inside a running container via SSM — a debug escape hatch, not the deploy path.</dd>
+  <dt>Rolling deployment</dt><dd>ECS starts new tasks, waits for health, drains and stops old ones — zero downtime, auto-rollback on failure.</dd>
+</dl>
+
+</div>
+
+<div class="foot">
+  NEXA · ECS migration plan · internal working doc · companion to <i>NEXA AWS Course</i>, <i>Service Map</i> &amp; <i>Migration Runbook</i>.
+  Assumes the Auxo dev ECS cluster + shared RDS path (Himanshu, 2026-06-23) and that you run your own CD via <code>iam:PassRole</code>.
+  Get the dev base URL from IT, and route the §15 enablement list by owner (IT vs Akshay) before starting.
+</div>
+
+</main>
+</div>
+</body>
+</html>

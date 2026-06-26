@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   // Dev only: Next.js blocks cross-origin requests to dev-server assets (HMR,
   // /_next/*) from any host other than localhost. When the app is reached via
   // the EC2 box's public IP, that triggers the cross-origin/CORS block — so the

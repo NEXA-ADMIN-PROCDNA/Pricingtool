@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
+import { PROCDNA_LOGO_DATA_URL } from '../login/_logo'
 
 const sans = "'DM Sans', system-ui, sans-serif"
 
@@ -37,10 +38,13 @@ function Login2Form() {
       <div style={{ width: 400, background: '#fff', borderRadius: 16, boxShadow: '0 4px 40px rgba(11,28,61,0.10)', padding: '40px 36px' }}>
 
         <div style={{ marginBottom: 28 }}>
-          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 22, color: '#0B1C3D', letterSpacing: '0.2px' }}>
-            ProcDNA <span style={{ color: '#1A6EFF' }}>NEXA</span>
-          </span>
-          <p style={{ margin: '8px 0 0', fontSize: 13, color: '#8A93A6' }}>Sign in with your email address.</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <img src={PROCDNA_LOGO_DATA_URL} alt="ProcDNA" style={{ height: 32, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 22, color: '#0B1C3D', letterSpacing: '0.2px' }}>
+              ProcDNA <span style={{ color: '#1A6EFF' }}>NEXA</span>
+            </span>
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: '#8A93A6' }}>Sign in with your email address.</p>
         </div>
 
         {error && (

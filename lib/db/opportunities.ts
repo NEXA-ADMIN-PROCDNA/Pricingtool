@@ -104,8 +104,8 @@ export async function getOpportunities(
       projectCodeProceed: true,
       createdAt: true,
       client:   { select: { name: true, clientId: true } },
-      owner:    { select: { name: true } },
-      coOwner:  { select: { name: true } },
+      owner:    { select: { id: true, name: true } },
+      coOwner:  { select: { id: true, name: true } },
       _count:  { select: { comments: true } },
       pricingVersions: {
         where:  { isFinal: true },

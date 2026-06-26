@@ -297,7 +297,7 @@ function FilterPopover({
   )
 }
 
-export function OpportunityTable({ rows, roleLabel, currentUserName }: { rows: OpportunityRow[]; roleLabel: string; currentUserName: string }) {
+export function OpportunityTable({ rows, roleLabel, currentUserId }: { rows: OpportunityRow[]; roleLabel: string; currentUserId: string }) {
   const router = useRouter()
   const params = useSearchParams()
   const active = (params.get('status') ?? 'ALL') as 'ALL' | OpportunityStatus
@@ -413,7 +413,7 @@ export function OpportunityTable({ rows, roleLabel, currentUserName }: { rows: O
 
   // ── Multi-column filter logic ──────────────────────────────────────────────
   const visible = useMemo(() => rows.filter(r => {
-    if (mineOnly && r.owner.name !== currentUserName && r.coOwner?.name !== currentUserName) return false
+    if (mineOnly && r.owner.id !== currentUserId && r.coOwner?.id !== currentUserId) return false
     if (active !== 'ALL' && r.status !== active) return false
 
     const cf = columnFilters['client']
@@ -472,7 +472,7 @@ export function OpportunityTable({ rows, roleLabel, currentUserName }: { rows: O
     }
 
     return true
-  }), [rows, active, columnFilters, mineOnly, currentUserName])
+  }), [rows, active, columnFilters, mineOnly, currentUserId])
 
   // ── KPI stats derived from the visible (filtered) rows ─────────────────────
   // Mirrors the server-side getDashboardStats logic, but driven entirely off the
