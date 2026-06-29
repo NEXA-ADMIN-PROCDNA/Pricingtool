@@ -1,0 +1,62 @@
+name: NEXA — build & deploy
+
+# Runs on every push to main. CI builds the Docker image and pushes it to ECR.
+# CD (the deploy job at the bottom) is commented out until ECS is ready — see notes.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # lets you trigger a run manually from the Actions tab
+
+env:
+  AWS_REGION:   us-east-1
+  ECR_REPO:     nexa-dev
+  ECR_REGISTRY: 492237925351.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  # ── CI: build the Docker image and push it to ECR ──────────────────────────
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image (no lint — just `next build` inside Docker)
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPO"
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+          echo "Pushed $IMAGE:${{ github.sha }}"
+
+  # ── CD: deploy the new image to ECS ────────────────────────────────────────
+  # ENABLE THIS once you have: the cluster name, the combined role, and a
+  # `nexa-dev` service whose task definition references the image `:latest` tag.
+  # Then uncomment the job, fill in <CLUSTER>, and push.
+  #
+  # deploy:
+  #   needs: build-and-push
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region:            ${{ env.AWS_REGION }}
+  #     - name: Force a new ECS deployment (re-pulls :latest)
+  #       run: |
+  #         aws ecs update-service \
+  #           --cluster <CLUSTER> \
+  #           --service nexa-dev \
+  #           --force-new-deployment \
+  #           --region "$AWS_REGION"
