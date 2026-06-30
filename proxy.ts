@@ -33,8 +33,9 @@ export async function proxy(req: NextRequest) {
 
 // The matcher excludes (= leaves PUBLIC) the login pages, the NextAuth handler,
 // the one-click email approval endpoint (token-protected on its own), the
-// emergency admin login (env-token protected), and Next.js static assets.
+// emergency admin login (env-token protected), the ALB health check (no
+// session cookie on health-check requests), and Next.js static assets.
 // Everything NOT matched here is forced through the auth check above.
 export const config = {
-  matcher: ['/((?!login|login2|api/auth|api/approvals/email-action|api/emergency|_next/static|_next/image|favicon.ico).*)'],
+  matcher: ['/((?!login|login2|api/auth|api/approvals/email-action|api/emergency|api/health|_next/static|_next/image|favicon.ico).*)'],
 }

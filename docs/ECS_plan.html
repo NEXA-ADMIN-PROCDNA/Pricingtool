@@ -464,6 +464,8 @@
 
 <div class="rec aws"><span class="h">Why this is a security upgrade over Vercel</span> Secrets never sit in GitHub, never sit in the image, and never sit in a file on disk. They live encrypted in Parameter Store, are decrypted only at task launch, and access is gated by IAM. GitHub only ever holds the AWS deploy credentials — not the app's secrets.</div>
 
+<div class="rec"><span class="h">Two different SSM permissions — don't confuse them</span> <b>(1) Who reads at launch:</b> the <b>combined role</b> holds <code class="inl">ssm:GetParameters</code> + <code class="inl">kms:Decrypt</code> — that's how the <em>task</em> pulls secrets when it starts. <b>(2) Who writes/manages:</b> <b>my IAM user</b> holds <code class="inl">ssm:PutParameter</code> + <code class="inl">ssm:GetParameter(s)</code> + <code class="inl">kms:Encrypt/Decrypt</code> on <code class="inl">nexa/dev/*</code> — so <em>I</em> can populate and verify the parameters myself, instead of routing every secret through IT/Himanshu. Two principals, two purposes, both scoped to <code class="inl">nexa/dev/*</code>. (See §11 for the exact policy lines.)</div>
+
 <!-- ============ 11. IAM ============ -->
 <h2 class="s" id="iam"><span class="n">11</span>IAM: one combined role + the CD user, and where <code style="font-size:.8em">iam:PassRole</code> fits</h2>
 <p class="lead">ECS technically has <b>two</b> role slots in a task definition — an <em>execution</em> role and a <em>task</em> role — for two jobs at two moments. For the dev trial we <b>collapse them into one combined role</b> used in both slots: simpler to create, one ARN to track, one <code class="inl">PassRole</code> target. (We split them back for production — see below.)</p>
@@ -489,13 +491,22 @@
 
 <h3>The IAM your CD user needs (the ask)</h3>
 <pre><span class="c">// scoped to NEXA — least privilege</span>
-ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability,
-ecr:PutImage, ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload
-ecs:RegisterTaskDefinition
-ecs:UpdateService, ecs:DescribeServices, ecs:DescribeTaskDefinition
-iam:PassRole   <span class="c">// on the ONE combined-role ARN</span></pre>
+<span class="c">// --- push the image ---</span>
+ecr:GetAuthorizationToken      <span class="c"># must be Resource: *  (account-level)</span>
+ecr:BatchCheckLayerAvailability, ecr:PutImage,
+ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload   <span class="c"># on the ECR repo ARN</span>
+<span class="c">// --- deploy to ECS ---</span>
+ecs:RegisterTaskDefinition     <span class="c"># must be Resource: *  (not scopable)</span>
+ecs:UpdateService, ecs:DescribeServices   <span class="c"># on the service ARN</span>
+ecs:DescribeTaskDefinition
+iam:PassRole                   <span class="c"># on the ONE combined-role ARN</span>
+<span class="c">// --- load &amp; read the secrets myself (Parameter Store) ---</span>
+ssm:PutParameter, ssm:GetParameter, ssm:GetParameters   <span class="c"># on parameter/nexa/dev/*</span>
+kms:Encrypt, kms:Decrypt       <span class="c"># on the params' KMS key (for SecureString)</span></pre>
 
-<div class="rec warn"><span class="h">The one gotcha that blocks deploys</span> If <code class="inl">iam:PassRole</code> is missing or not scoped to the role ARN, <code class="inl">RegisterTaskDefinition</code>/<code class="inl">UpdateService</code> fails with <em>"not authorized to perform: iam:PassRole"</em> — even though every <code class="inl">ecs:*</code> is present. Confirm PassRole names the exact role ARN. Likewise, if the role's <b>trust policy</b> doesn't allow <code class="inl">ecs-tasks.amazonaws.com</code>, ECS can't assume it and the task never starts.</div>
+<div class="rec"><span class="h">Why the SSM + KMS lines (new)</span> So <b>I can load and manage the <code class="inl">nexa/dev/*</code> parameters myself</b> instead of emailing each secret to IT/Himanshu. <code class="inl">ssm:PutParameter</code> writes a value, <code class="inl">ssm:GetParameter(s)</code> reads it back to verify, and <code class="inl">kms:Encrypt</code>/<code class="inl">Decrypt</code> are needed because the secrets are stored as encrypted <code class="inl">SecureString</code> parameters. All scoped to the <code class="inl">nexa/dev/*</code> path — I can't touch other projects' parameters. <b>This is separate from the role's runtime <code class="inl">ssm:GetParameters</code></b> (which is what the task uses at launch); these are <em>my</em> permissions to populate the store.</div>
+
+<div class="rec warn"><span class="h">The one gotcha that blocks deploys</span> If <code class="inl">iam:PassRole</code> is missing or not scoped to the role ARN, <code class="inl">RegisterTaskDefinition</code>/<code class="inl">UpdateService</code> fails with <em>"not authorized to perform: iam:PassRole"</em> — even though every <code class="inl">ecs:*</code> is present. Confirm PassRole names the exact role ARN. Likewise, if the role's <b>trust policy</b> doesn't allow <code class="inl">ecs-tasks.amazonaws.com</code>, ECS can't assume it and the task never starts. Note the two <b>Resource: *</b> actions above (<code class="inl">GetAuthorizationToken</code>, <code class="inl">RegisterTaskDefinition</code>) can't be ARN-scoped — everything else is.</div>
 
 <!-- ============ 12. CICD ============ -->
 <h2 class="s" id="cicd"><span class="n">12</span>CI/CD — CI is GitHub-only; CD ships an image</h2>
@@ -603,7 +614,7 @@ SUPABASE→S3 keys, MAIL_SENDER, EMAIL_ACTION_SECRET, CREDENTIALS_SECRET</pre>
   <div class="step"><div class="num"></div><div class="c2"><span class="k">ALB</span>The <b>distinct ALB</b>: target group (port 3000, target type <b>IP</b>), HTTPS listener (443), <b>health-check path <code class="inl">/api/health</code></b>, ALB security group (443 in). Can be built now; the cert attaches to the 443 listener when ready. → §8, §9</div></div>
   <div class="step"><div class="num"></div><div class="c2"><span class="k">ACM</span><b>ACM certificate</b> for the app hostname — <span class="pill info">Himanshu</span>. Attached to the 443 listener. → §14</div></div>
   <div class="step"><div class="num"></div><div class="c2"><span class="k">DNS · hostname</span><b>DNS records</b> (validation CNAME/Cvalue + hostname→ALB) and the <b>hostname assignment</b>. <span class="pill warn">deferred — requested later</span> Gates SSO testing, so don't let it drift. → §14</div></div>
-  <div class="step"><div class="num"></div><div class="c2"><span class="k">Secrets</span>Load the ~12 <b>SSM Parameter Store</b> values under <code class="inl">nexa/dev/*</code> (IT or Himanshu), or grant me write access. I provide app-level secrets; infra values (DB URL, S3, URLs) come from Akshay's resources. → §10</div></div>
+  <div class="step"><div class="num"></div><div class="c2"><span class="k">Secrets</span>Grant my IAM user <b>SSM Parameter Store get/put on <code class="inl">nexa/dev/*</code></b> (<code class="inl">ssm:PutParameter</code>, <code class="inl">ssm:GetParameter</code>, <code class="inl">ssm:GetParameters</code>) + <code class="inl">kms:Encrypt</code>/<code class="inl">Decrypt</code> on the key — so I can <b>load and manage the secrets myself</b> rather than emailing each value. (Infra values like DB URL/S3 come from Akshay's resources.) → §10, §11</div></div>
   <div class="step"><div class="num"></div><div class="c2"><span class="k">Confirm</span>Tasks run in a <b>private subnet on the existing NAT</b> (reuse, not a new one) with <b>ECR pull</b> reachable. → §8, §9</div></div>
 </div>
 
