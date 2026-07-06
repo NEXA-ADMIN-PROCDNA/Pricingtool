@@ -115,13 +115,14 @@ async function getApproval(approvalId: string) {
   })
 }
 
-// Resolve which approver slot this token belongs to, and their display name.
+// Resolve which approver slot this token belongs to.
+// Don't gate on approval.approver2 being populated — match by ID only.
 function resolveApprover(
   approval: NonNullable<Awaited<ReturnType<typeof getApproval>>>,
   approverId: string
 ): { slot: 'A1' | 'A2'; name: string } | null {
   if (approval.approverId === approverId) return { slot: 'A1', name: approval.approver.name }
-  if (approval.approverId2 === approverId && approval.approver2) return { slot: 'A2', name: approval.approver2.name }
+  if (approval.approverId2 === approverId) return { slot: 'A2', name: approval.approver2?.name ?? 'Approver 2' }
   return null
 }
 
@@ -294,10 +295,16 @@ export async function POST(req: NextRequest) {
         where: { id: approvalId },
         data:  { approver2Status: 'PENDING' },
       })
-      if (approval.approver2) {
+      // Fetch A2 directly in case the included relation wasn't populated
+      const a2User = approval.approver2 ?? (
+        approval.approverId2
+          ? await prisma.user.findUnique({ where: { id: approval.approverId2 }, select: { name: true, email: true } })
+          : null
+      )
+      if (a2User) {
         await mailApprovalRequested({
-          approverEmail:         approval.approver2.email,
-          approverName:          approval.approver2.name,
+          approverEmail:         a2User.email,
+          approverName:          a2User.name,
           requesterEmail:        approval.requestedBy.email,
           requesterName:         approval.requestedBy.name,
           opportunityId:         opp.opportunityId,
@@ -308,6 +315,8 @@ export async function POST(req: NextRequest) {
           approverId:            approval.approverId2!,
           businessJustification: approval.businessJustification,
         })
+      } else {
+        console.error('[email-action] approverId2 set but user not found:', approval.approverId2)
       }
     }
     return resultPage('approved', 'Approved.', opp.opportunityId,

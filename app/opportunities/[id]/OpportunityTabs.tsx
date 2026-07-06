@@ -1349,20 +1349,18 @@ export function OpportunityTabs({
       )}
 
       {/* ── Tab: SoW ─────────────────────────────────────────── */}
-      {tab === 'SOW / PO' && (() => {
-        const sowRequests = (opp.approvalRequests as any[]).filter((a: any) => a.approvalType === 'SOW_VERIFICATION')
-        // Oldest request (DESC order → last element) fixes the designated approver for all future resubmissions
-        const firstSowRequest = sowRequests.length > 0 ? sowRequests[sowRequests.length - 1] : null
-        return (
-          <TabSoW
-            opportunityId={opp.opportunityId}
-            opportunityName={opp.opportunityName}
-            initialPreContractAgreed={(opp as any).preContractAgreed ?? false}
-            existingVerification={sowRequests[0] ?? null}
-            lockedSowApproverId={firstSowRequest?.approverId ?? undefined}
-          />
-        )
-      })()}
+      {tab === 'SOW / PO' && (
+        <TabSoW
+          opportunityId={opp.opportunityId}
+          opportunityName={opp.opportunityName}
+          initialPreContractAgreed={(opp as any).preContractAgreed ?? false}
+          existingVerification={
+            (opp.approvalRequests as any[]).find(
+              (a: any) => a.approvalType === 'SOW_VERIFICATION'
+            ) ?? null
+          }
+        />
+      )}
 
       {/* ── Tab: Project Code ────────────────────────────────── */}
       {tab === 'Project Code' && (

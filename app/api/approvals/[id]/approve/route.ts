@@ -113,14 +113,19 @@ export async function POST(
   // Dual: Approver 1 approves — unlock Approver 2 (status stays PENDING)
   const updated = await prisma.approvalRequest.update({
     where: { id },
-    data:  { approver2Status: 'PENDING' },  // null → PENDING = Approver 2's turn
+    data:  { approver2Status: 'PENDING' },
   })
 
-  // Email Approver 2 with action buttons
-  if (approval.approver2) {
+  // Fetch A2 user directly — don't rely solely on the included relation
+  const a2User = approval.approver2 ?? (
+    approval.approverId2
+      ? await prisma.user.findUnique({ where: { id: approval.approverId2 }, select: { name: true, email: true } })
+      : null
+  )
+  if (a2User) {
     await mailApprovalRequested({
-      approverEmail:         approval.approver2.email,
-      approverName:          approval.approver2.name,
+      approverEmail:         a2User.email,
+      approverName:          a2User.name,
       requesterEmail:        approval.requestedBy.email,
       requesterName:         approval.requestedBy.name,
       opportunityId:         approval.opportunity.opportunityId,
@@ -131,6 +136,8 @@ export async function POST(
       approverId:            approval.approverId2!,
       businessJustification: approval.businessJustification,
     })
+  } else {
+    console.error('[dual-approve] approverId2 set but user not found:', approval.approverId2)
   }
 
   return NextResponse.json(updated)
