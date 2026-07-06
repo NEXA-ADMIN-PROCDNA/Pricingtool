@@ -5,6 +5,7 @@
 // SOW_PENDING → SOW_SUBMITTED transition.
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 
@@ -286,6 +287,7 @@ export function TabSoW({
 }) {
   const { data: session } = useSession()
   const currentUserId = (session?.user as { id?: string })?.id ?? ''
+  const router = useRouter()
 
   const [precontract, setPrecontract]   = useState(initialPreContractAgreed)
   const [saving, setSaving]             = useState(false)
@@ -349,6 +351,7 @@ export function TabSoW({
       setVerification({ id: data.id, status: 'PENDING', approver: data.approver })
       setApproverId('')
       setConfirmOpen(false)
+      router.refresh()
     } else {
       const body = await res.json().catch(() => ({})) as { error?: string }
       setSubmitError(body.error ?? 'Failed to submit')
