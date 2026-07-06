@@ -142,7 +142,7 @@ export async function getOpportunityDetail(opportunityId: string, auth?: AuthCtx
       sowDocuments:  { where: { isActive: true }, orderBy: { uploadedAt: 'desc' } },
       poDocuments:   { where: { isActive: true }, orderBy: { uploadedAt: 'desc' } },
       approvalRequests: {
-        include: { requestedBy: true, approver: true },
+        include: { requestedBy: true, approver: true, approver2: true },
         orderBy: { requestedAt: 'desc' },
       },
       comments: {

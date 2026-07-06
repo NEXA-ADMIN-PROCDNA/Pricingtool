@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   const approvals = await prisma.approvalRequest.findMany({
     where: {
-      ...(isAdmin ? {} : { approverId: userId }),
+      ...(isAdmin ? {} : { OR: [{ approverId: userId }, { approverId2: userId }] }),
       ...(onlyPending ? { status: 'PENDING' } : {}),
     },
     include: {

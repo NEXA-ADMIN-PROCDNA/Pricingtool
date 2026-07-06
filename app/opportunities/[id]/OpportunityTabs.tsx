@@ -223,6 +223,7 @@ export function OpportunityTabs({
   }
 
   const [approverId, setApproverId]                     = useState('')
+  const [approverId2, setApproverId2]                   = useState('')
   const [ccIds, setCcIds]                               = useState<string[]>([])
   const [businessJustification, setBusinessJustification] = useState('')
   const [approvalLoading, setApprovalLoading]           = useState(false)
@@ -336,10 +337,21 @@ export function OpportunityTabs({
     setApprovalLoading(true)
     setApprovalError(null)
     try {
+      const finalV   = pricingVersions.find(v => v.isFinal)
+      const billings = finalV?.proposedBillings != null ? Number(finalV.proposedBillings) : 0
+      const margin   = finalV?.grossMarginPct   != null ? Number(finalV.grossMarginPct)   : 100
+      const discount = finalV?.discountPremiumPct != null ? Number(finalV.discountPremiumPct) : 0
+      const isDual   = (billings > 100_000 && margin < 40) || discount < -10
       const res = await fetch(`/api/opportunities/${opp.opportunityId}/approvals`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approverId, requestedById: opp.ownerId, businessJustification, ccIds }),
+        body: JSON.stringify({
+          approverId,
+          ...(isDual && approverId2 ? { approverId2 } : {}),
+          requestedById: opp.ownerId,
+          businessJustification,
+          ccIds,
+        }),
       })
       if (!res.ok) {
         const j = await res.json()
@@ -351,6 +363,7 @@ export function OpportunityTabs({
       setApprovals((prev: ApprovalItem[]) => [created as ApprovalItem, ...prev])
       setOppStage('APPROVAL_PENDING')
       setApproverId('')
+      setApproverId2('')
       setCcIds([])
       setBusinessJustification('')
       setApprovalConfirm(false)
@@ -1153,28 +1166,68 @@ export function OpportunityTabs({
                     </p>
                   </div>
                 )}
+                {(() => {
+                  const finalV   = pricingVersions.find(v => v.isFinal)
+                  const billings = finalV?.proposedBillings != null ? Number(finalV.proposedBillings) : 0
+                  const margin   = finalV?.grossMarginPct   != null ? Number(finalV.grossMarginPct)   : 100
+                  const discount = finalV?.discountPremiumPct != null ? Number(finalV.discountPremiumPct) : 0
+                  const isDual   = (billings > 100_000 && margin < 40) || discount < -10
+                  const adminUsers   = users.filter(u => u.role === 'ADMIN')
+                  const partnerUsers = users.filter(u => u.role === 'PARTNER')
+                  const canSubmit = !!approverId && (!isDual || !!approverId2) && !!businessJustification.trim() && !approvalLoading
+                  return (
                 <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-                  <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-slate-500">
                     {isReapproval ? 'Re-request Approval' : 'Request Approval'}
                   </h2>
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-slate-500">Approver</label>
-                      <SearchableSelect
-                        options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
-                        value={approverId}
-                        onChange={setApproverId}
-                        placeholder="Search approver by name…"
-                        emptyMessage="No matching users found."
-                      />
+                  {isDual && (
+                    <div className="mb-4 flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#B45309" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mt-0.5 shrink-0"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                      <p className="text-xs text-amber-800">
+                        <strong>Dual approval required</strong> — revenue &gt; $100K with margin &lt; 40%, or discount &gt; 10%. Both an Admin and a Partner must approve.
+                      </p>
                     </div>
+                  )}
+                  <div className="flex flex-col gap-3 mt-4">
                     <div>
                       <label className="mb-1.5 block text-xs font-semibold text-slate-500">
-                        CC <span className="font-normal text-slate-400">(optional — they receive a notification only)</span>
+                        {isDual ? 'Approver 1 — Finance (Admin)' : 'Approver'}
+                      </label>
+                      {isDual && adminUsers.length === 0 ? (
+                        <p className="text-xs text-red-600 rounded-md bg-red-50 border border-red-200 px-3 py-2">No Admin users found in the system. An Admin must be provisioned before a dual-approval request can be sent.</p>
+                      ) : (
+                        <SearchableSelect
+                          options={(isDual ? adminUsers : users).map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                          value={approverId}
+                          onChange={setApproverId}
+                          placeholder={isDual ? 'Select an Admin…' : 'Search approver by name…'}
+                          emptyMessage="No matching users found."
+                        />
+                      )}
+                    </div>
+                    {isDual && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-semibold text-slate-500">Approver 2 — Partner</label>
+                        {partnerUsers.length === 0 ? (
+                          <p className="text-xs text-red-600 rounded-md bg-red-50 border border-red-200 px-3 py-2">No Partner users found in the system. A Partner must be provisioned before a dual-approval request can be sent.</p>
+                        ) : (
+                          <SearchableSelect
+                            options={partnerUsers.filter(u => u.id !== approverId).map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                            value={approverId2}
+                            onChange={setApproverId2}
+                            placeholder="Select a Partner…"
+                            emptyMessage="No matching users found."
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-slate-500">
+                        CC <span className="font-normal text-slate-400">(optional — notification only)</span>
                       </label>
                       <MultiSelect
                         options={users
-                          .filter(u => u.id !== approverId)
+                          .filter(u => u.id !== approverId && u.id !== approverId2)
                           .map(u => ({ value: u.id, label: u.name, sub: u.role }))}
                         values={ccIds}
                         onChange={setCcIds}
@@ -1197,7 +1250,7 @@ export function OpportunityTabs({
                     <div className="flex justify-end">
                       <button
                         onClick={() => setApprovalConfirm(true)}
-                        disabled={!approverId || !businessJustification.trim() || approvalLoading}
+                        disabled={!canSubmit}
                         className="rounded-md bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                       >
                         {isReapproval ? 'Send Re-approval Request' : 'Send Request'}
@@ -1208,6 +1261,8 @@ export function OpportunityTabs({
                     <p className="mt-2 text-xs text-red-600">{approvalError}</p>
                   )}
                 </div>
+                  )
+                })()}
               </>
             )
           })()}
@@ -1233,10 +1288,35 @@ export function OpportunityTabs({
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-700">
-                          Approver: <span className="font-semibold">{ar.approver.name}</span>
-                          <span className="ml-1 text-xs text-slate-400">({ar.approver.role})</span>
-                        </p>
+                        {ar.approverId2 ? (
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-slate-700">
+                                Approver 1: <span className="font-semibold">{ar.approver.name}</span>
+                                <span className="ml-1 text-xs text-slate-400">({ar.approver.role})</span>
+                              </p>
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${APPROVAL_COLORS[ar.status as ApprovalStatus]}`}>
+                                {ar.status}
+                              </span>
+                            </div>
+                            {ar.approver2 && (
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-slate-700">
+                                  Approver 2: <span className="font-semibold">{ar.approver2.name}</span>
+                                  <span className="ml-1 text-xs text-slate-400">({ar.approver2.role})</span>
+                                </p>
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${APPROVAL_COLORS[(ar.approver2Status ?? 'PENDING') as ApprovalStatus]}`}>
+                                  {ar.approver2Status ?? 'PENDING'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-700">
+                            Approver: <span className="font-semibold">{ar.approver.name}</span>
+                            <span className="ml-1 text-xs text-slate-400">({ar.approver.role})</span>
+                          </p>
+                        )}
                         <p className="text-xs text-slate-400">{fmtDate(ar.requestedAt)}</p>
                         {ar.businessJustification && (
                           <p className="text-xs text-slate-500 mt-1">
@@ -1248,9 +1328,11 @@ export function OpportunityTabs({
                           <p className="text-xs text-red-600 italic mt-1">{ar.rejectionReason}</p>
                         )}
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${APPROVAL_COLORS[ar.status as ApprovalStatus]}`}>
-                        {ar.status}
-                      </span>
+                      {!ar.approverId2 && (
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${APPROVAL_COLORS[ar.status as ApprovalStatus]}`}>
+                          {ar.status}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

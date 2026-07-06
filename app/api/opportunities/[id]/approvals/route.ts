@@ -72,7 +72,7 @@ export async function POST(
 
   try {
     const { id: opportunityId } = await params
-    const { approverId, requestedById, approvalType = 'PRICING', businessJustification, ccIds } = await req.json()
+    const { approverId, approverId2, requestedById, approvalType = 'PRICING', businessJustification, ccIds } = await req.json()
 
     if (!approverId || !requestedById) {
       return NextResponse.json({ error: 'Missing approverId or requestedById' }, { status: 400 })
@@ -115,18 +115,24 @@ export async function POST(
         : Promise.resolve([] as { email: string }[]),
     ])
 
+    const isDual = !!approverId2
     const approval = await prisma.approvalRequest.create({
       data: {
         opportunityId:        opp.id,
         requestedById,
         approverId,
+        ...(isDual && { approverId2, approver2Status: 'PENDING' }),
         approvalType,
         status:               'PENDING',
         requestedAt:          new Date(),
         pricingVersionNumber: finalVersion?.versionNumber ?? null,
         businessJustification: businessJustification?.trim() ?? null,
       },
-      include: { requestedBy: { select: { name: true, email: true } }, approver: { select: { name: true, email: true } } },
+      include: {
+        requestedBy: { select: { name: true, email: true } },
+        approver:    { select: { name: true, email: true } },
+        approver2:   { select: { name: true, email: true } },
+      },
     })
 
     const newStage = approvalType === 'SOW_VERIFICATION' ? 'SOW_REVIEW_PENDING' : 'APPROVAL_PENDING'
@@ -142,9 +148,7 @@ export async function POST(
       versionNumber: finalVersion?.versionNumber ?? undefined,
     }
 
-    await mailApprovalRequested({
-      approverEmail:         approval.approver.email,
-      approverName:          approval.approver.name,
+    const mailBase = {
       requesterEmail:        approval.requestedBy.email,
       requesterName:         approval.requestedBy.name,
       ccEmails:              ccUsers.map((u: { email: string }) => u.email),
@@ -153,10 +157,23 @@ export async function POST(
       clientName:            opp.client.name,
       approvalType,
       approvalRecordId:      approval.id,
-      approverId:            approval.approverId,
       businessJustification: approvalType === 'SOW_VERIFICATION' ? undefined : businessJustification?.trim() ?? '',
       context,
+    }
+    await mailApprovalRequested({
+      ...mailBase,
+      approverEmail: approval.approver.email,
+      approverName:  approval.approver.name,
+      approverId:    approval.approverId,
     })
+    if (isDual && approval.approver2) {
+      await mailApprovalRequested({
+        ...mailBase,
+        approverEmail: approval.approver2.email,
+        approverName:  approval.approver2.name,
+        approverId:    approval.approverId2!,
+      })
+    }
 
     return NextResponse.json(approval, { status: 201 })
   } catch (err) {

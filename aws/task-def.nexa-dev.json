@@ -1,0 +1,48 @@
+{
+  "family": "nexa-dev",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::492237925351:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::492237925351:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "nexa",
+      "image": "492237925351.dkr.ecr.us-east-1.amazonaws.com/nexa-dev:latest",
+      "essential": true,
+      "portMappings": [
+        { "containerPort": 3000, "protocol": "tcp" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/nexa-dev",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "nexa",
+          "awslogs-create-group": "true"
+        }
+      },
+      "secrets": [
+        { "name": "DATABASE_URL",               "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/DATABASE_URL" },
+        { "name": "DIRECT_URL",                 "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/DIRECT_URL" },
+        { "name": "NEXTAUTH_SECRET",            "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/NEXTAUTH_SECRET" },
+        { "name": "NEXTAUTH_URL",               "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/NEXTAUTH_URL" },
+        { "name": "AZURE_AD_TENANT_ID",         "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/AZURE_AD_TENANT_ID" },
+        { "name": "AZURE_AD_CLIENT_ID",         "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/AZURE_AD_CLIENT_ID" },
+        { "name": "AZURE_AD_CLIENT_SECRET",     "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/AZURE_AD_CLIENT_SECRET" },
+        { "name": "SUPABASE_SERVICE_ROLE_KEY",  "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/SUPABASE_SERVICE_ROLE_KEY" },
+        { "name": "SUPABASE_URL",               "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/SUPABASE_URL" },
+        { "name": "CREDENTIALS_SECRET",         "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/CREDENTIALS_SECRET" },
+        { "name": "MAIL_SENDER",                "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/MAIL_SENDER" },
+        { "name": "MAIL_BASE_URL",              "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/MAIL_BASE_URL" },
+        { "name": "EMAIL_ACTION_SECRET",        "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/EMAIL_ACTION_SECRET" },
+        { "name": "EMERGENCY_TOKEN",            "valueFrom": "arn:aws:ssm:us-east-1:492237925351:parameter/nexa/dev/EMERGENCY_TOKEN" }
+      ]
+    }
+  ]
+}

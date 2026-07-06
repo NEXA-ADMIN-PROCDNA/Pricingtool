@@ -32,49 +32,68 @@ export async function POST(
     include: {
       requestedBy: { select: { name: true, email: true } },
       approver:    { select: { name: true, email: true } },
+      approver2:   { select: { name: true, email: true } },
       opportunity: { select: { opportunityId: true, opportunityName: true, client: { select: { name: true } } } },
     },
   })
   if (!approval) return apiError('APPROVAL_NOT_FOUND')
-  if (!isAdmin && approval.approverId !== userId) return apiError('APPROVAL_WRONG_USER')
-  if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
 
-  const updated = await prisma.approvalRequest.update({
-    where: { id },
-    data:  { status: 'APPROVED', decidedAt: new Date() },
-  })
+  const isApprover1 = userId === approval.approverId
+  const isApprover2 = !!approval.approverId2 && userId === approval.approverId2
+  if (!isAdmin && !isApprover1 && !isApprover2) return apiError('APPROVAL_WRONG_USER')
 
-  // Stage transition is track-aware because pricing and SOW verification can be
-  // approved in parallel (in either order):
-  //  • SOW_VERIFICATION approved → engagement is verified → TO_BE_ARCHIVED.
-  //  • PRICING approved → normally SOW_PENDING, but if a SOW verification was
-  //    already approved on the parallel track, the deal is fully done, so go
-  //    straight to TO_BE_ARCHIVED instead of bouncing the stage backwards.
-  let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
-  if (approval.approvalType === 'SOW_VERIFICATION') {
-    newStage = 'TO_BE_ARCHIVED'
-  } else {
-    const sowApproved = await prisma.approvalRequest.findFirst({
-      where:  { opportunityId: approval.opportunityId, approvalType: 'SOW_VERIFICATION', status: 'APPROVED' },
-      select: { id: true },
+  const isDual = !!approval.approverId2
+
+  // For dual approval: each approver has their own status field to flip.
+  // For single approval: existing behaviour — flip status directly.
+  let updated
+  if (!isDual || isApprover1) {
+    if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
+    updated = await prisma.approvalRequest.update({
+      where: { id },
+      data:  { status: 'APPROVED', decidedAt: new Date() },
     })
-    newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+  } else {
+    // Approver2 acting
+    if (approval.approver2Status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
+    updated = await prisma.approvalRequest.update({
+      where: { id },
+      data:  { approver2Status: 'APPROVED', decidedAt: new Date() },
+    })
   }
-  await prisma.opportunity.update({
-    where: { id: approval.opportunityId },
-    data:  { stage: newStage },
-  })
 
-  await mailApprovalApproved({
-    requesterEmail:   approval.requestedBy.email,
-    requesterName:    approval.requestedBy.name,
-    approverEmail:    approval.approver.email,
-    approverName:     approval.approver.name,
-    opportunityId:    approval.opportunity.opportunityId,
-    opportunityName:  approval.opportunity.opportunityName,
-    clientName:       approval.opportunity.client?.name ?? '',
-    approvalType:     approval.approvalType,
-  })
+  // Only advance stage when BOTH approvals are in (or single-approval is done).
+  const approver1Done = updated.status === 'APPROVED'
+  const approver2Done = !isDual || updated.approver2Status === 'APPROVED'
+  const fullyApproved = approver1Done && approver2Done
+
+  if (fullyApproved) {
+    let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
+    if (approval.approvalType === 'SOW_VERIFICATION') {
+      newStage = 'TO_BE_ARCHIVED'
+    } else {
+      const sowApproved = await prisma.approvalRequest.findFirst({
+        where:  { opportunityId: approval.opportunityId, approvalType: 'SOW_VERIFICATION', status: 'APPROVED' },
+        select: { id: true },
+      })
+      newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+    }
+    await prisma.opportunity.update({
+      where: { id: approval.opportunityId },
+      data:  { stage: newStage },
+    })
+
+    await mailApprovalApproved({
+      requesterEmail:   approval.requestedBy.email,
+      requesterName:    approval.requestedBy.name,
+      approverEmail:    approval.approver.email,
+      approverName:     approval.approver.name,
+      opportunityId:    approval.opportunity.opportunityId,
+      opportunityName:  approval.opportunity.opportunityName,
+      clientName:       approval.opportunity.client?.name ?? '',
+      approvalType:     approval.approvalType,
+    })
+  }
 
   return NextResponse.json(updated)
 }

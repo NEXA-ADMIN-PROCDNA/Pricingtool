@@ -1,0 +1,6 @@
+ECR:
+- Repository ARN
+arn:aws:ecr:us-east-1:492237925351:repository/nexa-dev
+- Repository URI
+492237925351.dkr.ecr.us-east-1.amazonaws.com/nexa-dev
+

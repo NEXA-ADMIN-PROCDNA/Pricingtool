@@ -118,6 +118,7 @@ model User {
   opportunitiesCoOwned  Opportunity[]     @relation("OpportunityCoOwner")
   approvalsRequested    ApprovalRequest[] @relation("Requester")
   approvalsGiven        ApprovalRequest[] @relation("Approver")
+  approvalsGiven2       ApprovalRequest[] @relation("Approver2")
   comments              Comment[]
   activityLogs          ActivityLog[]
   clientsCreated          Client[]
@@ -447,7 +448,10 @@ model ApprovalRequest {
   requestedById   String
   requestedBy     User           @relation("Requester", fields: [requestedById], references: [id])
   approverId      String
-  approver        User           @relation("Approver", fields: [approverId], references: [id])
+  approver        User           @relation("Approver",  fields: [approverId],  references: [id])
+  approverId2     String?        @map("approver2_id")
+  approver2       User?          @relation("Approver2", fields: [approverId2], references: [id])
+  approver2Status ApprovalStatus? @map("approver2_status") // null = single-approval; PENDING/APPROVED/REJECTED = dual
   approvalType            String         @default("PRICING")   // "PRICING" | "SOW_VERIFICATION"
   status                  ApprovalStatus @default(PENDING)
   rejectionReason         String?        @db.Text

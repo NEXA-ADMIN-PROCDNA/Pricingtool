@@ -1,0 +1,10 @@
+{
+  "family": "nexa-dev-passrole-test",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "<ROLE_ARN_FROM_IT>",
+  "taskRoleArn": "<ROLE_ARN_FROM_IT>",
+  "containerDefinitions": [{ "name": "test", "image": "nginx:latest" }]
+}
