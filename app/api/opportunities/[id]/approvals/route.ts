@@ -160,20 +160,14 @@ export async function POST(
       businessJustification: approvalType === 'SOW_VERIFICATION' ? undefined : businessJustification?.trim() ?? '',
       context,
     }
+    // Dual approval is sequential: only Approver 1 gets the email now.
+    // Approver 2 will be emailed automatically once Approver 1 approves.
     await mailApprovalRequested({
       ...mailBase,
       approverEmail: approval.approver.email,
       approverName:  approval.approver.name,
       approverId:    approval.approverId,
     })
-    if (isDual && approval.approver2) {
-      await mailApprovalRequested({
-        ...mailBase,
-        approverEmail: approval.approver2.email,
-        approverName:  approval.approver2.name,
-        approverId:    approval.approverId2!,
-      })
-    }
 
     return NextResponse.json(approval, { status: 201 })
   } catch (err) {

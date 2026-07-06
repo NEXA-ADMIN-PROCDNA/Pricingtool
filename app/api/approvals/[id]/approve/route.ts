@@ -1,19 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/approvals/[id]/approve — approve a pending request from inside the app.
-//
-// Big picture: the in-app twin of the email-action approve. Only the assigned
-// approver (or an ADMIN) may approve. It flips the request to APPROVED and advances
-// the opportunity stage. Track-aware: PRICING normally → SOW_PENDING, but if SOW
-// verification was already approved on the parallel track it jumps straight to
-// TO_BE_ARCHIVED; SOW_VERIFICATION → TO_BE_ARCHIVED. Then emails both parties.
-//
-// RISK: the status flip + stage update aren't in one transaction — a failure between
-// them leaves a half-applied state. (See audit C3.)
-// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
-import { mailApprovalApproved } from '@/lib/mail'
+import { mailApprovalRequested, mailApprovalApproved } from '@/lib/mail'
 import { apiError } from '@/lib/errors'
 
 export async function POST(
@@ -44,30 +32,22 @@ export async function POST(
 
   const isDual = !!approval.approverId2
 
-  // For dual approval: each approver has their own status field to flip.
-  // For single approval: existing behaviour — flip status directly.
-  let updated
-  if (!isDual || isApprover1) {
-    if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
-    updated = await prisma.approvalRequest.update({
-      where: { id },
-      data:  { status: 'APPROVED', decidedAt: new Date() },
-    })
-  } else {
-    // Approver2 acting
+  if (isApprover2) {
+    // Sequential guard: Approver 2 can only act after Approver 1 has approved
+    if (approval.status !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Approver 1 (Finance) has not yet approved. Please wait.' },
+        { status: 403 }
+      )
+    }
     if (approval.approver2Status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
-    updated = await prisma.approvalRequest.update({
+
+    // Approver 2 approves → fully approved → advance stage
+    const updated = await prisma.approvalRequest.update({
       where: { id },
       data:  { approver2Status: 'APPROVED', decidedAt: new Date() },
     })
-  }
 
-  // Only advance stage when BOTH approvals are in (or single-approval is done).
-  const approver1Done = updated.status === 'APPROVED'
-  const approver2Done = !isDual || updated.approver2Status === 'APPROVED'
-  const fullyApproved = approver1Done && approver2Done
-
-  if (fullyApproved) {
     let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
     if (approval.approvalType === 'SOW_VERIFICATION') {
       newStage = 'TO_BE_ARCHIVED'
@@ -93,6 +73,62 @@ export async function POST(
       clientName:       approval.opportunity.client?.name ?? '',
       approvalType:     approval.approvalType,
     })
+
+    return NextResponse.json(updated)
+  }
+
+  // Approver 1 (or single-approval) path
+  if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
+
+  const updated = await prisma.approvalRequest.update({
+    where: { id },
+    data:  { status: 'APPROVED', decidedAt: new Date() },
+  })
+
+  if (!isDual) {
+    // Single approval — advance stage immediately
+    let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
+    if (approval.approvalType === 'SOW_VERIFICATION') {
+      newStage = 'TO_BE_ARCHIVED'
+    } else {
+      const sowApproved = await prisma.approvalRequest.findFirst({
+        where:  { opportunityId: approval.opportunityId, approvalType: 'SOW_VERIFICATION', status: 'APPROVED' },
+        select: { id: true },
+      })
+      newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
+    }
+    await prisma.opportunity.update({
+      where: { id: approval.opportunityId },
+      data:  { stage: newStage },
+    })
+
+    await mailApprovalApproved({
+      requesterEmail:   approval.requestedBy.email,
+      requesterName:    approval.requestedBy.name,
+      approverEmail:    approval.approver.email,
+      approverName:     approval.approver.name,
+      opportunityId:    approval.opportunity.opportunityId,
+      opportunityName:  approval.opportunity.opportunityName,
+      clientName:       approval.opportunity.client?.name ?? '',
+      approvalType:     approval.approvalType,
+    })
+  } else {
+    // Dual approval — Approver 1 just approved; now email Approver 2 with action buttons
+    if (approval.approver2) {
+      await mailApprovalRequested({
+        approverEmail:         approval.approver2.email,
+        approverName:          approval.approver2.name,
+        requesterEmail:        approval.requestedBy.email,
+        requesterName:         approval.requestedBy.name,
+        opportunityId:         approval.opportunity.opportunityId,
+        opportunityName:       approval.opportunity.opportunityName,
+        clientName:            approval.opportunity.client?.name ?? '',
+        approvalType:          approval.approvalType,
+        approvalRecordId:      approval.id,
+        approverId:            approval.approverId2!,
+        businessJustification: approval.businessJustification,
+      })
+    }
   }
 
   return NextResponse.json(updated)

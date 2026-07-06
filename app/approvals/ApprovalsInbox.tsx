@@ -9,6 +9,7 @@
 // the /api/approvals/[id]/approve|reject routes. Heavy inline styling via the C palette.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
@@ -66,6 +67,9 @@ type ApprovalItem = {
   id: string
   approvalType: 'PRICING' | 'SOW_VERIFICATION'
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN'
+  approverId: string
+  approverId2: string | null
+  approver2Status: 'PENDING' | 'APPROVED' | 'REJECTED' | null
   requestedAt: string
   decidedAt: string | null
   rejectionReason: string | null
@@ -315,9 +319,10 @@ function PricingSnap({ pv }: { pv: PricingSnap }) {
 // ─── Card ───────────────────────────────────────────────────────────────────
 
 function ApprovalCard({
-  item, onApprove, onReject,
+  item, sessionUserId, onApprove, onReject,
 }: {
   item: ApprovalItem
+  sessionUserId: string
   onApprove: (id: string) => Promise<void>
   onReject: (id: string, reason: string) => Promise<void>
 }) {
@@ -326,9 +331,14 @@ function ApprovalCard({
   const [loading, setLoading]     = useState(false)
 
   const pv = item.opportunity.pricingVersions[0] ?? null
-  const isPending = item.status === 'PENDING'
-  const isSow     = item.approvalType === 'SOW_VERIFICATION'
-  const typeLabel = isSow ? 'SoW Verification' : 'Pricing Approval'
+
+  const isApprover2        = !!item.approverId2 && item.approverId2 === sessionUserId
+  const waitingForApprover1 = isApprover2 && item.status === 'PENDING'
+  // For Approver 2, "pending" means their own slot is pending (not the overall status)
+  const myStatus   = isApprover2 ? (item.approver2Status ?? 'PENDING') : item.status
+  const isPending  = myStatus === 'PENDING'
+  const isSow      = item.approvalType === 'SOW_VERIFICATION'
+  const typeLabel  = isSow ? 'SoW Verification' : 'Pricing Approval'
 
   async function handleApprove() {
     setLoading(true)
@@ -368,7 +378,7 @@ function ApprovalCard({
           }} />
           {typeLabel}
         </div>
-        <StatusPill status={item.status} />
+        <StatusPill status={myStatus} />
       </div>
 
       {/* Opportunity name + BD ID */}
@@ -453,7 +463,24 @@ function ApprovalCard({
       )}
 
       {/* ACTIONS */}
-      {isPending && (
+      {isPending && waitingForApprover1 && (
+        <div style={{
+          marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.rule}`,
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#FFFBEB', border: '1px solid #FCD34D',
+          borderRadius: 6, padding: '12px 14px',
+        }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth={2}
+               style={{ width: 16, height: 16, flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" />
+            <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+          </svg>
+          <span style={{ ...SANS, fontSize: 13, color: '#92400E', fontWeight: 500 }}>
+            Waiting for Finance team (Approver 1) to approve first.
+          </span>
+        </div>
+      )}
+      {isPending && !waitingForApprover1 && (
         <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
           {rejecting ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -552,6 +579,9 @@ function ApprovalCard({
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export function ApprovalsInbox() {
+  const { data: session } = useSession()
+  const sessionUserId = (session?.user as any)?.id ?? ''
+
   const [items, setItems]     = useState<ApprovalItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
@@ -572,7 +602,14 @@ export function ApprovalsInbox() {
       toast.error(j.error ?? 'Failed to approve. Please try again.')
       return
     }
-    setItems(prev => prev.map(a => a.id === id ? { ...a, status: 'APPROVED', decidedAt: new Date().toISOString() } : a))
+    setItems(prev => prev.map(a => {
+      if (a.id !== id) return a
+      // If current user is Approver 2, only their slot changes
+      if (a.approverId2 && a.approverId2 === sessionUserId) {
+        return { ...a, approver2Status: 'APPROVED' as const, decidedAt: new Date().toISOString() }
+      }
+      return { ...a, status: 'APPROVED' as const, decidedAt: new Date().toISOString() }
+    }))
   }
 
   async function handleReject(id: string, reason: string) {
@@ -586,14 +623,26 @@ export function ApprovalsInbox() {
       toast.error(j.error ?? 'Failed to reject. Please try again.')
       return
     }
-    setItems(prev => prev.map(a => a.id === id
-      ? { ...a, status: 'REJECTED', decidedAt: new Date().toISOString(), rejectionReason: reason || null }
-      : a
-    ))
+    setItems(prev => prev.map(a => {
+      if (a.id !== id) return a
+      if (a.approverId2 && a.approverId2 === sessionUserId) {
+        return { ...a, approver2Status: 'REJECTED' as const, decidedAt: new Date().toISOString(), rejectionReason: reason || null }
+      }
+      return { ...a, status: 'REJECTED' as const, decidedAt: new Date().toISOString(), rejectionReason: reason || null }
+    }))
   }
 
-  const pending = items.filter(a => a.status === 'PENDING')
-  const decided = items.filter(a => a.status !== 'PENDING')
+  // An item is "pending" for the current user if their own slot is still open.
+  // For Approver 2, that means approver2Status === 'PENDING' (regardless of overall status).
+  function isMyPending(a: ApprovalItem) {
+    if (a.approverId2 && a.approverId2 === sessionUserId) {
+      return a.approver2Status === 'PENDING' || a.approver2Status == null
+    }
+    return a.status === 'PENDING'
+  }
+
+  const pending = items.filter(isMyPending)
+  const decided = items.filter(a => !isMyPending(a))
 
   return (
     <>
@@ -750,7 +799,7 @@ export function ApprovalsInbox() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                     {pending.map(item => (
-                      <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                      <ApprovalCard key={item.id} item={item} sessionUserId={sessionUserId} onApprove={handleApprove} onReject={handleReject} />
                     ))}
                   </div>
                 )}
@@ -775,7 +824,7 @@ export function ApprovalsInbox() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                     {decided.map(item => (
-                      <ApprovalCard key={item.id} item={item} onApprove={handleApprove} onReject={handleReject} />
+                      <ApprovalCard key={item.id} item={item} sessionUserId={sessionUserId} onApprove={handleApprove} onReject={handleReject} />
                     ))}
                   </div>
                 )}

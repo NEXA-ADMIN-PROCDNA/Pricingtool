@@ -1,14 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /api/approvals/[id]/reject — reject a pending request (approver or ADMIN).
-//
-// Big picture: flips the request to REJECTED (optional reason) and rolls the
-// opportunity stage BACK (PRICING → PRICE_LINKED, SOW_VERIFICATION → SOW_SUBMITTED).
-// Key rule: rejecting the PRICING request also auto-WITHDRAWS any pending OR approved
-// SOW verification on the parallel track, so the deal resets cleanly and the owner
-// redoes the flow once pricing is re-approved.
-//
-// RISK: several writes, not transactional. (See audit C3.)
-// ─────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthToken } from '@/lib/getAuthToken'
 import { prisma } from '@/lib/prisma'
@@ -32,27 +21,48 @@ export async function POST(
     include: {
       requestedBy: { select: { name: true, email: true } },
       approver:    { select: { name: true, email: true } },
+      approver2:   { select: { name: true, email: true } },
       opportunity: { select: { opportunityId: true, opportunityName: true, client: { select: { name: true } } } },
     },
   })
   if (!approval) return apiError('APPROVAL_NOT_FOUND')
-  if (!isAdmin && approval.approverId !== userId) return apiError('APPROVAL_WRONG_USER')
-  if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
 
-  const updated = await prisma.approvalRequest.update({
-    where: { id },
-    data:  {
-      status:          'REJECTED',
-      decidedAt:       new Date(),
-      rejectionReason: reason?.trim() || null,
-    },
-  })
+  const isApprover2 = !!approval.approverId2 && userId === approval.approverId2
+  const isApprover1 = userId === approval.approverId
 
-  // A PRICING rejection invalidates the whole downstream SOW track: pricing and
-  // SOW verification can be requested in parallel, so a SOW verification may
-  // already be pending or even approved. Withdraw any such SOW verification so
-  // the opportunity resets cleanly to PRICE_LINKED and the owner can redo the
-  // flow once pricing is re-approved. (A SOW rejection only rolls its own track.)
+  if (!isAdmin && !isApprover1 && !isApprover2) return apiError('APPROVAL_WRONG_USER')
+
+  let updated
+
+  if (isApprover2) {
+    // Approver 2 can only reject after Approver 1 has approved
+    if (approval.status !== 'APPROVED') {
+      return NextResponse.json(
+        { error: 'Approver 1 (Finance) has not yet approved.' },
+        { status: 403 }
+      )
+    }
+    if (approval.approver2Status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
+
+    updated = await prisma.approvalRequest.update({
+      where: { id },
+      data:  { approver2Status: 'REJECTED', decidedAt: new Date(), rejectionReason: reason?.trim() || null },
+    })
+  } else {
+    // Approver 1 (or single-approval / admin) path
+    if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
+
+    updated = await prisma.approvalRequest.update({
+      where: { id },
+      data:  { status: 'REJECTED', decidedAt: new Date(), rejectionReason: reason?.trim() || null },
+    })
+  }
+
+  // Roll back opportunity stage
+  const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
+  await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: rollbackStage } })
+
+  // A PRICING rejection invalidates any parallel SOW verification
   if (approval.approvalType === 'PRICING') {
     await prisma.approvalRequest.updateMany({
       where: {
@@ -68,14 +78,14 @@ export async function POST(
     })
   }
 
-  const rollbackStage = approval.approvalType === 'SOW_VERIFICATION' ? 'SOW_SUBMITTED' : 'PRICE_LINKED'
-  await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: rollbackStage } })
+  const rejecterName  = isApprover2 ? (approval.approver2?.name ?? 'Approver 2') : approval.approver.name
+  const rejecterEmail = isApprover2 ? (approval.approver2?.email ?? '') : approval.approver.email
 
   await mailApprovalRejected({
     requesterEmail:   approval.requestedBy.email,
     requesterName:    approval.requestedBy.name,
-    approverEmail:    approval.approver.email,
-    approverName:     approval.approver.name,
+    approverEmail:    rejecterEmail,
+    approverName:     rejecterName,
     opportunityId:    approval.opportunity.opportunityId,
     opportunityName:  approval.opportunity.opportunityName,
     clientName:       approval.opportunity.client?.name ?? '',

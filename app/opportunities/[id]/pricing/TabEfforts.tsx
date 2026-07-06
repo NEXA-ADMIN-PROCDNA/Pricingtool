@@ -74,16 +74,19 @@ export function TabEfforts({
       : []
   , [allRateCards, addLob])
 
-  // Roles available for the chosen LoB + Location
-  const roleOptions = useMemo(() =>
-    (addLob && addLocation)
-      ? Array.from(new Set(
-          allRateCards
-            .filter(rc => rc.domain === addLob && rc.location === addLocation)
-            .map(rc => rc.jobRole)
-        )).sort()
-      : []
-  , [allRateCards, addLob, addLocation])
+  // Roles available for the chosen LoB + Location, sorted by ascending cost rate
+  const roleOptions = useMemo(() => {
+    if (!addLob || !addLocation) return []
+    const filtered = allRateCards
+      .filter(rc => rc.domain === addLob && rc.location === addLocation)
+      .sort((a, b) => a.costRatePerHour - b.costRatePerHour)
+    const seen = new Set<string>()
+    const result: string[] = []
+    for (const rc of filtered) {
+      if (!seen.has(rc.jobRole)) { seen.add(rc.jobRole); result.push(rc.jobRole) }
+    }
+    return result
+  }, [allRateCards, addLob, addLocation])
 
   function resetAddForm() {
     setAddLob(''); setAddLocation(''); setAddRole(''); setShowAddRow(false)
