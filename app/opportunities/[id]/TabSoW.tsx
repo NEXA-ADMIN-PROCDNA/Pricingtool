@@ -276,11 +276,13 @@ export function TabSoW({
   opportunityName,
   initialPreContractAgreed = false,
   existingVerification = null,
+  lockedSowApproverId,
 }: {
   opportunityId: string
   opportunityName: string
   initialPreContractAgreed?: boolean
   existingVerification?: Verification | null
+  lockedSowApproverId?: string
 }) {
   const { data: session } = useSession()
   const currentUserId = (session?.user as { id?: string })?.id ?? ''
@@ -291,7 +293,8 @@ export function TabSoW({
   const [poCount, setPoCount]           = useState(0)
   const [verification, setVerification] = useState<Verification | null>(existingVerification)
   const [users, setUsers]               = useState<User[]>([])
-  const [approverId, setApproverId]     = useState('')
+  // Pre-fill with locked approver if one exists from a previous SOW_VERIFICATION request
+  const [approverId, setApproverId]     = useState(lockedSowApproverId ?? '')
   const [submitting, setSubmitting]     = useState(false)
   const [submitError, setSubmitError]   = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen]   = useState(false)
@@ -575,7 +578,9 @@ export function TabSoW({
                 Submit for Verification
               </p>
               <p style={{ fontSize: 12, color: '#7B7C7F', marginBottom: 14 }}>
-                One or more conditions are met. Select an approver to verify.
+                {lockedSowApproverId
+                  ? 'This opportunity already has a designated SOW verifier. The approver is locked to the original selection.'
+                  : 'One or more conditions are met. Select an approver to verify.'}
               </p>
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
@@ -583,9 +588,13 @@ export function TabSoW({
                     Approver
                   </label>
                   <SearchableSelect
-                    options={users.map(u => ({ value: u.id, label: u.name, sub: u.role }))}
+                    options={
+                      lockedSowApproverId
+                        ? users.filter(u => u.id === lockedSowApproverId).map(u => ({ value: u.id, label: u.name, sub: u.role }))
+                        : users.map(u => ({ value: u.id, label: u.name, sub: u.role }))
+                    }
                     value={approverId}
-                    onChange={setApproverId}
+                    onChange={lockedSowApproverId ? () => {} : setApproverId}
                     placeholder="Search approver…"
                     emptyMessage="No matching users found."
                   />
