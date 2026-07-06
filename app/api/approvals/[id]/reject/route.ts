@@ -35,8 +35,8 @@ export async function POST(
   let updated
 
   if (isApprover2) {
-    // Approver 2 can only reject after Approver 1 has approved
-    if (approval.status !== 'APPROVED') {
+    // approver2Status === null means A1 hasn't approved yet — block
+    if (approval.approver2Status === null) {
       return NextResponse.json(
         { error: 'Approver 1 (Finance) has not yet approved.' },
         { status: 403 }

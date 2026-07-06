@@ -332,11 +332,13 @@ function ApprovalCard({
 
   const pv = item.opportunity.pricingVersions[0] ?? null
 
-  const isApprover2        = !!item.approverId2 && item.approverId2 === sessionUserId
-  const waitingForApprover1 = isApprover2 && item.status === 'PENDING'
-  // For Approver 2, "pending" means their own slot is pending (not the overall status)
+  const isApprover2         = !!item.approverId2 && item.approverId2 === sessionUserId
+  // null = locked (A1 hasn't approved yet); 'PENDING' = unlocked (A2's turn)
+  const waitingForApprover1 = isApprover2 && item.approver2Status === null
   const myStatus   = isApprover2 ? (item.approver2Status ?? 'PENDING') : item.status
-  const isPending  = myStatus === 'PENDING'
+  const isPending  = isApprover2
+    ? (item.approver2Status === null || item.approver2Status === 'PENDING')
+    : item.status === 'PENDING'
   const isSow      = item.approvalType === 'SOW_VERIFICATION'
   const typeLabel  = isSow ? 'SoW Verification' : 'Pricing Approval'
 
@@ -604,9 +606,13 @@ export function ApprovalsInbox() {
     }
     setItems(prev => prev.map(a => {
       if (a.id !== id) return a
-      // If current user is Approver 2, only their slot changes
       if (a.approverId2 && a.approverId2 === sessionUserId) {
-        return { ...a, approver2Status: 'APPROVED' as const, decidedAt: new Date().toISOString() }
+        // Approver 2 approved → both slots done, status becomes APPROVED
+        return { ...a, status: 'APPROVED' as const, approver2Status: 'APPROVED' as const, decidedAt: new Date().toISOString() }
+      }
+      if (a.approverId2) {
+        // Approver 1 in dual: status stays PENDING, unlock A2 (approver2Status: null → 'PENDING')
+        return { ...a, approver2Status: 'PENDING' as const }
       }
       return { ...a, status: 'APPROVED' as const, decidedAt: new Date().toISOString() }
     }))
@@ -626,17 +632,17 @@ export function ApprovalsInbox() {
     setItems(prev => prev.map(a => {
       if (a.id !== id) return a
       if (a.approverId2 && a.approverId2 === sessionUserId) {
-        return { ...a, approver2Status: 'REJECTED' as const, decidedAt: new Date().toISOString(), rejectionReason: reason || null }
+        return { ...a, approver2Status: 'REJECTED' as const, status: 'REJECTED' as const, decidedAt: new Date().toISOString(), rejectionReason: reason || null }
       }
       return { ...a, status: 'REJECTED' as const, decidedAt: new Date().toISOString(), rejectionReason: reason || null }
     }))
   }
 
   // An item is "pending" for the current user if their own slot is still open.
-  // For Approver 2, that means approver2Status === 'PENDING' (regardless of overall status).
+  // For Approver 2: null = waiting for A1, 'PENDING' = their turn — both show in pending tab.
   function isMyPending(a: ApprovalItem) {
     if (a.approverId2 && a.approverId2 === sessionUserId) {
-      return a.approver2Status === 'PENDING' || a.approver2Status == null
+      return a.approver2Status === null || a.approver2Status === 'PENDING'
     }
     return a.status === 'PENDING'
   }

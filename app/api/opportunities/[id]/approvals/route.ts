@@ -121,7 +121,8 @@ export async function POST(
         opportunityId:        opp.id,
         requestedById,
         approverId,
-        ...(isDual && { approverId2, approver2Status: 'PENDING' }),
+        // approver2Status starts null (locked). It becomes 'PENDING' only after Approver 1 approves.
+        ...(isDual && { approverId2, approver2Status: null }),
         approvalType,
         status:               'PENDING',
         requestedAt:          new Date(),

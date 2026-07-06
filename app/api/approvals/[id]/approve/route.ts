@@ -33,8 +33,8 @@ export async function POST(
   const isDual = !!approval.approverId2
 
   if (isApprover2) {
-    // Sequential guard: Approver 2 can only act after Approver 1 has approved
-    if (approval.status !== 'APPROVED') {
+    // approver2Status === null means A1 hasn't approved yet — block
+    if (approval.approver2Status === null) {
       return NextResponse.json(
         { error: 'Approver 1 (Finance) has not yet approved. Please wait.' },
         { status: 403 }
@@ -42,10 +42,10 @@ export async function POST(
     }
     if (approval.approver2Status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
 
-    // Approver 2 approves → fully approved → advance stage
+    // Both approved → mark status APPROVED, advance stage
     const updated = await prisma.approvalRequest.update({
       where: { id },
-      data:  { approver2Status: 'APPROVED', decidedAt: new Date() },
+      data:  { status: 'APPROVED', approver2Status: 'APPROVED', decidedAt: new Date() },
     })
 
     let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
@@ -58,10 +58,7 @@ export async function POST(
       })
       newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
     }
-    await prisma.opportunity.update({
-      where: { id: approval.opportunityId },
-      data:  { stage: newStage },
-    })
+    await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: newStage } })
 
     await mailApprovalApproved({
       requesterEmail:   approval.requestedBy.email,
@@ -77,16 +74,16 @@ export async function POST(
     return NextResponse.json(updated)
   }
 
-  // Approver 1 (or single-approval) path
+  // ── Approver 1 (or single-approval) path ──────────────────────────────────
   if (approval.status !== 'PENDING') return apiError('APPROVAL_TOKEN_USED')
 
-  const updated = await prisma.approvalRequest.update({
-    where: { id },
-    data:  { status: 'APPROVED', decidedAt: new Date() },
-  })
-
   if (!isDual) {
-    // Single approval — advance stage immediately
+    // Single approval: mark approved and advance stage immediately
+    const updated = await prisma.approvalRequest.update({
+      where: { id },
+      data:  { status: 'APPROVED', decidedAt: new Date() },
+    })
+
     let newStage: 'TO_BE_ARCHIVED' | 'SOW_PENDING'
     if (approval.approvalType === 'SOW_VERIFICATION') {
       newStage = 'TO_BE_ARCHIVED'
@@ -97,10 +94,7 @@ export async function POST(
       })
       newStage = sowApproved ? 'TO_BE_ARCHIVED' : 'SOW_PENDING'
     }
-    await prisma.opportunity.update({
-      where: { id: approval.opportunityId },
-      data:  { stage: newStage },
-    })
+    await prisma.opportunity.update({ where: { id: approval.opportunityId }, data: { stage: newStage } })
 
     await mailApprovalApproved({
       requesterEmail:   approval.requestedBy.email,
@@ -112,23 +106,31 @@ export async function POST(
       clientName:       approval.opportunity.client?.name ?? '',
       approvalType:     approval.approvalType,
     })
-  } else {
-    // Dual approval — Approver 1 just approved; now email Approver 2 with action buttons
-    if (approval.approver2) {
-      await mailApprovalRequested({
-        approverEmail:         approval.approver2.email,
-        approverName:          approval.approver2.name,
-        requesterEmail:        approval.requestedBy.email,
-        requesterName:         approval.requestedBy.name,
-        opportunityId:         approval.opportunity.opportunityId,
-        opportunityName:       approval.opportunity.opportunityName,
-        clientName:            approval.opportunity.client?.name ?? '',
-        approvalType:          approval.approvalType,
-        approvalRecordId:      approval.id,
-        approverId:            approval.approverId2!,
-        businessJustification: approval.businessJustification,
-      })
-    }
+
+    return NextResponse.json(updated)
+  }
+
+  // Dual: Approver 1 approves — unlock Approver 2 (status stays PENDING)
+  const updated = await prisma.approvalRequest.update({
+    where: { id },
+    data:  { approver2Status: 'PENDING' },  // null → PENDING = Approver 2's turn
+  })
+
+  // Email Approver 2 with action buttons
+  if (approval.approver2) {
+    await mailApprovalRequested({
+      approverEmail:         approval.approver2.email,
+      approverName:          approval.approver2.name,
+      requesterEmail:        approval.requestedBy.email,
+      requesterName:         approval.requestedBy.name,
+      opportunityId:         approval.opportunity.opportunityId,
+      opportunityName:       approval.opportunity.opportunityName,
+      clientName:            approval.opportunity.client?.name ?? '',
+      approvalType:          approval.approvalType,
+      approvalRecordId:      approval.id,
+      approverId:            approval.approverId2!,
+      businessJustification: approval.businessJustification,
+    })
   }
 
   return NextResponse.json(updated)
