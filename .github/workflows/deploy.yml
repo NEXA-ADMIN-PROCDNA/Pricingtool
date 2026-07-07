@@ -39,24 +39,35 @@ jobs:
           echo "Pushed $IMAGE:${{ github.sha }}"
 
   # ── CD: deploy the new image to ECS ────────────────────────────────────────
-  # ENABLE THIS once you have: the cluster name, the combined role, and a
-  # `nexa-dev` service whose task definition references the image `:latest` tag.
-  # Then uncomment the job, fill in <CLUSTER>, and push.
-  #
-  # deploy:
-  #   needs: build-and-push
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v4
-  #       with:
-  #         aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region:            ${{ env.AWS_REGION }}
-  #     - name: Force a new ECS deployment (re-pulls :latest)
-  #       run: |
-  #         aws ecs update-service \
-  #           --cluster <CLUSTER> \
-  #           --service nexa-dev \
-  #           --force-new-deployment \
-  #           --region "$AWS_REGION"
+  # Forces a new deployment so the service re-pulls the freshly-pushed :latest.
+  # The task def (nexa-dev) references the :latest tag, so no new revision is
+  # registered here — force-new-deployment is enough.
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    env:
+      ECS_CLUSTER: auxo-frontend-dev
+      ECS_SERVICE: nexa-dev-service-v75p7yfn
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Force a new ECS deployment (re-pulls :latest)
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Wait for the service to reach steady state
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
+          echo "Deployment stable — new task is healthy in the target group."
