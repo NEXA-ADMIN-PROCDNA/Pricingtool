@@ -67,6 +67,7 @@ interface GraphUser {
   userPrincipalName: string | null
   jobTitle: string | null
   usageLocation: string | null
+  accountEnabled: boolean | null
 }
 
 interface GraphResponse {
@@ -80,7 +81,7 @@ interface GraphResponse {
 async function fetchAllAzureUsers(graphClient: Client): Promise<GraphUser[]> {
   const users: GraphUser[] = []
   let url: string | undefined =
-    '/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle,usageLocation&$top=999'
+    '/users?$select=id,displayName,givenName,surname,mail,userPrincipalName,jobTitle,usageLocation,accountEnabled&$top=999'
 
   while (url) {
     const page: GraphResponse = await graphClient.api(url).get()
@@ -134,6 +135,17 @@ async function main() {
 
     // Skip service accounts / guests
     if (email.includes('#EXT#') || !name.trim()) {
+      skipped++
+      continue
+    }
+
+    // Disabled Azure AD accounts (ex-employees): deactivate if already in DB, never create
+    if (azUser.accountEnabled === false) {
+      const deactivated = await prisma.user.updateMany({
+        where: { email, isActive: true },
+        data:  { isActive: false },
+      })
+      if (deactivated.count > 0) console.log(`  ⛔ Deactivated (disabled in Azure AD): ${name} <${email}>`)
       skipped++
       continue
     }

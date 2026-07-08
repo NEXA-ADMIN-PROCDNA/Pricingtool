@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx tsc *)",
       "Bash(npx prisma *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(MSYS_NO_PATHCONV=1 aws sts get-caller-identity --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws ec2 describe-security-groups --group-ids sg-08a71816c7924a318 --region us-east-1 --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws elbv2 describe-target-groups --region us-east-1 --query \"TargetGroups[?TargetGroupName=='nexa-dev'].{Name:TargetGroupName,Port:Port,Protocol:Protocol,HealthPath:HealthCheckPath,HealthPort:HealthCheckPort,Matcher:Matcher.HttpCode,TgArn:TargetGroupArn}\" --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws ec2 describe-security-groups --group-ids sg-0d108d214cf0cff0b --region us-east-1 --query \"SecurityGroups[0].{Name:GroupName,Desc:Description}\" --output json)",
+      "Bash(MSYS_NO_PATHCONV=1 aws elbv2 describe-target-health --target-group-arn \"arn:aws:elasticloadbalancing:us-east-1:492237925351:targetgroup/nexa-dev/fa6507c60cbe80bb\" --region us-east-1 --output json)"
     ]
   }
 }
