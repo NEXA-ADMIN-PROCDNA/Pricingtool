@@ -90,6 +90,7 @@ export async function PATCH(
   if (typeof body.starConnect === 'boolean') simpleData.starConnect = body.starConnect
   if (body.workType !== undefined) simpleData.workType = (body.workType ?? '').toString().trim() || null
   if ((body as any).coOwnerId !== undefined) (simpleData as any).coOwnerId = (body as any).coOwnerId || null
+  if ((body as any).sharepointUrl !== undefined) (simpleData as any).sharepointUrl = (body as any).sharepointUrl?.trim() || null
   if (Object.keys(simpleData).length > 0) {
     await prisma.opportunity.update({ where: { id: opp.id }, data: simpleData })
   }
@@ -128,7 +129,7 @@ export async function PATCH(
     where:  { id: opp.id },
     select: {
       status: true, preContractAgreed: true, stage: true, projectCodeProceed: true,
-      businessUnit: true, starConnect: true, startDate: true, endDate: true, primaryLob: true, workType: true,
+      businessUnit: true, starConnect: true, startDate: true, endDate: true, primaryLob: true, workType: true, sharepointUrl: true,
     },
   })
 

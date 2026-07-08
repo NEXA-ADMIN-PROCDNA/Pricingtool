@@ -15,6 +15,7 @@ import { getUsersForSelect } from '@/lib/db/users'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { StageBadge } from '@/components/ui/StageBadge'
 import { OpportunityTabs } from './OpportunityTabs'
+import { SharepointLink } from './SharepointLink'
 
 export default async function OpportunityDetailPage({
   params,
@@ -52,6 +53,12 @@ export default async function OpportunityDetailPage({
           <p className="mt-1 text-sm text-slate-500">
             {opp.client.name} · {opp.opportunityId} · Owner: {opp.owner.name}
           </p>
+          <SharepointLink
+            opportunityId={opp.opportunityId}
+            ownerId={opp.owner.id}
+            coOwnerId={(opp as any).coOwnerId}
+            initialUrl={(opp as any).sharepointUrl}
+          />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={opp.status} />
