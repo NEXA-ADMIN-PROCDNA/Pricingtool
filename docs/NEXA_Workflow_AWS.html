@@ -1,0 +1,601 @@
+<!doctype html>
+<title>NEXA — Architecture & Workflow</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   Palette: "Infrastructure runbook on kraft"
+   Warm graphite + petrol-teal ink + clay — deliberately not
+   the indigo-on-near-black default. Mono carries the tech voice.
+   ═══════════════════════════════════════════════════════════ */
+:root{
+  --bg:        #e8e4da;
+  --surface:   #f4f1e9;
+  --surface2:  #ded9cb;
+  --border:    #cbc4b2;
+  --border-lo: #ddd7c8;
+  --ink:       #262a26;
+  --muted:     #6d6a5c;
+  --faint:     #8f8b7c;
+
+  --petrol:    #17606d;   /* primary accent */
+  --petrol-lo: #dce9ea;
+  --clay:      #a85a35;   /* secondary category */
+  --clay-lo:   #f0e0d5;
+
+  --live:      #3d7a51;
+  --live-lo:   #dde9de;
+  --prog:      #9a6b1f;
+  --prog-lo:   #f0e5cd;
+  --plan:      #6d6a5c;
+  --plan-lo:   #e0dccf;
+
+  --mono: ui-monospace,'Cascadia Code','JetBrains Mono','Fira Code',Consolas,monospace;
+  --sans: Arial,Helvetica,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:        #1b1c19;
+    --surface:   #232420;
+    --surface2:  #2c2d28;
+    --border:    #3c3d36;
+    --border-lo: #313029;
+    --ink:       #e7e3d6;
+    --muted:     #9c968673;
+    --muted:     #9c9686;
+    --faint:     #736f62;
+
+    --petrol:    #4fb0bf;
+    --petrol-lo: #16302f;
+    --clay:      #d38a5e;
+    --clay-lo:   #33231a;
+
+    --live:      #6db884;
+    --live-lo:   #1a2a1f;
+    --prog:      #d3a34e;
+    --prog-lo:   #2e2515;
+    --plan:      #9c9686;
+    --plan-lo:   #2a2a24;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#e8e4da;--surface:#f4f1e9;--surface2:#ded9cb;--border:#cbc4b2;--border-lo:#ddd7c8;
+  --ink:#262a26;--muted:#6d6a5c;--faint:#8f8b7c;
+  --petrol:#17606d;--petrol-lo:#dce9ea;--clay:#a85a35;--clay-lo:#f0e0d5;
+  --live:#3d7a51;--live-lo:#dde9de;--prog:#9a6b1f;--prog-lo:#f0e5cd;--plan:#6d6a5c;--plan-lo:#e0dccf;
+}
+:root[data-theme="dark"]{
+  --bg:#1b1c19;--surface:#232420;--surface2:#2c2d28;--border:#3c3d36;--border-lo:#313029;
+  --ink:#e7e3d6;--muted:#9c9686;--faint:#736f62;
+  --petrol:#4fb0bf;--petrol-lo:#16302f;--clay:#d38a5e;--clay-lo:#33231a;
+  --live:#6db884;--live-lo:#1a2a1f;--prog:#d3a34e;--prog-lo:#2e2515;--plan:#9c9686;--plan-lo:#2a2a24;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);background:var(--bg);color:var(--ink);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.page{max-width:1080px;margin:0 auto;padding:38px 26px 90px}
+.mono{font-family:var(--mono)}
+
+/* ── header ── */
+.header{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:20px;
+  padding-bottom:18px;margin-bottom:8px;border-bottom:2px solid var(--ink);flex-wrap:wrap;
+}
+.header h1{font-size:25px;font-weight:700;letter-spacing:-.4px;line-height:1.15}
+.header .kicker{
+  font-family:var(--mono);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--clay);font-weight:600;margin-bottom:7px;
+}
+.header .url{font-family:var(--mono);font-size:12.5px;color:var(--petrol);margin-top:6px;font-weight:600}
+.header-right{text-align:right}
+.stamp{
+  display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;color:var(--prog);
+}
+.stamp::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--prog)}
+.header-right .meta{font-size:11.5px;color:var(--faint);margin-top:8px}
+
+/* ── section ── */
+.section{margin-top:44px}
+.section-head{
+  display:flex;align-items:baseline;gap:12px;margin-bottom:20px;
+  padding-bottom:9px;border-bottom:1px solid var(--border);
+}
+.section-num{display:none}
+.section-title{font-size:18px;font-weight:700;letter-spacing:-.2px}
+.section-sub{font-size:12.5px;color:var(--faint);margin-left:auto;font-style:italic}
+
+/* ═══ ARCHITECTURE DIAGRAM ═══ */
+.arch{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:28px 24px;position:relative;
+}
+.arch-flow{display:flex;flex-direction:column;align-items:center;gap:0}
+.node{
+  border:1.5px solid var(--border);background:var(--bg);border-radius:9px;
+  padding:12px 18px;text-align:center;min-width:230px;position:relative;
+}
+.node .n-tag{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;
+  color:var(--faint);margin-bottom:3px;
+}
+.node .n-title{font-size:14px;font-weight:700;letter-spacing:-.1px}
+.node .n-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.node.petrol{border-color:var(--petrol);background:var(--petrol-lo)}
+.node.petrol .n-title{color:var(--petrol)}
+.node.clay{border-color:var(--clay);background:var(--clay-lo)}
+.node.clay .n-title{color:var(--clay)}
+
+.node.core{min-width:340px;border-width:2px;border-color:var(--petrol);background:var(--petrol-lo);padding:16px 20px}
+.node.core .n-title{font-size:16px;color:var(--petrol)}
+
+.conn{display:flex;flex-direction:column;align-items:center;height:30px;justify-content:center}
+.conn .line{width:2px;flex:1;background:var(--border)}
+.conn .lbl{
+  font-family:var(--mono);font-size:9.5px;color:var(--faint);background:var(--surface);
+  padding:1px 6px;letter-spacing:.5px;
+}
+
+.fanout{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;width:100%}
+.fanout .node{min-width:0;flex:1;max-width:220px}
+
+/* side rails */
+.rail{
+  position:absolute;top:0;bottom:0;width:170px;display:flex;flex-direction:column;
+  justify-content:center;gap:14px;
+}
+.rail-item{
+  border:1px dashed var(--clay);background:var(--clay-lo);border-radius:8px;
+  padding:9px 12px;font-size:11px;line-height:1.45;
+}
+.rail-item .ri-tag{font-family:var(--mono);font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--clay);font-weight:700;display:block;margin-bottom:3px}
+.rail-item .ri-body{color:var(--muted);font-size:11px}
+@media (max-width:900px){
+  .rail{position:static;width:100%;flex-direction:row;margin-top:20px}
+  .rail-item{flex:1}
+}
+
+/* ═══ STACK COMPONENT CARDS ═══ */
+.stack-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:680px){.stack-grid{grid-template-columns:1fr}}
+.comp{
+  background:var(--surface);border:1px solid var(--border);border-radius:11px;
+  padding:18px 20px;display:flex;gap:14px;
+}
+.comp-badge{
+  flex-shrink:0;width:38px;padding-top:1px;
+  font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.5px;color:var(--petrol);
+}
+.comp.c-clay .comp-badge{color:var(--clay)}
+.comp-body{flex:1;min-width:0}
+.comp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+.comp-name{font-size:14px;font-weight:700}
+.comp-svc{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--surface2);padding:1px 7px;border-radius:4px}
+.comp-desc{font-size:12.5px;color:var(--muted);line-height:1.55}
+.comp-desc code{font-family:var(--mono);font-size:11.5px;color:var(--ink);background:var(--surface2);padding:1px 5px;border-radius:3px}
+.pill{
+  display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;padding:2px 8px;border-radius:3px;border:1px solid;
+}
+.pill.live{color:var(--live);border-color:var(--live);background:var(--live-lo)}
+.pill.prog{color:var(--prog);border-color:var(--prog);background:var(--prog-lo)}
+.pill.plan{color:var(--plan);border-color:var(--plan);background:var(--plan-lo)}
+
+/* ═══ PHASES ═══ */
+.phase-track{display:flex;flex-direction:column;gap:10px}
+.phase{
+  display:flex;gap:16px;align-items:stretch;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;overflow:hidden;
+}
+.phase-spine{width:6px;flex-shrink:0}
+.phase.p-done .phase-spine{background:var(--live)}
+.phase.p-prog .phase-spine{background:var(--prog)}
+.phase.p-plan .phase-spine{background:var(--plan)}
+.phase-inner{display:flex;gap:16px;align-items:center;padding:14px 18px 14px 4px;flex:1;flex-wrap:wrap}
+.phase-code{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--faint);width:44px;text-align:center}
+.phase-txt{flex:1;min-width:180px}
+.phase-title{font-size:14px;font-weight:700;margin-bottom:2px}
+.phase-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.phase-sub code{font-family:var(--mono);font-size:11px;color:var(--ink)}
+
+/* ═══ ROLE HIERARCHY (nested shells) ═══ */
+.hier{max-width:720px}
+.hlevel{border:1.5px solid var(--border);border-radius:10px;background:var(--surface)}
+.hrow{display:flex;align-items:baseline;gap:12px;padding:11px 16px;flex-wrap:wrap}
+.hrole{
+  font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.5px;
+  min-width:78px;
+}
+.hsees{font-size:12.5px;color:var(--muted);line-height:1.4}
+.hnest{padding:0 12px 12px 22px}
+/* each shell tinted a touch by level, deepest = quietest */
+.l-admin{border-color:var(--petrol);background:var(--petrol-lo)}
+.l-admin>.hrow .hrole{color:var(--petrol)}
+.l-partner{border-color:var(--clay);background:var(--clay-lo)}
+.l-partner>.hrow .hrole{color:var(--clay)}
+.l-ed{border-color:var(--prog);background:var(--prog-lo)}
+.l-ed>.hrow .hrole{color:var(--prog)}
+.l-director{border-color:var(--border);background:var(--surface2)}
+.l-director>.hrow .hrole{color:var(--ink)}
+.l-sel{border-color:var(--border);background:var(--bg)}
+.l-sel>.hrow .hrole{color:var(--faint)}
+
+/* ═══ DEPLOY PIPELINE ═══ */
+.deploy{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:4px 0}
+.deploy-step{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:12px 15px;min-width:150px;flex:1;
+}
+.deploy-step .ds-n{font-family:var(--mono);font-size:10px;color:var(--clay);font-weight:700;letter-spacing:.5px}
+.deploy-step .ds-t{font-size:13px;font-weight:700;margin:3px 0}
+.deploy-step .ds-d{font-size:11px;color:var(--muted);line-height:1.45}
+.deploy-arrow{display:flex;align-items:center;padding:0 6px;color:var(--faint);font-size:15px;flex-shrink:0}
+
+/* ═══ OWNERSHIP ═══ */
+.own-wrap{border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.own{width:100%;border-collapse:collapse;background:var(--surface)}
+.own td{padding:14px 18px;border-bottom:1px solid var(--border-lo);vertical-align:top;font-size:13px}
+.own tr:last-child td{border-bottom:none}
+.own .who{width:210px}
+.own .person{font-weight:700;display:block;font-size:13.5px}
+.own .role-tag{font-family:var(--mono);font-size:10px;color:var(--clay);letter-spacing:.5px;margin-top:3px;display:inline-block}
+.own .resp{color:var(--muted);line-height:1.55}
+.own .resp code{font-family:var(--mono);font-size:11.5px;color:var(--ink);background:var(--surface2);padding:1px 5px;border-radius:3px}
+
+/* ═══ APPROVAL ═══ */
+.appr-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:720px){.appr-grid{grid-template-columns:1fr}}
+.appr{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:20px 22px}
+.appr h3{font-size:14px;font-weight:700;margin-bottom:3px}
+.appr .appr-range{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px}
+.branch{border-radius:8px;padding:11px 14px;margin-bottom:9px;border:1px solid}
+.branch .b-t{font-size:12.5px;font-weight:700;margin-bottom:3px;display:flex;justify-content:space-between}
+.branch .b-d{font-size:11.5px;line-height:1.5;color:var(--muted)}
+.branch.ok{border-color:var(--live);background:var(--live-lo)}
+.branch.ok .b-t{color:var(--live)}
+.branch.no{border-color:var(--clay);background:var(--clay-lo)}
+.branch.no .b-t{color:var(--clay)}
+.branch.wd{border-color:var(--prog);background:var(--prog-lo)}
+.branch.wd .b-t{color:var(--prog)}
+.b-arrow{font-family:var(--mono);font-size:11px;font-weight:700}
+.dual{
+  margin-top:12px;border:1px solid var(--petrol);background:var(--petrol-lo);
+  border-radius:8px;padding:12px 14px;font-size:11.5px;line-height:1.55;color:var(--ink);
+}
+.dual strong{color:var(--petrol)}
+
+/* ═══ PIPELINE STAGES ═══ */
+.pipe{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 0}
+.pstage{min-width:112px;display:flex;flex-direction:column}
+.pbox{
+  background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+  padding:11px 12px;text-align:center;flex:1;
+}
+.pbox .pc{font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.5px;margin-bottom:3px}
+.pbox .pn{font-size:12px;font-weight:700;line-height:1.25}
+.pbox.k-petrol{border-color:var(--petrol);background:var(--petrol-lo)}.pbox.k-petrol .pn{color:var(--petrol)}
+.pbox.k-clay{border-color:var(--clay);background:var(--clay-lo)}.pbox.k-clay .pn{color:var(--clay)}
+.pbox.k-prog{border-color:var(--prog);background:var(--prog-lo)}.pbox.k-prog .pn{color:var(--prog)}
+.pbox.k-live{border-color:var(--live);background:var(--live-lo)}.pbox.k-live .pn{color:var(--live)}
+.parr{display:flex;align-items:center;padding:0 3px;color:var(--faint);font-size:15px;flex-shrink:0}
+.pipe-legend{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.9;margin-top:12px}
+.pipe-legend b{color:var(--ink)}
+
+/* ═══ NEXT ═══ */
+.next{display:flex;flex-direction:column;gap:9px}
+.next-row{display:flex;gap:13px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px 17px}
+.next-mark{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--petrol);flex-shrink:0;margin-top:1px;width:24px}
+.next-t{font-size:13.5px;font-weight:700}
+.next-s{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.next-s code{font-family:var(--mono);font-size:11px;color:var(--ink)}
+
+footer{
+  margin-top:56px;padding-top:20px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  font-family:var(--mono);font-size:11px;color:var(--faint);
+}
+</style>
+
+<div class="page">
+
+  <header class="header">
+    <div>
+      <div class="kicker">Architecture &amp; Workflow Reference</div>
+      <h1>NEXA — Business Development &amp; Pricing Tool</h1>
+      <div class="url">https://nexa-dev.auxo.tech</div>
+    </div>
+    <div class="header-right">
+      <span class="stamp">Dev Environment</span>
+      <div class="meta">ProcDNA Internal · Jul 2026</div>
+    </div>
+  </header>
+
+  <!-- ═══════════════ 01 · ARCHITECTURE ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <span class="section-title">Runtime Architecture</span>
+      <span class="section-sub">path of a single request</span>
+    </div>
+
+    <div class="arch">
+      <!-- left rail: secrets -->
+      <div class="rail" style="left:16px">
+        <div class="rail-item">
+          <span class="ri-tag">Secrets → boot</span>
+          <span class="ri-body">SSM Parameter Store injects DB creds, NextAuth secret, Azure &amp; Graph keys into the task at startup — nothing in the image.</span>
+        </div>
+      </div>
+      <!-- right rail: deploy -->
+      <div class="rail" style="right:16px">
+        <div class="rail-item">
+          <span class="ri-tag">Deploy → task</span>
+          <span class="ri-body">GitHub Actions builds the image, pushes to ECR, and forces a new ECS deployment. Old task drains only after the new one is healthy.</span>
+        </div>
+      </div>
+
+      <div class="arch-flow" style="max-width:420px;margin:0 auto">
+        <div class="node">
+          <div class="n-tag">Client</div>
+          <div class="n-title">Browser</div>
+          <div class="n-meta">Microsoft SSO session · 8-hr expiry</div>
+        </div>
+
+        <div class="conn"><span class="line"></span><span class="lbl">HTTPS :443</span><span class="line"></span></div>
+
+        <div class="node">
+          <div class="n-tag">DNS</div>
+          <div class="n-title">GoDaddy → nexa-dev.auxo.tech</div>
+          <div class="n-meta">CNAME to the load balancer</div>
+        </div>
+
+        <div class="conn"><span class="line"></span><span class="line"></span></div>
+
+        <div class="node petrol">
+          <div class="n-tag">Ingress</div>
+          <div class="n-title">Application Load Balancer</div>
+          <div class="n-meta">ACM TLS termination · health check <span style="color:var(--ink)">/api/health</span> · spans 2 AZs</div>
+        </div>
+
+        <div class="conn"><span class="line"></span><span class="lbl">HTTP :3000</span><span class="line"></span></div>
+
+        <div class="node core">
+          <div class="n-tag">Compute — ECS Fargate</div>
+          <div class="n-title">NEXA container (Next.js 16)</div>
+          <div class="n-meta">
+            cluster <span style="color:var(--ink)">auxo-frontend-dev</span><br>
+            service <span style="color:var(--ink)">nexa-dev-service-v75p7yfn</span> · task <span style="color:var(--ink)">nexa-dev:3</span><br>
+            role &amp; ownership checked on <em>every</em> request
+          </div>
+        </div>
+
+        <div class="conn"><span class="line"></span><span class="lbl">outbound</span><span class="line"></span></div>
+
+        <div class="fanout">
+          <div class="node clay">
+            <div class="n-tag">Data</div>
+            <div class="n-title">RDS PostgreSQL</div>
+            <div class="n-meta">schema nexa_dev</div>
+          </div>
+          <div class="node clay">
+            <div class="n-tag">Files</div>
+            <div class="n-title">S3 Bucket</div>
+            <div class="n-meta">nexa-dev-bucket</div>
+          </div>
+          <div class="node clay">
+            <div class="n-tag">Mail / Auth</div>
+            <div class="n-title">Microsoft 365</div>
+            <div class="n-meta">Graph API · Entra ID</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.6">
+      Everything runs inside ProcDNA's own AWS account (Auxo). NEXA shares the existing dev cluster and VPC but keeps its
+      <strong style="color:var(--ink)">own service, own load balancer target group, own DB schema, and own S3 bucket</strong> — isolated from neighbouring projects.
+    </p>
+  </div>
+
+  <!-- ═══════════════ 02 · STACK COMPONENTS ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <span class="section-title">Stack Components</span>
+      <span class="section-sub">what each piece is &amp; owns</span>
+    </div>
+
+    <div class="stack-grid">
+
+      <div class="comp">
+        <div class="comp-badge">ECS</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">Fargate Compute</span><span class="pill live">Live</span></div>
+          <div class="comp-desc">Serverless container — no VM to patch. AWS restarts it on failure. Runs the Next.js 16 / React 19 / Prisma 7 app. Rolling deploys keep the old task serving until the new one passes health checks. <code>cluster: auxo-frontend-dev</code></div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="comp-badge">ALB</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">Load Balancer</span><span class="pill live">Live</span></div>
+          <div class="comp-desc">The public front door. Terminates HTTPS with an ACM certificate, health-checks <code>/api/health</code>, and forwards to the container on port 3000. Its subnets were trimmed to the 2 AZs the target group lives in.</div>
+        </div>
+      </div>
+
+      <div class="comp c-clay">
+        <div class="comp-badge">RDS</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">PostgreSQL</span><span class="comp-svc">nexa_dev</span><span class="pill prog">Migrating</span></div>
+          <div class="comp-desc">Managed database on the shared <code>auxo-development</code> PG13 instance. NEXA owns the <code>nexa_dev</code> schema with dedicated <code>nexaDeveloper</code> credentials — other projects can't read its tables. Structure applied; data cutover pending.</div>
+        </div>
+      </div>
+
+      <div class="comp c-clay">
+        <div class="comp-badge">S3</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">Object Storage</span><span class="comp-svc">nexa-dev-bucket</span></div>
+          <div class="comp-desc">Holds uploaded SOW &amp; PO documents. Access is via short-lived signed URLs that expire after 1 hour, so links can't be forwarded and reused. Bucket created; app still reads/writes Supabase Storage until cutover.</div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="comp-badge">SSM</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">Parameter Store</span><span class="pill live">Live</span></div>
+          <div class="comp-desc">Encrypted vault for every secret — DB URL, NextAuth signing key, Azure client secret, Graph credentials, HMAC keys. Injected into the task at boot; only the ECS task role can read them. No secret ever ships inside the code or image.</div>
+        </div>
+      </div>
+
+      <div class="comp">
+        <div class="comp-badge">CI</div>
+        <div class="comp-body">
+          <div class="comp-head"><span class="comp-name">GitHub Actions + ECR</span><span class="pill live">Live</span></div>
+          <div class="comp-desc">Push to <code>main</code> → build image → push to the ECR registry → force new ECS deployment. Fully automated; a failed health check leaves the previous version running. No manual server access needed to ship.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ 03 · DEPLOY PIPELINE ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <span class="section-title">Deployment Pipeline</span>
+      <span class="section-sub">git push → live, no hands</span>
+    </div>
+    <div class="deploy">
+      <div class="deploy-step"><div class="ds-n">01 · PUSH</div><div class="ds-t">Commit to main</div><div class="ds-d">Developer pushes. GitHub Actions workflow triggers automatically.</div></div>
+      <div class="deploy-arrow">→</div>
+      <div class="deploy-step"><div class="ds-n">02 · BUILD</div><div class="ds-t">Docker image</div><div class="ds-d">Next.js production build packaged into a container image.</div></div>
+      <div class="deploy-arrow">→</div>
+      <div class="deploy-step"><div class="ds-n">03 · PUSH ECR</div><div class="ds-t">Registry</div><div class="ds-d">Tagged image pushed to the Amazon ECR repository.</div></div>
+      <div class="deploy-arrow">→</div>
+      <div class="deploy-step"><div class="ds-n">04 · DEPLOY</div><div class="ds-t">Force ECS update</div><div class="ds-d">New task spins up, pulls secrets from SSM, registers with the ALB.</div></div>
+      <div class="deploy-arrow">→</div>
+      <div class="deploy-step"><div class="ds-n">05 · HEALTH</div><div class="ds-t">Drain old</div><div class="ds-d">Old task drains only after the new one is healthy. Zero downtime.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 04 · ROLE HIERARCHY ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <span class="section-title">Role Hierarchy</span>
+      <span class="section-sub">each level sees itself + everything nested inside</span>
+    </div>
+
+    <div class="hier">
+      <div class="hlevel l-admin">
+        <div class="hrow"><span class="hrole">ADMIN</span><span class="hsees">everything · rate-card management · export / data dump</span></div>
+        <div class="hnest">
+          <div class="hlevel l-partner">
+            <div class="hrow"><span class="hrole">PARTNER</span><span class="hsees">all opportunities, full pipeline</span></div>
+            <div class="hnest">
+              <div class="hlevel l-ed">
+                <div class="hrow"><span class="hrole">ED</span><span class="hsees">own + Directors + their SELs (2 levels down)</span></div>
+                <div class="hnest">
+                  <div class="hlevel l-director">
+                    <div class="hrow"><span class="hrole">DIRECTOR</span><span class="hsees">own + their SELs</span></div>
+                    <div class="hnest">
+                      <div class="hlevel l-sel">
+                        <div class="hrow"><span class="hrole">SEL</span><span class="hsees">own opportunities only</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.55">
+      Enforced server-side on every request — the signed session token carries the role, so it can't be faked in the browser.
+    </p>
+  </div>
+
+  <!-- ═══════════════ 05 · APPROVAL LOGIC ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <span class="section-title">Approval Logic</span>
+      <span class="section-sub">two gated sign-offs</span>
+    </div>
+    <div class="appr-grid">
+
+      <div class="appr">
+        <h3>Pricing Approval</h3>
+        <div class="appr-range">stage S3 → S4</div>
+        <div class="branch ok"><div class="b-t"><span>Approved</span><span class="b-arrow">→ S5</span></div><div class="b-d">Advances to SOW Pending. The final pricing version locks — no silent edits.</div></div>
+        <div class="branch no"><div class="b-t"><span>Rejected</span><span class="b-arrow">→ S3</span></div><div class="b-d">Back to Price Linked with the reason attached; owner revises and re-requests.</div></div>
+        <div class="branch wd"><div class="b-t"><span>Withdrawn</span><span class="b-arrow">→ S3</span></div><div class="b-d">Requester pulls a pending request back (reason logged) if something changed.</div></div>
+        <div class="dual"><strong>Dual-approver mode:</strong> nominate Finance (A1) + Business (A2). A1 must decide first — A2 stays in a "waiting" state until then. The stage only advances when <strong>both</strong> approve; either rejection stops the deal.</div>
+      </div>
+
+      <div class="appr">
+        <h3>SOW Verification</h3>
+        <div class="appr-range">stage S6 → S7</div>
+        <div class="branch ok"><div class="b-t"><span>Verified</span><span class="b-arrow">→ S8</span></div><div class="b-d">Paperwork confirmed. Owner commits the project code through a deliberate "are you sure?" step.</div></div>
+        <div class="branch no"><div class="b-t"><span>Rejected</span><span class="b-arrow">→ S6</span></div><div class="b-d">Back to SOW Submitted so documents can be corrected and re-submitted.</div></div>
+        <div class="dual" style="border-color:var(--clay);background:var(--clay-lo)"><strong style="color:var(--clay)">Email actions:</strong> approvers act straight from their inbox. The email carries deal context + metrics; Approve/Reject opens a signed confirmation page (blocks scanner false-clicks); links expire in 7 days. Sent from <span class="mono" style="font-size:11px">nexa_admin@procdna.com</span>.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ 06 · PIPELINE STAGES ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <span class="section-title">Opportunity Pipeline</span>
+      <span class="section-sub">S1 → S8, nothing skips</span>
+    </div>
+    <div class="pipe">
+      <div class="pstage"><div class="pbox"><div class="pc">S1</div><div class="pn">Lead</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox"><div class="pc">S2</div><div class="pn">Pricing Pending</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-petrol"><div class="pc">S3</div><div class="pn">Price Linked</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-prog"><div class="pc">S4</div><div class="pn">Approval Pending</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-petrol"><div class="pc">S5</div><div class="pn">SOW Pending</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-petrol"><div class="pc">S6</div><div class="pn">SOW Submitted</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-prog"><div class="pc">S7</div><div class="pn">SOW Review</div></div></div>
+      <div class="parr">→</div>
+      <div class="pstage"><div class="pbox k-live"><div class="pc">S8</div><div class="pn">Project Code</div></div></div>
+    </div>
+    <div class="pipe-legend">
+      <b>S1→S2</b> owner creates opportunity &nbsp;·&nbsp; <b>S2→S3</b> pricing version built &amp; marked final &nbsp;·&nbsp;
+      <b>S3→S4</b> approval requested &nbsp;·&nbsp; <b>S5→S6</b> SOW/PO uploaded + pre-contract flag set &nbsp;·&nbsp;
+      <b>S8</b> permanent, irreversible commit &nbsp;·&nbsp; every transition logged with name + timestamp
+    </div>
+  </div>
+
+  <!-- ═══════════════ 07 · WHAT'S NEXT ═══════════════ -->
+  <div class="section">
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <span class="section-title">What's Next</span>
+      <span class="section-sub">to production</span>
+    </div>
+    <div class="next">
+      <div class="next-row"><span class="next-mark">P1</span><div><div class="next-t">Finish the RDS cutover</div><div class="next-s">Seed the <code>nexa_dev</code> schema, update the <code>SSM</code> connection params, redeploy. ~1 day.</div></div></div>
+      <div class="next-row"><span class="next-mark">IT</span><div><div class="next-t">Two IT actions to unblock</div><div class="next-s">① Register <code>nexa-dev.auxo.tech</code> as a Redirect URI in Entra ID (SSO). ② Whitelist it in email security so approval links aren't rewritten by Safe Links.</div></div></div>
+      <div class="next-row"><span class="next-mark">P2</span><div><div class="next-t">Move documents to S3</div><div class="next-s">Swap storage adapter to <code>nexa-dev-bucket</code> and migrate existing files.</div></div></div>
+      <div class="next-row"><span class="next-mark">GA</span><div><div class="next-t">~1-month trial → production</div><div class="next-s">Dev runs on test data. After sign-off: separate hardened production environment, stricter roles, live data migration.</div></div></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>NEXA · ProcDNA Internal</span>
+    <span>Reference doc · maintained by Shreeraj Deshmukh</span>
+  </footer>
+
+</div>
