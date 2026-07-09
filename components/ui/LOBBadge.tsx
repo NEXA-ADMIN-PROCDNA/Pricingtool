@@ -19,7 +19,7 @@ export function LOBBadge({ lob }: { lob: string | null | undefined }) {
   }
   const { label, classes } = config[lob] ?? { label: lob, classes: 'bg-slate-100 text-slate-600' }
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${classes}`}>
+    <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-semibold ${classes}`}>
       {label}
     </span>
   )

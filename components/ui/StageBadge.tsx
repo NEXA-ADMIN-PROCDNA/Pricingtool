@@ -15,7 +15,7 @@ const config: Record<string, { label: string; classes: string }> = {
 export function StageBadge({ stage }: { stage: string }) {
   const cfg = config[stage] ?? { label: stage, classes: 'bg-slate-100 text-slate-500' }
   return (
-    <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${cfg.classes}`}>
+    <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-medium ${cfg.classes}`}>
       {cfg.label}
     </span>
   )
@@ -44,7 +44,7 @@ export function StageProgress({ stage }: { stage: string }) {
       </div>
       <div className="h-1.5 w-full rounded-full bg-slate-100">
         <div
-          className="h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
+          className="h-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-blue-400 transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
