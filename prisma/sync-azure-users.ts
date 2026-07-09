@@ -21,8 +21,17 @@ import { Client } from '@microsoft/microsoft-graph-client'
 import { TokenCredentialAuthenticationProvider } from '@microsoft/microsoft-graph-client/authProviders/azureTokenCredentials/index.js'
 
 // ── Prisma client ─────────────────────────────────────────────────
+// Schema comes from the DATABASE_URL query string (?schema=...) so the same
+// script works against Supabase (procdna_database) and RDS (nexa_dev).
+function schemaFromUrl(url: string | undefined): string {
+  try {
+    return new URL(url ?? '').searchParams.get('schema') ?? 'procdna_database'
+  } catch {
+    return 'procdna_database'
+  }
+}
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaPg(pool, { schema: 'procdna_database' })
+const adapter = new PrismaPg(pool, { schema: schemaFromUrl(process.env.DATABASE_URL) })
 const prisma = new PrismaClient({ adapter })
 
 // ── Role mapping ──────────────────────────────────────────────────
